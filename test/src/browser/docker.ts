@@ -1,7 +1,7 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import type {
-    runDockerBrowser as RunDockerBrowser,
+    startDockerController as StartDockerController,
     prepareDockerImages as PrepareDockerImages,
     checkDockerParallelism as CheckDockerParallelism,
 } from "src/browser/docker";
@@ -13,7 +13,7 @@ import path from "path";
 describe("browser/docker", () => {
     const sandbox = sinon.createSandbox();
     let prepareDockerImages: typeof PrepareDockerImages;
-    let runDockerBrowser: typeof RunDockerBrowser;
+    let startDockerController: typeof StartDockerController;
     let checkDockerParallelism: typeof CheckDockerParallelism;
     let warnStub: SinonStub;
     let prepareImage: SinonStub;
@@ -32,8 +32,8 @@ describe("browser/docker", () => {
         image: string | null,
         options = {},
         container: DockerConfig = {},
-    ): ReturnType<typeof runDockerBrowser> =>
-        runDockerBrowser(image === null ? null : { image, selenoidImage, ...container }, {
+    ): ReturnType<typeof startDockerController> =>
+        startDockerController(image === null ? null : { image, selenoidImage, ...container }, {
             browserName: "chrome",
             browserVersion: "98.0",
             ...options,
@@ -102,7 +102,7 @@ describe("browser/docker", () => {
             },
         });
         prepareDockerImages = dockerModule.prepareDockerImages;
-        runDockerBrowser = dockerModule.runDockerBrowser;
+        startDockerController = dockerModule.startDockerController;
         checkDockerParallelism = dockerModule.checkDockerParallelism;
     });
 
@@ -332,7 +332,7 @@ describe("browser/docker", () => {
 
     it("should require an explicitly configured Selenoid image before calling Docker", async () => {
         await assert.isRejected(
-            runDockerBrowser({ image: "browser:1" }, { browserName: "chrome" }),
+            startDockerController({ image: "browser:1" }, { browserName: "chrome" }),
             '"docker.selenoidImage" must be a non-empty string when "gridUrl" is "docker"',
         );
         assert.notCalled(command);
@@ -466,7 +466,7 @@ describe("browser/docker", () => {
         assert.calledWith(syncCommand, "docker", ["rm", "--force", sinon.match(/^testplane-/)]);
     });
 
-    it("should use distinct container names for parallel sessions", async () => {
+    it("should use distinct names for independently owned controllers", async () => {
         const drivers = await Promise.all([start("browser"), start("browser")]);
         const runs = command.getCalls().filter(call => call.args[0][0] === "create");
         assert.notEqual(runs[0].args[0][2], runs[1].args[0][2]);
@@ -736,5 +736,120 @@ describe("browser/docker", () => {
         assert.neverCalledWith(process.off as SinonStub, "exit", exitHandlers[0]);
         await driver.kill();
         assert.calledWith(process.off as SinonStub, "exit", exitHandlers[0]);
+    });
+    describe("shared sessions", () => {
+        it("isolates containers by session label when identical browsers run together", async () => {
+            const controller = await start("browser");
+            const first = controller.createSession("98.0", 1000);
+            const second = controller.createSession("98.0", 1000);
+            const firstLabel = first.selenoidOptions!.labels["testplane.session"];
+            const secondLabel = second.selenoidOptions!.labels["testplane.session"];
+            assert.notEqual(firstLabel, secondLabel);
+            command.callsFake(async (args: string[]) => {
+                if (args[0] === "ps")
+                    return args.includes(`label=testplane.session=${firstLabel}`)
+                        ? "first-container"
+                        : "second-container";
+                return "";
+            });
+            await Promise.all([first.free(), first.kill()]);
+            assert.calledOnceWith(command.withArgs(["rm", "--force", "first-container"]));
+            assert.neverCalledWith(command, ["rm", "--force", "second-container"]);
+            assert.notCalled(removeConfig);
+            await second.free();
+            await controller.kill();
+        });
+
+        it("waits for Selenoid's concurrent container removal", async () => {
+            const controller = await start("browser");
+            const session = controller.createSession("98.0", 1000);
+            command.withArgs(sinon.match.array.startsWith(["ps", "--all"])).resolves("owned-container");
+            const remove = command.withArgs(["rm", "--force", "owned-container"]);
+            remove.onFirstCall().rejects(new Error("removal of container owned-container is already in progress"));
+            remove.onSecondCall().rejects(new Error("No such container: owned-container"));
+            await session.free();
+            assert.calledTwice(remove);
+            assert.notCalled(removeConfig);
+            await controller.kill();
+        });
+
+        it("finds the CDP container by label instead of the shared image", async () => {
+            const controller = await start("browser");
+            const session = controller.createSession("98.0", 1000);
+            fetchStub.resetHistory();
+            fetchStub.onFirstCall().rejects(new Error("adapter starting"));
+            fetchStub.resolves({ ok: true, json: async () => ({ domains: [] }) });
+            command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("my-container");
+            await session.prepareCdp!("session-id");
+            const lookup = command.getCalls().find(call => call.args[0][0] === "ps")!.args[0];
+            assert.include(lookup, `label=testplane.session=${session.selenoidOptions!.labels["testplane.session"]}`);
+            assert.notInclude(lookup, "ancestor=browser");
+            await controller.kill();
+        });
+
+        it("saves only the session's browser logs and saves the controller log once", async () => {
+            const controller = await startDockerController(
+                { image: "chrome-image", selenoidImage },
+                {},
+                [
+                    {
+                        config: { image: "chrome-image", selenoidImage },
+                        browserName: "chrome",
+                        browserVersion: "chrome-route",
+                    },
+                    {
+                        config: { image: "firefox-image", selenoidImage },
+                        browserName: "firefox",
+                        browserVersion: "firefox-route",
+                    },
+                ],
+                2,
+            );
+            const session = controller.createSession("firefox-route", 1000);
+            const label = session.selenoidOptions!.labels["testplane.session"];
+            const file = { fd: 123, appendFile: sandbox.stub().resolves(), close: sandbox.stub().resolves() };
+            openLog.resolves(file);
+            command.withArgs(sinon.match.array.startsWith(["ps", "--all"])).resolves("my-firefox");
+            await session.saveLogs!("firefox-session");
+            assert.calledWith(file.appendFile, sinon.match("Image: firefox-image"));
+            assert.calledWith(file.appendFile, sinon.match("Selenoid log:"));
+            assert.calledOnceWith(spawnCommand, "docker", ["logs", "--timestamps", "my-firefox"], sinon.match.object);
+            const lookup = command.getCalls().find(call => call.args[0][0] === "ps")!.args[0];
+            assert.include(lookup, `label=testplane.session=${label}`);
+            await Promise.all([controller.free(), controller.kill()]);
+            assert.calledTwice(spawnCommand);
+            assert.match(spawnCommand.secondCall.args[1][2], /^testplane-/);
+        });
+
+        it("rejects conflicting controller images before image preparation", async () => {
+            await assert.isRejected(
+                startDockerController({ image: "browser", selenoidImage }, {}, [
+                    {
+                        config: { image: "browser", selenoidImage: "different" },
+                        browserName: "chrome",
+                        browserVersion: "1",
+                    },
+                ]),
+                "same docker.selenoidImage",
+            );
+            assert.notCalled(command);
+        });
+
+        it("releases the Selenoid slot and removes only the owned container after a failed DELETE", async () => {
+            const controller = await start("browser");
+            const session = controller.createSession("98.0", 1000);
+            session.setSessionId!("session-id");
+            fetchStub.rejects(new Error("connection failed"));
+            command.withArgs(sinon.match.array.startsWith(["ps", "--all"])).resolves("owned-container");
+            await session.kill();
+            assert.calledWith(
+                fetchStub,
+                "http://127.0.0.1:12345/wd/hub/session/session-id",
+                sinon.match({ method: "DELETE" }),
+            );
+            assert.calledWith(command, ["rm", "--force", "owned-container"]);
+            assert.notCalled(removeConfig);
+            await controller.kill();
+        });
     });
 });

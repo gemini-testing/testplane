@@ -164,6 +164,7 @@ export class NewBrowser extends Browser {
                     "delete WebDriver session",
                     () => this._session!.deleteSession(),
                 );
+                this._wdProcess?.setSessionId?.(undefined);
             }
         } catch (error) {
             this._shouldKillWebdriver = true;
@@ -227,7 +228,10 @@ export class NewBrowser extends Browser {
             "create WebDriver session (launch browser)",
             () => remote(sessionOpts),
         );
+        // Keep the session reachable by cleanup even when CDP initialization fails.
+        this._session = session;
         this._sessionIdForLogs = session.sessionId;
+        this._wdProcess?.setSessionId?.(session.sessionId);
         const debuggerAddress = session.capabilities["goog:chromeOptions"]?.debuggerAddress;
         if (debuggerAddress && !("browserWSEndpoint" in this._config && this._config.browserWSEndpoint)) {
             await timeDockerOperation(dockerScope ? session.sessionId : undefined, "prepare CDP (total)", () =>
@@ -269,25 +273,46 @@ export class NewBrowser extends Browser {
         if (this._isLocalGridUrl()) {
             gridUrl = await this._getLocalWebdriverGridUrl();
         } else if (gridUrl === DOCKER_GRID_URL) {
-            const { runDockerBrowser } = await import("./docker");
-            this._wdProcess = await runDockerBrowser(config.docker, {
-                // Selenoid uses the Appium device name when browserName is absent.
-                browserName:
-                    config.desiredCapabilities?.browserName ||
-                    config.desiredCapabilities?.["appium:deviceName"] ||
-                    (config.desiredCapabilities as { deviceName?: string } | null)?.deviceName,
-                browserVersion:
-                    this.version ||
-                    config.desiredCapabilities?.browserVersion ||
-                    (config.desiredCapabilities as { version?: string } | null)?.version,
-                timeout: config.sessionRequestTimeout || config.httpTimeout,
-            });
+            const { runDockerBrowser } = await import("./docker-manager");
+            this._wdProcess = await runDockerBrowser(
+                config.docker,
+                {
+                    // Selenoid uses the Appium device name when browserName is absent.
+                    browserName:
+                        config.desiredCapabilities?.browserName ||
+                        config.desiredCapabilities?.["appium:deviceName"] ||
+                        (config.desiredCapabilities as { deviceName?: string } | null)?.deviceName,
+                    browserVersion:
+                        this.version ||
+                        config.desiredCapabilities?.browserVersion ||
+                        (config.desiredCapabilities as { version?: string } | null)?.version,
+                    timeout: config.sessionRequestTimeout || config.httpTimeout,
+                },
+                this._rootConfig,
+                this.id,
+                () => this.quit(),
+            );
             gridUrl = this._wdProcess.gridUrl;
         }
 
         const gridUri = new URI(gridUrl);
 
-        const capabilities = await this._extendCapabilities(config);
+        let capabilities = await this._extendCapabilities(config);
+        const selenoidOptions = this._wdProcess?.selenoidOptions;
+        if (selenoidOptions) {
+            const original = capabilities["selenoid:options"];
+            capabilities = {
+                ...capabilities,
+                "selenoid:options": {
+                    ...original,
+                    ...selenoidOptions,
+                    labels: {
+                        ...(original?.labels instanceof Map ? Object.fromEntries(original.labels) : original?.labels),
+                        ...selenoidOptions.labels,
+                    },
+                } as unknown as WebdriverIO.Capabilities["selenoid:options"],
+            };
+        }
 
         const options = {
             protocol: gridUri.protocol(),
@@ -298,7 +323,7 @@ export class NewBrowser extends Browser {
             capabilities,
             automationProtocol: config.automationProtocol,
             connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
-            connectionRetryCount: 3,
+            connectionRetryCount: selenoidOptions ? 0 : 3,
             baseUrl: config.baseUrl,
             waitforTimeout: config.waitTimeout,
             waitforInterval: config.waitInterval,

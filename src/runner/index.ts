@@ -13,6 +13,7 @@ import {
 } from "../events";
 import { RunnableEmitter } from "./types";
 import RuntimeConfig from "../config/runtime-config";
+import { configureDockerRun, stopDockerRun } from "../browser/docker-manager";
 import { DOCKER_GRID_URL } from "../constants/config";
 import WorkersRegistry from "../utils/workers-registry";
 import PromiseGroup from "./promise-group";
@@ -121,9 +122,13 @@ export class MainRunner extends RunnableEmitter {
             this.emit(MasterEvents.BEGIN);
             await this._runTests(testCollection, opts);
         } finally {
-            this.emit(MasterEvents.END);
-            await this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn);
-            await this.workersRegistry.end();
+            try {
+                this.emit(MasterEvents.END);
+                await this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn);
+                await this.workersRegistry.end();
+            } finally {
+                await stopDockerRun(this.config);
+            }
         }
     }
 
@@ -151,7 +156,13 @@ export class MainRunner extends RunnableEmitter {
             }, 0);
             if (dockerSessions > 0) {
                 const { checkDockerParallelism } = await import("../browser/docker");
-                await checkDockerParallelism(Math.min(dockerSessions, this.config.system.parallelLimit));
+                const limit = Math.min(dockerSessions, this.config.system.parallelLimit);
+                await checkDockerParallelism(limit);
+                configureDockerRun(
+                    this.config,
+                    testCollection.getBrowsers().filter(id => this.config.forBrowser(id).gridUrl === DOCKER_GRID_URL),
+                    limit,
+                );
             }
         }
 
