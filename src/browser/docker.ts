@@ -55,8 +55,28 @@ function errorMessage(error: unknown): string {
     return (error as DockerError).stderr?.trim() || (error as Error).message;
 }
 
+/** Selenoid may still be removing a container after DELETE /session returns. */
+async function removeContainers(containers: string[]): Promise<void> {
+    if (!containers.length) return;
+    const deadline = Date.now() + COMMAND_TIMEOUT;
+    for (;;) {
+        try {
+            await docker(["rm", "--force", ...containers]);
+            return;
+        } catch (error) {
+            const message = errorMessage(error);
+            if (/already in progress|is being removed/i.test(message) && Date.now() < deadline) {
+                await delay(100);
+                continue;
+            }
+            if (/no such container/i.test(message) && !/already in progress|is being removed/i.test(message)) return;
+            throw error;
+        }
+    }
+}
+
 /** Enforce a limit of 5 browser sessions per 4 Docker CPUs. */
-export async function checkDockerParallelism(parallelism: number): Promise<void> {
+export async function checkDockerParallelism(parallelism: number): Promise<number> {
     let cpus: number;
     try {
         cpus = Number(
@@ -77,6 +97,7 @@ export async function checkDockerParallelism(parallelism: number): Promise<void>
                 `Reduce sessionsPerBrowser or system.parallelLimit, or allocate more CPUs to Docker.`,
         );
     }
+    return limit;
 }
 
 /** Stream complete output to disk without execFile's in-memory buffer limit. */
@@ -185,7 +206,7 @@ async function waitForSelenoid(name: string, gridUrl: string, timeout: number): 
     );
 }
 
-type DockerBrowserOptions = {
+export type DockerBrowserOptions = {
     browserName?: string;
     browserVersion?: string;
     timeout?: number;
@@ -230,13 +251,36 @@ export async function prepareDockerImages(
     return { image: preparedImage, selenoidImage };
 }
 
-/** Start an isolated Selenoid environment per session; Selenoid manages the browser container. */
-export async function runDockerBrowser(
+export type DockerBrowserEntry = {
+    config: DockerConfig | null;
+    browserName: string;
+    browserVersion: string;
+};
+
+export type DockerController = WdProcess & {
+    addBrowser: (entry: DockerBrowserEntry) => Promise<void>;
+    createSession: (version: string, timeout: number) => WdProcess;
+};
+
+/** The owner stops this controller only after all of its sessions have finished. */
+export async function startDockerController(
     config: DockerConfig | null,
     { browserName = "", browserVersion, timeout = COMMAND_TIMEOUT }: DockerBrowserOptions,
-): Promise<WdProcess> {
+    entries: DockerBrowserEntry[] = [{ config, browserName, browserVersion: browserVersion || "default" }],
+    limit = 1,
+): Promise<DockerController> {
     const name = `testplane-${randomUUID()}`;
-    const { image: preparedImage, selenoidImage } = await prepareDockerImages(config, browserName, name);
+    // Validate the controller choice before pulling or building anything.
+    if (entries.some(entry => entry.config?.selenoidImage !== config?.selenoidImage)) {
+        throw new Error("All Docker browsers in one run must use the same docker.selenoidImage.");
+    }
+    const prepared = await Promise.all(
+        entries.map(async entry => ({
+            ...entry,
+            ...(await prepareDockerImages(entry.config, entry.browserName, name)),
+        })),
+    );
+    const { image: preparedImage, selenoidImage } = prepared[0];
     const securityOptions = JSON.parse(
         await timeDockerOperation(name, "check container security options", () =>
             docker(["info", "--format", "{{json .SecurityOptions}}"]),
@@ -252,8 +296,6 @@ export async function runDockerBrowser(
     // Podman supplies host.docker.internal itself; host-gateway may be unavailable in podman machine.
     const isPodman = serverComponents?.some(component => component.Name === "Podman Engine") ?? false;
     const defaultHosts = isPodman ? [] : ["host.docker.internal:host-gateway"];
-    const browserConfig = { ...config };
-    delete browserConfig.selenoidImage;
     const network = `${name}-network`;
     const configDir = await mkdtemp(path.join(tmpdir(), "testplane-selenoid-"));
     const configPath = path.join(configDir, "browsers.json");
@@ -299,9 +341,7 @@ export async function runDockerBrowser(
             const containers = (await docker(["ps", "--all", "--quiet", "--filter", `network=${network}`]))
                 .split(/\s+/)
                 .filter(Boolean);
-            if (containers.length) {
-                await docker(["rm", "--force", ...containers]);
-            }
+            await removeContainers(containers);
             await docker(["network", "rm", network]).catch(error => {
                 if (!/not found|no such network/i.test(errorMessage(error))) {
                     throw error;
@@ -319,7 +359,7 @@ export async function runDockerBrowser(
 
         return removal;
     };
-    const getLogs = async (): Promise<string> => {
+    const getLogs = async (label?: string): Promise<string> => {
         const controllerLogs = await docker(["logs", "--tail", "100", name], { includeStderr: true }).catch(() => "");
         const driverLogs: string[] = [];
         if (networkCreated) {
@@ -331,7 +371,7 @@ export async function runDockerBrowser(
                 "--filter",
                 `network=${network}`,
                 "--filter",
-                `ancestor=${preparedImage}`,
+                label ? `label=testplane.session=${label}` : `ancestor=${preparedImage}`,
             ]).catch(() => "");
             for (const container of containers.split(/\s+/).filter(Boolean).slice(0, 4)) {
                 const logs = await docker(["logs", "--tail", "100", container], { includeStderr: true }).catch(
@@ -343,10 +383,12 @@ export async function runDockerBrowser(
             }
         }
         try {
-            const logsDir = path.join(configDir, "logs");
+            const logsDir = path.join(configDir, "logs", label || "controller");
             await mkdir(logsDir, { recursive: true });
-            await docker(["cp", `${name}:/opt/selenoid/logs/.`, logsDir]);
-            const files = (await readdir(logsDir, { withFileTypes: true })).filter(file => file.isFile());
+            await docker(["cp", `${name}:/opt/selenoid/logs/${label ? `${label}.log` : "."}`, logsDir]);
+            const files = (await readdir(logsDir, { withFileTypes: true })).filter(
+                file => file.isFile() && (!label || file.name === `${label}.log`),
+            );
             for (const file of files.slice(-4)) {
                 const handle = await open(path.join(logsDir, file.name), "r");
                 try {
@@ -369,16 +411,18 @@ export async function runDockerBrowser(
         return [controllerLogs, ...driverLogs].filter(Boolean).join("\n");
     };
 
-    const saveLogs = async (sessionId: string): Promise<string> => {
+    const saveLogs = async (sessionId: string, label?: string, image = preparedImage): Promise<string> => {
         const logsDir = path.join(tmpdir(), "testplane-logs");
         await mkdir(logsDir, { recursive: true });
         const logPath = path.join(logsDir, `${encodeURIComponent(sessionId)}.log`);
         const file = await open(logPath, "w", 0o600);
         try {
-            await file.appendFile(
-                `Session: ${sessionId}\nImage: ${preparedImage}\nSaved: ${new Date().toISOString()}\n`,
-            );
-            await appendDockerOutput(file, "Selenoid", ["logs", "--timestamps", name]);
+            await file.appendFile(`Session: ${sessionId}\nImage: ${image}\nSaved: ${new Date().toISOString()}\n`);
+            if (label) {
+                await file.appendFile(`Selenoid log: ${path.join(logsDir, `${name}.log`)}\n`);
+            } else {
+                await appendDockerOutput(file, "Selenoid", ["logs", "--timestamps", name]);
+            }
             const containers = (
                 await docker([
                     "ps",
@@ -387,7 +431,7 @@ export async function runDockerBrowser(
                     "--filter",
                     `network=${network}`,
                     "--filter",
-                    `ancestor=${preparedImage}`,
+                    label ? `label=testplane.session=${label}` : `ancestor=${preparedImage}`,
                 ])
             )
                 .split(/\s+/)
@@ -401,29 +445,39 @@ export async function runDockerBrowser(
         return logPath;
     };
 
+    const browsers: Record<string, { default: string; versions: Record<string, DockerConfig> }> = {};
+    const addEntry = (entry: DockerBrowserEntry, image: string): void => {
+        const browserConfig = { ...entry.config };
+        delete browserConfig.selenoidImage;
+        browsers[entry.browserName] ??= { default: entry.browserVersion, versions: {} };
+        browsers[entry.browserName].versions[entry.browserVersion] = {
+            port: "4444",
+            path: "/",
+            shmSize: 2 * 1024 ** 3,
+            hosts: defaultHosts,
+            ...browserConfig,
+            image,
+        };
+    };
+    prepared.forEach(entry => addEntry(entry, entry.image));
+
+    const saveControllerLogs = async (): Promise<void> => {
+        const logsDir = path.join(tmpdir(), "testplane-logs");
+        await mkdir(logsDir, { recursive: true });
+        const logPath = path.join(logsDir, `${name}.log`);
+        const file = await open(logPath, "w", 0o600);
+        try {
+            await appendDockerOutput(file, "Selenoid", ["logs", "--timestamps", name]);
+            log(`Docker Selenoid log: ${logPath}`);
+        } finally {
+            await file.close();
+        }
+    };
+
     registerCleanup(removeOnExit);
 
     try {
-        // Version is a Selenoid routing key. An omitted version selects this image's default.
-        const version = browserVersion || "default";
-        await writeFile(
-            configPath,
-            JSON.stringify({
-                [browserName]: {
-                    default: version,
-                    versions: {
-                        [version]: {
-                            port: "4444",
-                            path: "/",
-                            shmSize: 2 * 1024 ** 3,
-                            hosts: defaultHosts,
-                            ...browserConfig,
-                            image: preparedImage,
-                        },
-                    },
-                },
-            }),
-        );
+        await writeFile(configPath, JSON.stringify(browsers));
         // Set before creation to also clean up when the CLI times out after creating the network.
         networkCreated = true;
         await timeDockerOperation(name, "create network", () => docker(["network", "create", network]));
@@ -450,7 +504,7 @@ export async function runDockerBrowser(
                 "-container-network",
                 network,
                 "-limit",
-                "1",
+                String(limit),
                 "-retry-count",
                 "1",
                 "-capture-driver-logs",
@@ -488,7 +542,7 @@ export async function runDockerBrowser(
             waitForSelenoid(name, gridUrl, timeout),
         );
 
-        const prepareCdp = async (sessionId: string): Promise<void> => {
+        const prepareCdp = async (sessionId: string, label?: string, cdpTimeout = timeout): Promise<void> => {
             const protocolUrl = `${gridUrl}/devtools/${encodeURIComponent(sessionId)}/json/protocol`;
             const isCdpReady = async (): Promise<boolean> => {
                 try {
@@ -509,7 +563,7 @@ export async function runDockerBrowser(
                     "--filter",
                     `network=${network}`,
                     "--filter",
-                    `ancestor=${preparedImage}`,
+                    label ? `label=testplane.session=${label}` : `ancestor=${preparedImage}`,
                 ])
             )
                 .split(/\s+/)
@@ -519,7 +573,7 @@ export async function runDockerBrowser(
             }
             const browserContainer = containers[0];
             await timeDockerOperation(sessionId, "wait for CDP readiness", async () => {
-                const deadline = Date.now() + timeout;
+                const deadline = Date.now() + cdpTimeout;
                 while (Date.now() < deadline) {
                     if (await isCdpReady()) return;
                     if ((await docker(["inspect", "--format", "{{.State.Running}}", browserContainer])) !== "true") {
@@ -527,18 +581,108 @@ export async function runDockerBrowser(
                     }
                     await delay(Math.max(0, Math.min(200, deadline - Date.now())));
                 }
-                throw new Error(`CDP adapter did not become ready within ${timeout} ms.`);
+                throw new Error(`CDP adapter did not become ready within ${cdpTimeout} ms.`);
             });
         };
 
+        let shared = false;
+        let stopping: Promise<void> | undefined;
+        const stop = (): Promise<void> => {
+            stopping ??= (async (): Promise<void> => {
+                if (shared) await saveControllerLogs().catch(error => warn(errorMessage(error)));
+                await remove();
+            })().catch(error => {
+                stopping = undefined;
+                throw error;
+            });
+            return stopping;
+        };
         return {
             gridUrl: `${gridUrl}/wd/hub`,
-            free: remove,
-            kill: remove,
+            free: stop,
+            kill: stop,
             getPid: () => undefined,
             getLogs,
             saveLogs,
             prepareCdp,
+            addBrowser: async (entry): Promise<void> => {
+                if (entry.config?.selenoidImage !== selenoidImage) {
+                    throw new Error("All Docker browsers in one run must use the same docker.selenoidImage.");
+                }
+                const { image } = await prepareDockerImages(entry.config, entry.browserName, name);
+                addEntry(entry, image);
+                await writeFile(configPath, JSON.stringify(browsers));
+                // Never expose a partially copied config to Selenoid.
+                await docker(["cp", configPath, `${name}:/browsers.next.json`]);
+                await docker(["exec", name, "mv", "/browsers.next.json", "/browsers.json"]);
+                await docker(["kill", "--signal", "HUP", name]);
+                const deadline = Date.now() + timeout;
+                while (Date.now() < deadline) {
+                    const response = await fetch(`${gridUrl}/status`, { signal: AbortSignal.timeout(1000) });
+                    const status = (await response.json()) as { browsers?: Record<string, Record<string, unknown>> };
+                    if (response.ok && status.browsers?.[entry.browserName]?.[entry.browserVersion]) return;
+                    await delay(50);
+                }
+                throw new Error("Selenoid did not reload the browser configuration in time.");
+            },
+            createSession: (version, sessionTimeout): WdProcess => {
+                shared = true;
+                const image = Object.values(browsers)
+                    .map(browser => browser.versions[version]?.image)
+                    .find(Boolean);
+                if (!image) throw new Error(`Unknown Docker browser route: ${version}`);
+                const label = randomUUID();
+                let sessionId: string | undefined;
+                let released: Promise<void> | undefined;
+                const release = (): Promise<void> => {
+                    released ??= (async (): Promise<void> => {
+                        // A failed client DELETE must not leave Selenoid's slot occupied.
+                        if (sessionId) {
+                            await fetch(`${gridUrl}/wd/hub/session/${encodeURIComponent(sessionId)}`, {
+                                method: "DELETE",
+                                signal: AbortSignal.timeout(COMMAND_TIMEOUT),
+                            })
+                                .then(response => {
+                                    if (!response.ok && response.status !== 404) {
+                                        throw new Error(`Selenoid session deletion returned ${response.status}`);
+                                    }
+                                })
+                                .catch(error => warn(errorMessage(error)));
+                        }
+                        const containers = (
+                            await docker([
+                                "ps",
+                                "--all",
+                                "--quiet",
+                                "--filter",
+                                `network=${network}`,
+                                "--filter",
+                                `label=testplane.session=${label}`,
+                            ])
+                        )
+                            .split(/\s+/)
+                            .filter(Boolean);
+                        await removeContainers(containers);
+                    })().catch(error => {
+                        released = undefined;
+                        throw error;
+                    });
+                    return released;
+                };
+                return {
+                    gridUrl: `${gridUrl}/wd/hub`,
+                    free: release,
+                    kill: release,
+                    getPid: () => undefined,
+                    setSessionId: (id): void => {
+                        sessionId = id;
+                    },
+                    selenoidOptions: { version, labels: { "testplane.session": label }, logName: `${label}.log` },
+                    getLogs: () => getLogs(label),
+                    saveLogs: sessionId => saveLogs(sessionId, label, image),
+                    prepareCdp: sessionId => prepareCdp(sessionId, label, sessionTimeout),
+                };
+            },
         };
     } catch (error) {
         const logs = await getLogs().catch(() => "");
