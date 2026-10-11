@@ -50,7 +50,7 @@ describe("NewBrowser", () => {
                 remote: webdriverioRemoteStub,
             },
             "../browser-installer": { installBrowser: installBrowserStub },
-            "./docker": { runDockerBrowser: runDockerBrowserStub },
+            "./docker-manager": { runDockerBrowser: runDockerBrowserStub },
             "../utils/logger": { warn: warnStub, log: logStub },
             "./history": {
                 runGroup: runGroupStub,
@@ -628,6 +628,39 @@ describe("NewBrowser", () => {
             desiredCapabilities: { browserName: "chrome", browserVersion: "109.0" },
         };
 
+        it("adds routing and ownership without changing real browser capabilities or user labels", async () => {
+            const driver = await runDockerBrowserStub();
+            driver.selenoidOptions = {
+                version: "internal-route",
+                labels: { "testplane.session": "owned" },
+                logName: "owned.log",
+            };
+            const settings = {
+                ...config,
+                desiredCapabilities: {
+                    ...config.desiredCapabilities,
+                    "selenoid:options": {
+                        enableVNC: true,
+                        version: "user-route",
+                        labels: { team: "desktop", "testplane.session": "user" },
+                    },
+                },
+            };
+            const browser = await mkBrowser_(settings as any).init();
+            const request = webdriverioRemoteStub.firstCall.args[0];
+            assert.equal(request.capabilities.browserName, "chrome");
+            assert.equal(request.capabilities.browserVersion, "1.0");
+            assert.deepEqual(request.capabilities["selenoid:options"], {
+                enableVNC: true,
+                version: "internal-route",
+                labels: { team: "desktop", "testplane.session": "owned" },
+                logName: "owned.log",
+            });
+            assert.equal(request.connectionRetryCount, 0);
+            assert.equal(settings.desiredCapabilities["selenoid:options"].version, "user-route");
+            await browser.quit();
+        });
+
         it("should prepare CDP using the debugger address returned by Chrome", async () => {
             session.capabilities = { "goog:chromeOptions": { debuggerAddress: "localhost:39599" } };
             session.sessionId = "chrome-session";
@@ -661,7 +694,7 @@ describe("NewBrowser", () => {
             await assert.isRejected(mkBrowser_(config).init(), "CDP adapter failed");
             assert.callOrder(driver.prepareCdp, driver.getLogs, driver.kill);
             assert.calledOnceWith(driver.saveLogs, session.sessionId);
-            assert.callOrder(driver.saveLogs, driver.kill);
+            assert.callOrder(driver.saveLogs, session.deleteSession, driver.kill);
         });
 
         it("should save session logs before deleting the browser and print their path", async () => {

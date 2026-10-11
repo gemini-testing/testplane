@@ -11,6 +11,8 @@ export type WdProcess = {
     free: () => void | Promise<void>;
     kill: () => void | Promise<void>;
     getPid: () => number | undefined;
+    setSessionId?: (sessionId: string | undefined) => void;
+    selenoidOptions?: { version: string; labels: Record<string, string>; logName: string };
     getLogs?: () => Promise<string>;
     saveLogs?: (sessionId: string) => Promise<string>;
     prepareCdp?: (sessionId: string) => Promise<void>;
