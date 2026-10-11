@@ -1,5 +1,7 @@
 import { performance } from "perf_hooks";
-import { log } from "../utils/logger";
+import makeDebug from "debug";
+
+export const debugDocker = makeDebug("testplane:docker");
 
 /** Log before awaiting so a stalled operation is visible, too. */
 export async function timeDockerOperation<T>(
@@ -7,16 +9,16 @@ export async function timeDockerOperation<T>(
     operation: string,
     action: () => T | Promise<T>,
 ): Promise<T> {
-    if (!scope) return action();
+    if (!scope || !debugDocker.enabled) return action();
     const started = performance.now();
     const prefix = `[Docker timing][${scope}] ${operation}`;
-    log(`${prefix}: started`);
+    debugDocker(`${prefix}: started`);
     try {
         const result = await action();
-        log(`${prefix}: done in ${((performance.now() - started) / 1000).toFixed(3)}s`);
+        debugDocker(`${prefix}: done in ${((performance.now() - started) / 1000).toFixed(3)}s`);
         return result;
     } catch (error) {
-        log(`${prefix}: failed after ${((performance.now() - started) / 1000).toFixed(3)}s`);
+        debugDocker(`${prefix}: failed after ${((performance.now() - started) / 1000).toFixed(3)}s`);
         throw error;
     }
 }
