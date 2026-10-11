@@ -3,8 +3,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 import lockfile from "proper-lockfile";
-import { log, warn } from "../utils/logger";
-import { timeDockerOperation } from "./docker-timing";
+import { warn } from "../utils/logger";
+import { debugDocker, timeDockerOperation } from "./docker-timing";
 
 const BUILD_TIMEOUT = 10 * 60_000;
 // Runs only while building the image. The original entrypoint starts devtools normally afterwards.
@@ -50,7 +50,7 @@ export async function prepareDockerBrowserImage(source: string, scope: string, d
     const key = createHash("sha256").update(`${metadata.Id}\n${recipe}`).digest("hex");
     const image = `testplane-browser:${key}`;
     if (await imageExists(image, docker)) {
-        log(`[Docker timing][${scope}] prepared browser image: ${image}`);
+        debugDocker(`[Docker timing][${scope}] prepared browser image: ${image}`);
         return image;
     }
 
