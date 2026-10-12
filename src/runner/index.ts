@@ -25,6 +25,7 @@ import { Test } from "../types";
 import { SelectivityRunner } from "../browser/cdp/selectivity/runner";
 import { noopProfilerRuntime } from "../profiler/runtime/noop";
 import type { ProfilerRuntimeLike } from "../profiler/runtime/types";
+import { ExitOnError } from "./exit-on-error";
 
 interface WorkerMethods {
     runTest: typeof runTest;
@@ -59,11 +60,13 @@ export class MainRunner extends RunnableEmitter {
     protected workers: Workers | null;
     protected profiler: ProfilerRuntimeLike;
     private _cancelError: Error | null;
+    private exitOnError: ExitOnError;
 
     constructor(config: Config, interceptors: Interceptor[], profiler: ProfilerRuntimeLike = noopProfilerRuntime) {
         super();
 
         this.config = config;
+        this.exitOnError = new ExitOnError(config.exitOnError);
         this.interceptors = interceptors;
         this.browserPool = null;
 
@@ -167,7 +170,24 @@ export class MainRunner extends RunnableEmitter {
     }
 
     protected _createBrowserRunner(browserId: string): BrowserRunner {
-        const runner = BrowserRunner.create(browserId, this.config, this.browserPool, this.workers, this.profiler);
+        const runner = BrowserRunner.create(
+            browserId,
+            this.config,
+            this.browserPool,
+            this.workers,
+            this.profiler,
+            (test: Test) => {
+                if (this.cancelled) {
+                    return undefined;
+                }
+
+                const error = this.exitOnError.check(test);
+                if (error) {
+                    this.emit(MasterEvents.ERROR, error);
+                }
+                return error;
+            },
+        );
 
         if (this._cancelError) {
             runner.cancel(this._cancelError);

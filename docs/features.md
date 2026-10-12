@@ -29,6 +29,9 @@ To prevent incidental fails, Testplane retries a failed test before marking it a
 
 :warning: Testplane reruns tests in a new browser session to exclude situations when the browser environment is the cause of the failure.
 
+### Stops on infrastructure errors
+See [Stop a run on matching errors](exit-on-error.md) for configuring named error filters and run-wide failure thresholds.
+
 ### Executes separate tests
 Sometimes you only need to run specific tests, not all the tests in a set. Testplane makes this possible. You can specify the path to the test file
 ```
