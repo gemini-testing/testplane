@@ -392,6 +392,16 @@ export interface DockerConfig {
     [option: string]: unknown;
 }
 
+export interface ExitOnErrorRule {
+    filter: RegExp | ((errorText: string) => boolean);
+    limit: number;
+}
+
+export interface ExitOnErrorConfig {
+    enabled: boolean;
+    filters: Record<string, ExitOnErrorRule>;
+}
+
 export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver";
@@ -564,6 +574,7 @@ export type ConfigInputData = Partial<PartialCommonConfig> & {
     beforeAll?: HookType;
     afterAll?: HookType;
     profiler?: Partial<ProfilerConfig>;
+    exitOnError?: Partial<ExitOnErrorConfig>;
 };
 
 export type ConfigInput = ConfigInputData | (() => ConfigInputData) | (() => Promise<ConfigInputData>);
@@ -577,6 +588,7 @@ export interface ConfigParsed extends CommonConfig {
     beforeAll?: HookType;
     afterAll?: HookType;
     profiler: ProfilerConfig;
+    exitOnError: ExitOnErrorConfig;
 }
 
 export interface RuntimeConfig {

@@ -127,6 +127,31 @@ const rootSection = section(
 
         plugins: options.anyObject(),
 
+        exitOnError: section({
+            enabled: options.boolean("exitOnError.enabled"),
+            filters: option({
+                defaultValue: defaults.exitOnError.filters,
+                validate: value => {
+                    if (!_.isPlainObject(value)) {
+                        throw new Error('"exitOnError.filters" must be an object of named rules');
+                    }
+
+                    for (const [name, rule] of Object.entries(value)) {
+                        const path = `exitOnError.filters.${name}`;
+                        if (!_.isPlainObject(rule)) {
+                            throw new Error(`"${path}" must be an object`);
+                        }
+                        if (typeof rule.filter !== "function" && !_.isRegExp(rule.filter)) {
+                            throw new Error(`"${path}.filter" must be a function or RegExp`);
+                        }
+                        if (!Number.isSafeInteger(rule.limit) || rule.limit <= 0) {
+                            throw new Error(`"${path}.limit" must be a positive safe integer`);
+                        }
+                    }
+                },
+            }),
+        }),
+
         lastFailed: section({
             only: options.boolean("lastFailed.only"),
             input: option({
