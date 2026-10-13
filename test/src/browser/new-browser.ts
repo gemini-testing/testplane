@@ -671,6 +671,16 @@ describe("NewBrowser", () => {
             await browser.quit();
         });
 
+        it("should mark a Docker session without an adapter as unavailable for CDP", async () => {
+            session.capabilities = { "goog:chromeOptions": { debuggerAddress: "localhost:39599" } };
+            const driver = await runDockerBrowserStub();
+            driver.prepareCdp.resolves(false);
+            const browser = await mkBrowser_(config).init();
+            assert.isFalse(browser.cdpAvailable);
+            assert.equal(session.capabilities["goog:chromeOptions"]?.debuggerAddress, "localhost:39599");
+            await browser.quit();
+        });
+
         it("should skip CDP preparation for an explicit browserWSEndpoint", async () => {
             session.capabilities = { "goog:chromeOptions": { debuggerAddress: "localhost:39599" } };
             const settings = { ...config, browserWSEndpoint: "ws://custom/devtools" };

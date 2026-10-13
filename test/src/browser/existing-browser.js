@@ -170,6 +170,13 @@ describe("ExistingBrowser", () => {
     });
 
     describe("init", () => {
+        it("should attach without connecting CDP when the Docker adapter is absent", async () => {
+            const browser = await initBrowser_(mkBrowser_({ gridUrl: "docker" }), { cdpAvailable: false });
+            assert.calledOnce(webdriverioAttachStub);
+            assert.notCalled(CDPCreateStub);
+            assert.isNull(browser.cdp);
+        });
+
         it("should attach to browser with detected session environment flags", async () => {
             const desiredCapabilities = { browserName: "yabro" };
             const detectedSessionEnvFlags = { isW3C: false, isMobile: false };

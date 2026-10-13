@@ -70,11 +70,12 @@ describe("worker/browser-pool", () => {
                 sessionId: "100-500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
+                cdpAvailable: false,
             });
 
             assert.calledOnceWith(
                 browser.init,
-                { sessionId: "100-500", sessionCaps: "some-caps", sessionOpts: "some-opts" },
+                { sessionId: "100-500", sessionCaps: "some-caps", sessionOpts: "some-opts", cdpAvailable: false },
                 sinon.match.instanceOf(Calibrator),
             );
         });
