@@ -15,7 +15,7 @@ export type WdProcess = {
     selenoidOptions?: { version: string; labels: Record<string, string>; logName: string };
     getLogs?: () => Promise<string>;
     saveLogs?: (sessionId: string) => Promise<string>;
-    prepareCdp?: (sessionId: string) => Promise<void>;
+    prepareCdp?: (sessionId: string) => Promise<boolean | void>;
 };
 
 export class WebdriverPool {

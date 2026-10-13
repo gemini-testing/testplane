@@ -115,6 +115,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     id: "bro",
                     version: "1.0",
                     sessionId: "100500",
+                    cdpAvailable: false,
                     capabilities: { browserName: "bro" },
                     publicAPI: {
                         options: { foo: "bar" },
@@ -133,6 +134,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     browserId: "bro",
                     browserVersion: "1.0",
                     sessionId: "100500",
+                    cdpAvailable: false,
                     sessionCaps: { browserName: "bro" },
                     sessionOpts: { foo: "bar" },
                     state,

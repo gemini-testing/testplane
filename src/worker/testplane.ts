@@ -11,6 +11,7 @@ export interface WorkerRunTestOpts {
     browserVersion: string;
     file: string;
     sessionId: string;
+    cdpAvailable?: boolean;
     sessionCaps: WdioBrowser["capabilities"];
     sessionOpts: WdioBrowser["options"] & { capabilities: WdioBrowser["capabilities"] };
     state: Record<string, unknown>;

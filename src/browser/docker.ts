@@ -8,7 +8,7 @@ import path from "path";
 import type { WdProcess } from "../browser-pool/webdriver-pool";
 import type { DockerConfig } from "../config/types";
 import { log, warn } from "../utils/logger";
-import { prepareDockerBrowserImage } from "./docker-image";
+import { CHECK_DEVTOOLS, prepareDockerBrowserImage } from "./docker-image";
 import { timeDockerOperation } from "./docker-timing";
 
 const PLATFORM = "linux/amd64";
@@ -542,7 +542,7 @@ export async function startDockerController(
             waitForSelenoid(name, gridUrl, timeout),
         );
 
-        const prepareCdp = async (sessionId: string, label?: string, cdpTimeout = timeout): Promise<void> => {
+        const prepareCdp = async (sessionId: string, label?: string, cdpTimeout = timeout): Promise<boolean | void> => {
             const protocolUrl = `${gridUrl}/devtools/${encodeURIComponent(sessionId)}/json/protocol`;
             const isCdpReady = async (): Promise<boolean> => {
                 try {
@@ -572,6 +572,13 @@ export async function startDockerController(
                 throw new Error(`Expected one browser container for CDP, found ${containers.length}.`);
             }
             const browserContainer = containers[0];
+            const adapter = await docker(["exec", "--user", "0", browserContainer, "/bin/sh", "-ec", CHECK_DEVTOOLS]);
+            if (adapter.trim() === "absent") {
+                warn(`Docker browser session ${sessionId} has no /usr/bin/devtools adapter; continuing without CDP.`);
+                return false;
+            }
+            if (adapter.trim() !== "present")
+                throw new Error(`Cannot check CDP adapter in container ${browserContainer}`);
             await timeDockerOperation(sessionId, "wait for CDP readiness", async () => {
                 const deadline = Date.now() + cdpTimeout;
                 while (Date.now() < deadline) {

@@ -122,6 +122,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
                 browserVersion: this._browser.version,
                 sessionId: this._browser.sessionId,
                 sessionCaps: this._browser.capabilities,
+                ...(this._browser.cdpAvailable === false && { cdpAvailable: false }),
                 sessionOpts: this._browser.publicAPI.options,
                 file: this._test.file,
                 state: this._browser.state,
@@ -273,6 +274,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
                 {
                     sessionId: this._browser.sessionId,
                     sessionCaps: this._browser.capabilities,
+                    ...(this._browser.cdpAvailable === false && { cdpAvailable: false }),
                     sessionOpts: this._browser.publicAPI.options,
                     driverPid: this._browser.getDriverPid(),
                 },

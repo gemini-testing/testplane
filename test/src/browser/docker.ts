@@ -50,6 +50,7 @@ describe("browser/docker", () => {
             .withArgs(sinon.match.array.startsWith(["inspect", "--format", "{{json .NetworkSettings.Ports}}"]))
             .resolves(JSON.stringify({ "4444/tcp": [{ HostIp: "127.0.0.1", HostPort: "12345" }] }));
         command.withArgs(sinon.match.array.startsWith(["inspect", "--format", "{{.State.Running}}"])).resolves("true");
+        command.withArgs(sinon.match.array.startsWith(["exec"])).resolves("present");
         syncCommand = sandbox.stub();
         fetchStub = sandbox.stub(globalThis, "fetch").resolves({
             ok: true,
@@ -680,7 +681,7 @@ describe("browser/docker", () => {
             await driver.free();
         });
 
-        it("should wait for the native adapter without running commands in the browser", async () => {
+        it("should check adapter presence before waiting for its native route", async () => {
             const driver = await start("browser");
             fetchStub.resetHistory();
             fetchStub.resolves({ ok: true, json: async () => ({ domains: [] }) });
@@ -688,7 +689,7 @@ describe("browser/docker", () => {
             command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
             await driver.prepareCdp!("session-id");
             assert.calledOnce(prepareImage);
-            assert.isFalse(command.getCalls().some(call => call.args[0][0] === "exec"));
+            assert.isTrue(command.getCalls().some(call => call.args[0][0] === "exec"));
             assert.lengthOf(
                 command.getCalls().filter(call => call.args[0][0] === "create"),
                 1,
@@ -697,6 +698,27 @@ describe("browser/docker", () => {
                 command.getCalls().filter(call => call.args[0][0] === "image"),
                 2,
             );
+            await driver.free();
+        });
+
+        it("should skip waiting when the browser image has no adapter", async () => {
+            const driver = await start("browser");
+            fetchStub.resetHistory();
+            fetchStub.rejects(new Error("CDP unavailable"));
+            command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
+            command.withArgs(sinon.match.array.startsWith(["exec"])).resolves("absent\n");
+            assert.isFalse(await driver.prepareCdp!("session-id"));
+            assert.calledOnce(fetchStub);
+            assert.calledWith(warnStub, sinon.match("continuing without CDP"));
+            await driver.free();
+        });
+
+        it("should propagate adapter inspection failures", async () => {
+            const driver = await start("browser");
+            fetchStub.rejects(new Error("CDP unavailable"));
+            command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
+            command.withArgs(sinon.match.array.startsWith(["exec"])).rejects(new Error("exec failed"));
+            await assert.isRejected(driver.prepareCdp!("session-id"), "exec failed");
             await driver.free();
         });
 

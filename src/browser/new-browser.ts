@@ -57,6 +57,7 @@ const headlessBrowserOptions: HeadlessBrowserOptions = {
 };
 
 export class NewBrowser extends Browser {
+    cdpAvailable?: boolean;
     private _rootConfig: Config;
     private _onExit: (err?: Error) => Promise<void> = async () => {};
     private _initPromise: Promise<this> | null = null;
@@ -234,9 +235,12 @@ export class NewBrowser extends Browser {
         this._wdProcess?.setSessionId?.(session.sessionId);
         const debuggerAddress = session.capabilities["goog:chromeOptions"]?.debuggerAddress;
         if (debuggerAddress && !("browserWSEndpoint" in this._config && this._config.browserWSEndpoint)) {
-            await timeDockerOperation(dockerScope ? session.sessionId : undefined, "prepare CDP (total)", () =>
-                this._wdProcess?.prepareCdp?.(session.sessionId),
+            const available = await timeDockerOperation(
+                dockerScope ? session.sessionId : undefined,
+                "prepare CDP (total)",
+                () => this._wdProcess?.prepareCdp?.(session.sessionId),
             );
+            if (available === false) this.cdpAvailable = false;
         }
         return session;
     }

@@ -44,6 +44,7 @@ export interface Browser {
 
 export interface SessionOptions {
     sessionId: string;
+    cdpAvailable?: boolean;
     sessionCaps?: WebdriverIO.Capabilities;
     sessionOpts?: Options.WebdriverIO & { capabilities: WebdriverIO.Capabilities };
     driverPid?: number;

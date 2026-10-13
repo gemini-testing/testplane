@@ -28,6 +28,7 @@ describe("browser/docker-image", () => {
         recipes = [];
         build = sandbox.stub().resolves();
         docker = sandbox.stub().callsFake(async (args: string[]) => {
+            if (args[0] === "run") return "present";
             if (args[0] === "build") {
                 recipes.push(await readFile(path.join(args[args.length - 1], "Dockerfile"), "utf8"));
                 await build();
@@ -129,6 +130,37 @@ describe("browser/docker-image", () => {
         await assert.isRejected(prepare("chrome:latest", "session", docker), "daemon unavailable");
         assert.notCalled(build);
         assert.deepEqual(await readdir(directory), []);
+    });
+
+    it("should use the original image without building when the adapter is absent", async () => {
+        docker.withArgs(sinon.match.array.startsWith(["run"])).resolves("absent\n");
+        assert.equal(await prepare("chrome:69", "session", docker), "chrome:69");
+        assert.notCalled(build);
+        assert.deepEqual(recipes, []);
+        assert.deepEqual(await readdir(directory), []);
+        const args = docker.getCalls().find(call => call.args[0][0] === "run")!.args[0];
+        assert.include(args, metadata.Id);
+        assert.include(args, "--rm");
+        assert.include(args, "none");
+    });
+
+    it("should propagate adapter probe errors instead of skipping preparation", async () => {
+        docker.withArgs(sinon.match.array.startsWith(["run"])).rejects(new Error("daemon unavailable"));
+        await assert.isRejected(prepare("chrome:69", "session", docker), "daemon unavailable");
+        assert.notCalled(build);
+    });
+
+    it("should prepare a replacement image even if the previous image had no adapter", async () => {
+        docker
+            .withArgs(sinon.match.array.startsWith(["run"]))
+            .onFirstCall()
+            .resolves("absent")
+            .onSecondCall()
+            .resolves("present");
+        await prepare("chrome:latest", "first", docker);
+        metadata.Id = `sha256:${"b".repeat(64)}`;
+        assert.match(await prepare("chrome:latest", "second", docker), /^testplane-browser:/);
+        assert.calledOnce(build);
     });
 
     it("should preserve the default root user", async () => {
