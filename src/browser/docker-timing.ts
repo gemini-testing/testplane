@@ -18,7 +18,7 @@ export async function timeDockerOperation<T>(
         debugDocker(`${prefix}: done in ${((performance.now() - started) / 1000).toFixed(3)}s`);
         return result;
     } catch (error) {
-        debugDocker(`${prefix}: failed after ${((performance.now() - started) / 1000).toFixed(3)}s`);
+        debugDocker(`${prefix}: failed after ${((performance.now() - started) / 1000).toFixed(3)}s: %O`, error);
         throw error;
     }
 }
