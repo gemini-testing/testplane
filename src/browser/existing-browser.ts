@@ -89,7 +89,10 @@ export class ExistingBrowser extends Browser {
         this._meta = this._initMeta();
     }
 
-    async init({ sessionId, sessionCaps, sessionOpts }: SessionOptions, calibrator: Calibrator): Promise<this> {
+    async init(
+        { sessionId, sessionCaps, sessionOpts, cdpAvailable }: SessionOptions,
+        calibrator: Calibrator,
+    ): Promise<this> {
         const scope = this._config.gridUrl === DOCKER_GRID_URL && !getInstance().local ? sessionId : undefined;
         const timed = <T>(operation: string, action: () => T | Promise<T>): Promise<T> =>
             timeDockerOperation(scope, operation, action);
@@ -97,7 +100,7 @@ export class ExistingBrowser extends Browser {
             this._attachSession({ sessionId, sessionCaps, sessionOpts }),
         );
 
-        const cdpPromise = timed("connect CDP", () => CDP.create(this)).then(cdp => {
+        const cdpPromise = timed("connect CDP", () => (cdpAvailable === false ? null : CDP.create(this))).then(cdp => {
             this._cdp = cdp;
         });
 

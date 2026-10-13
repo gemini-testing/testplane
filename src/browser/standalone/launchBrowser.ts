@@ -96,6 +96,7 @@ export async function launchBrowser(
     await existingBrowser.init(
         {
             sessionId: session.sessionId,
+            cdpAvailable: newBrowser.cdpAvailable,
             sessionCaps: session.capabilities,
             sessionOpts: {
                 capabilities: session.capabilities,

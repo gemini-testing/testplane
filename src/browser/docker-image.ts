@@ -23,6 +23,8 @@ fi
 `;
 const RECIPE = `USER 0\nRUN ${JSON.stringify(["/bin/sh", "-ec", PREPARE_DEVTOOLS])}\n`;
 
+export const CHECK_DEVTOOLS = "if [ -f /usr/bin/devtools ]; then echo present; else echo absent; fi";
+
 type Docker = (args: string[], options?: { timeout: number }) => Promise<string>;
 
 async function imageExists(image: string, docker: Docker): Promise<boolean> {
@@ -53,6 +55,29 @@ export async function prepareDockerBrowserImage(source: string, scope: string, d
         debugDocker(`[Docker timing][${scope}] prepared browser image: ${image}`);
         return image;
     }
+
+    const adapter = await timeDockerOperation(scope, "check browser image CDP adapter", () =>
+        docker([
+            "run",
+            "--rm",
+            "--platform",
+            "linux/amd64",
+            "--network",
+            "none",
+            "--user",
+            "0",
+            "--entrypoint",
+            "/bin/sh",
+            metadata.Id,
+            "-ec",
+            CHECK_DEVTOOLS,
+        ]),
+    );
+    if (adapter.trim() === "absent") {
+        debugDocker(`[Docker timing][${scope}] no CDP adapter in ${source}; using the original image`);
+        return source;
+    }
+    if (adapter.trim() !== "present") throw new Error(`Cannot check CDP adapter in Docker image "${source}"`);
 
     // Only lock files live on the host. proper-lockfile removes the lock when released.
     const locks = path.join(tmpdir(), "testplane-docker-image-locks");
