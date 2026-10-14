@@ -69,7 +69,7 @@ export const fetchTextWithBrowserFallback = async (
         return await response.text();
     } catch {
         return runtime
-            .evaluate<string>(sessionId, {
+            .evaluate<unknown>(sessionId, {
                 expression: `fetch("${url.replaceAll('"', '\\"')}").then(r => {
                     if (!r.ok) throw new Error("HTTP " + r.status);
                     return r.text();
@@ -82,7 +82,13 @@ export const fetchTextWithBrowserFallback = async (
                     throw new Error(`Browser fetch failed for "${url}": ${JSON.stringify(response.exceptionDetails)}`);
                 }
 
-                return response.result.value;
+                const value = response.result?.value;
+
+                if (typeof value !== "string") {
+                    throw new Error(`Browser fetch failed for "${url}": expected text response`);
+                }
+
+                return value;
             });
     }
 };
