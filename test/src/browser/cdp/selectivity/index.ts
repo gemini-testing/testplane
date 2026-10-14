@@ -24,6 +24,8 @@ describe("CDP/Selectivity", () => {
     let usedDumpsTrackerMock: { usedDumpsFor: SinonStub; wasUsed: SinonStub; trackUsed: SinonStub };
     let clickNavigationGuardMock: {
         onBeforeUnloadPause: SinonStub;
+        onBfcacheRestorePause: SinonStub;
+        completeBfcacheRestore: SinonStub;
         dispose: SinonStub;
     };
     let fsStub: {
@@ -124,6 +126,8 @@ describe("CDP/Selectivity", () => {
         getUsedDumpsTrackerStub = sandbox.stub().returns(usedDumpsTrackerMock);
         clickNavigationGuardMock = {
             onBeforeUnloadPause: sandbox.stub(),
+            onBfcacheRestorePause: sandbox.stub().returns(false),
+            completeBfcacheRestore: sandbox.stub(),
             dispose: sandbox.stub(),
         };
         createClickNavigationGuardStub = sandbox.stub().returns(clickNavigationGuardMock);
@@ -414,6 +418,191 @@ describe("CDP/Selectivity", () => {
 
             assert.isFunction(stopFn);
             assert.calledWith(browserMock.cdp!.target.attachToTarget, "target-123");
+        });
+    });
+
+    describe("pause ownership", () => {
+        const createDeferred = (): {
+            promise: Promise<void>;
+            resolve: () => void;
+            reject: (error: Error) => void;
+        } => {
+            let resolve!: () => void;
+            let reject!: (error: Error) => void;
+            const promise = new Promise<void>((fulfill, fail) => {
+                resolve = fulfill;
+                reject = fail;
+            });
+
+            return { promise, resolve, reject };
+        };
+        const mockTest = { id: "pause-test", browserId: "chrome", fullTitle: () => "pause ownership" } as Test;
+
+        for (const failedStep of ["none", "snapshot", "flush"] as const) {
+            it(`should not let an old snapshot resume a newer pause before its flush (${failedStep})`, async () => {
+                const snapshot = createDeferred();
+                const snapshotStarted = createDeferred();
+                const flush = createDeferred();
+                const flushStarted = createDeferred();
+                const error = new Error(`pending ${failedStep} error`);
+                jsSelectivityMock.takeCoverageSnapshot.callsFake(() => {
+                    snapshotStarted.resolve();
+                    return snapshot.promise;
+                });
+                jsSelectivityMock.flushPage.callsFake(() => {
+                    flushStarted.resolve();
+                    return flush.promise;
+                });
+                const stop = await startSelectivity(browserMock as unknown as ExistingBrowser);
+                const paused = browserMock.cdp!.debugger.on.getCall(0).args[1];
+
+                paused({ callFrames: [{ functionName: "__testplane_cdp_coverage_snapshot_pause" }] }, "session-123");
+                await snapshotStarted.promise;
+                // A new document can pause while the old document's CDP snapshot request is still pending.
+                paused({ callFrames: [{ functionName: "__testplane_cdp_coverage_page_start" }] }, "session-123");
+                if (failedStep === "snapshot") snapshot.reject(error);
+                else snapshot.resolve();
+                await flushStarted.promise;
+
+                try {
+                    assert.notCalled(browserMock.cdp!.debugger.resume);
+                } finally {
+                    if (failedStep === "flush") flush.reject(error);
+                    else flush.resolve();
+                    if (failedStep === "none") await stop(mockTest, true);
+                    else await assert.isRejected(stop(mockTest, false), error.message);
+                }
+
+                assert.calledOnceWithExactly(browserMock.cdp!.debugger.resume, "session-123");
+                assert.callOrder(
+                    jsSelectivityMock.takeCoverageSnapshot,
+                    jsSelectivityMock.flushPage,
+                    browserMock.cdp!.debugger.resume,
+                );
+            });
+        }
+
+        it("should resume and complete a newer BFCache restore only after its queued flush", async () => {
+            const snapshot = createDeferred();
+            const snapshotStarted = createDeferred();
+            const flush = createDeferred();
+            const flushStarted = createDeferred();
+            jsSelectivityMock.takeCoverageSnapshot.callsFake(() => {
+                snapshotStarted.resolve();
+                return snapshot.promise;
+            });
+            jsSelectivityMock.flushPage.callsFake(() => {
+                flushStarted.resolve();
+                return flush.promise;
+            });
+            clickNavigationGuardMock.onBfcacheRestorePause.returns(true);
+            const stop = await startSelectivity(browserMock as unknown as ExistingBrowser);
+            const paused = browserMock.cdp!.debugger.on.getCall(0).args[1];
+
+            paused({ callFrames: [{ functionName: "__testplane_cdp_coverage_snapshot_pause" }] }, "session-123");
+            await snapshotStarted.promise;
+            paused({ callFrames: [{ functionName: "__testplane_cdp_coverage_bfcache_restore" }] }, "session-123");
+            snapshot.resolve();
+            await flushStarted.promise;
+
+            try {
+                assert.notCalled(browserMock.cdp!.debugger.resume);
+                assert.notCalled(clickNavigationGuardMock.completeBfcacheRestore);
+            } finally {
+                flush.resolve();
+                await stop(mockTest, true);
+            }
+
+            assert.calledOnceWithExactly(browserMock.cdp!.debugger.resume, "session-123");
+            assert.calledOnce(clickNavigationGuardMock.completeBfcacheRestore);
+            assert.callOrder(
+                jsSelectivityMock.flushPage,
+                browserMock.cdp!.debugger.resume,
+                clickNavigationGuardMock.completeBfcacheRestore,
+            );
+        });
+
+        it("should not invalidate pending pause ownership for a different session", async () => {
+            const snapshot = createDeferred();
+            const snapshotStarted = createDeferred();
+            jsSelectivityMock.takeCoverageSnapshot.callsFake(() => {
+                snapshotStarted.resolve();
+                return snapshot.promise;
+            });
+            const stop = await startSelectivity(browserMock as unknown as ExistingBrowser);
+            const paused = browserMock.cdp!.debugger.on.getCall(0).args[1];
+
+            paused({ callFrames: [{ functionName: "__testplane_cdp_coverage_snapshot_pause" }] }, "session-123");
+            await snapshotStarted.promise;
+            paused({ callFrames: [{ functionName: "__testplane_cdp_coverage_page_start" }] }, "different-session");
+            assert.notCalled(browserMock.cdp!.debugger.resume);
+            snapshot.resolve();
+            await stop(mockTest, true);
+
+            assert.notCalled(jsSelectivityMock.flushPage);
+            assert.calledOnceWithExactly(browserMock.cdp!.debugger.resume, "session-123");
+        });
+
+        it("should immediately resume an unrelated newer pause without a later stale resume", async () => {
+            const snapshot = createDeferred();
+            const snapshotStarted = createDeferred();
+            jsSelectivityMock.takeCoverageSnapshot.callsFake(() => {
+                snapshotStarted.resolve();
+                return snapshot.promise;
+            });
+            const stop = await startSelectivity(browserMock as unknown as ExistingBrowser);
+            const paused = browserMock.cdp!.debugger.on.getCall(0).args[1];
+
+            paused({ callFrames: [{ functionName: "__testplane_cdp_coverage_snapshot_pause" }] }, "session-123");
+            await snapshotStarted.promise;
+            paused({ callFrames: [{ functionName: "someOtherFunction" }] }, "session-123");
+            assert.calledOnceWithExactly(browserMock.cdp!.debugger.resume, "session-123");
+            snapshot.resolve();
+            await stop(mockTest, true);
+
+            assert.notCalled(jsSelectivityMock.flushPage);
+            assert.calledOnceWithExactly(browserMock.cdp!.debugger.resume, "session-123");
+        });
+
+        it("should wait for the latest queued flush and resume before stop cleanup", async () => {
+            const snapshot = createDeferred();
+            const snapshotStarted = createDeferred();
+            const flush = createDeferred();
+            const flushStarted = createDeferred();
+            jsSelectivityMock.takeCoverageSnapshot.callsFake(() => {
+                snapshotStarted.resolve();
+                return snapshot.promise;
+            });
+            jsSelectivityMock.flushPage.callsFake(() => {
+                flushStarted.resolve();
+                return flush.promise;
+            });
+            const stop = await startSelectivity(browserMock as unknown as ExistingBrowser);
+            const paused = browserMock.cdp!.debugger.on.getCall(0).args[1];
+
+            paused({ callFrames: [{ functionName: "__testplane_cdp_coverage_snapshot_pause" }] }, "session-123");
+            await snapshotStarted.promise;
+            paused({ callFrames: [{ functionName: "__testplane_cdp_coverage_page_start" }] }, "session-123");
+            const stopped = stop(mockTest, true);
+            snapshot.resolve();
+            await flushStarted.promise;
+
+            try {
+                assert.notCalled(browserMock.cdp!.debugger.resume);
+                assert.notCalled(jsSelectivityMock.stop);
+                assert.notCalled(cssSelectivityMock.stop);
+                assert.notCalled(clickNavigationGuardMock.dispose);
+                assert.notCalled(browserMock.cdp!.target.detachFromTarget);
+            } finally {
+                flush.resolve();
+                await stopped;
+            }
+
+            assert.calledOnceWithExactly(browserMock.cdp!.debugger.resume, "session-123");
+            assert.calledOnceWithExactly(jsSelectivityMock.stop, true);
+            assert.calledOnceWithExactly(cssSelectivityMock.stop, true);
+            assert.calledOnce(clickNavigationGuardMock.dispose);
+            assert.calledOnceWithExactly(browserMock.cdp!.target.detachFromTarget, "session-123");
         });
     });
 
