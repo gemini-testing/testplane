@@ -98,8 +98,12 @@ export class JSSelectivity {
         // navigation may restart ids before the next boundary clears the maps). Detect reuse by content hash and drop
         // the now-stale mapping, so the "||=" below repopulates it for the new script instead of keeping the old one.
         const previousHash = this._scriptIdToHash[scriptId];
+        const previousSourceUrl = this._scriptIdToSourceUrl[scriptId];
+        // Coverage fallback has no hash. A different named URL cannot reuse its source/map on the first parsed event.
+        const hasDifferentUnhashedSource =
+            previousHash === undefined && Boolean(previousSourceUrl && url && previousSourceUrl !== url);
 
-        if (previousHash !== undefined && previousHash !== hash) {
+        if ((previousHash !== undefined && previousHash !== hash) || hasDifferentUnhashedSource) {
             delete this._scriptsSource[scriptId];
             delete this._scriptsSourceMap[scriptId];
             delete this._scriptIdToSourceUrl[scriptId];
@@ -110,6 +114,7 @@ export class JSSelectivity {
 
         this._scriptIdToSourceUrl[scriptId] ||= url;
 
+        // Parsed metadata is authoritative. A source may contain marker-like text inside a string or template.
         if (!url || !sourceMapURL || url.startsWith("chrome-error://")) {
             this._scriptsSource[scriptId] ||= null;
             this._scriptsSourceMap[scriptId] ||= null;
@@ -221,7 +226,7 @@ export class JSSelectivity {
             this._scriptsSource[scriptId] ||= scriptSourcePromise;
 
             if (!this._scriptsSourceMap[scriptId] || shouldRecalculateSource) {
-                this._scriptsSourceMap[scriptId] = scriptSourcePromise.then(async sourceCode => {
+                const scriptSourceMapPromise: SelectivityAssetState = scriptSourcePromise.then(async sourceCode => {
                     if (sourceCode instanceof Error) {
                         return sourceCode;
                     }
@@ -248,14 +253,22 @@ export class JSSelectivity {
                         ? this._mapSourceMapUrl({ type: "js", sourceUrl: fixedUrl, sourceMapUrl: resolvedSourceMapUrl })
                         : true;
 
+                    // A pending fallback may finish after scriptParsed has replaced this scriptId's assets.
+                    const isCurrentScript = this._scriptsSourceMap[scriptId] === scriptSourceMapPromise;
+
                     if (!mappedResult) {
-                        this._scriptsSource[scriptId] = null;
+                        if (isCurrentScript) {
+                            this._scriptsSource[scriptId] = null;
+                        }
                         return null;
                     }
 
                     if (mappedResult !== true) {
-                        this._scriptIdToSourceMapUrl[scriptId] = resolvedSourceMapUrl = mappedResult;
-                    } else {
+                        resolvedSourceMapUrl = mappedResult;
+                        if (isCurrentScript) {
+                            this._scriptIdToSourceMapUrl[scriptId] = resolvedSourceMapUrl;
+                        }
+                    } else if (isCurrentScript) {
                         this._scriptIdToSourceMapUrl[scriptId] ||= resolvedSourceMapUrl;
                     }
 
@@ -287,6 +300,7 @@ export class JSSelectivity {
                         return err as Error;
                     }
                 });
+                this._scriptsSourceMap[scriptId] = scriptSourceMapPromise;
             }
         });
     }
