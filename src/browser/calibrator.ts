@@ -4,8 +4,14 @@ import looksSame from "looks-same";
 import { CoreError } from "./core-error";
 import { ExistingBrowser } from "./existing-browser";
 import type { Image, RGB } from "../image";
+import os from "node:os";
+import { setTimeout as delay } from "node:timers/promises";
+import * as logger from "../utils/logger";
 
 const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" } as const;
+const MAX_CALIBRATION_ATTEMPTS = 10;
+const CALIBRATION_RETRY_DELAY = 100;
+const MARKER_COLOR: RGB = { R: 148, G: 250, B: 0 };
 
 interface BrowserFeatures {
     needsCompatLib: boolean;
@@ -45,17 +51,41 @@ export class Calibrator {
 
         await browser.open("about:blank");
         const features = await browser.evalScript<BrowserFeatures>(this._script);
-        const image = await browser.captureViewportImage();
-
         const { innerWidth, pixelRatio } = features;
         const hasPixelRatio = Boolean(pixelRatio && pixelRatio > 1.0);
-        const { width: imageWidth, height: imageHeight } = image.getSize();
-        const searchColor = image.hasICCPChunk
-            ? await image.getRGB(Math.floor(imageWidth / 2), Math.floor(imageHeight / 2))
-            : { R: 148, G: 250, B: 0 };
-        const imageFeatures = await this._analyzeImage(image, { calculateColorLength: hasPixelRatio, searchColor });
+        let image: Image | null = null;
+        let imageFeatures: ImageAnalysisResult | null = null;
 
-        if (!imageFeatures) {
+        for (let attempt = 0; attempt < MAX_CALIBRATION_ATTEMPTS; attempt++) {
+            image = await browser.captureViewportImage();
+            const { width, height } = image.getSize();
+            const centerColor = await image.getRGB(Math.floor(width / 2), Math.floor(height / 2));
+            const searchColor =
+                image.hasICCPChunk && !looksSame.colors(centerColor, { R: 255, G: 255, B: 255 }, { tolerance: 10 })
+                    ? centerColor
+                    : MARKER_COLOR;
+
+            if (looksSame.colors(searchColor, centerColor, { tolerance: 10 })) {
+                imageFeatures = await this._analyzeImage(image, { calculateColorLength: hasPixelRatio, searchColor });
+                if (imageFeatures) {
+                    break;
+                }
+            }
+
+            if (!imageFeatures && attempt !== MAX_CALIBRATION_ATTEMPTS - 1) {
+                await delay(CALIBRATION_RETRY_DELAY);
+            }
+        }
+
+        if (!imageFeatures || !image) {
+            if (image) {
+                const screenshotPath = path.join(os.tmpdir(), "testplane-calibration-page.png");
+                await image.save(screenshotPath);
+                logger.error(
+                    "Could not calibrate, because marker area was not found. See calibration page screenshot for details: " +
+                        screenshotPath,
+                );
+            }
             throw new CoreError(
                 "Could not calibrate. This could be due to calibration page has failed to open properly",
             );
