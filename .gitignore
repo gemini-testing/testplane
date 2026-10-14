@@ -1,6 +1,7 @@
 .DS_store
 .DS_Store
 build
+src/browser/client-scripts/*/tsc-out/
 
 .idea
 .vscode

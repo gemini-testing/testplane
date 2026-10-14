@@ -2,12 +2,13 @@
 
 const path = require("path");
 const fs = require("fs");
+const proxyquire = require("proxyquire");
+const timers = require("node:timers/promises");
 const { Image } = require("src/image");
-const { Calibrator } = require("src/browser/calibrator");
 const { CoreError } = require("src/browser/core-error");
 
 describe("calibrator", () => {
-    let browser, calibrator;
+    let browser, calibrator, logger;
 
     const mkBrowser = () => {
         return {
@@ -27,13 +28,26 @@ describe("calibrator", () => {
         return image;
     };
 
+    const mkBlankImage = () => {
+        const image = sinon.createStubInstance(Image);
+        image.getSize.returns({ width: 10, height: 10 });
+        image.getRGB.resolves({ R: 255, G: 255, B: 255 });
+        image.save.resolves();
+        return image;
+    };
+
+    afterEach(() => sinon.restore());
+
     beforeEach(() => {
         browser = mkBrowser();
 
         sinon.stub(browser);
+        sinon.stub(timers, "setTimeout").resolves();
+        logger = { error: sinon.stub() };
         browser.evalScript.returns(Promise.resolve({ innerWidth: 984 })); // width of viewport in test image
         browser.open.returns(Promise.resolve());
 
+        const { Calibrator } = proxyquire("src/browser/calibrator", { "../utils/logger": logger });
         calibrator = new Calibrator();
     });
 
@@ -70,6 +84,7 @@ describe("calibrator", () => {
         assert.calledOnce(browser.open);
         assert.calledOnce(browser.evalScript);
         assert.calledOnce(browser.captureViewportImage);
+        assert.notCalled(timers.setTimeout);
     });
 
     it("should return cached result second time", async () => {
@@ -83,10 +98,46 @@ describe("calibrator", () => {
         assert.match(result.left, 2);
     });
 
-    it("should fail on broken calibration page", () => {
+    [false, true].forEach(hasICCPChunk => {
+        it(`should retry a blank screenshot until the marker appears (iCCP: ${hasICCPChunk})`, async () => {
+            setScreenshot("calibrate.png");
+            const blankImage = mkBlankImage();
+            blankImage._hasICCPChunk = hasICCPChunk;
+            browser.captureViewportImage.onFirstCall().resolves(blankImage);
+
+            const result = await calibrator.calibrate(browser);
+
+            assert.calledTwice(browser.captureViewportImage);
+            assert.calledOnceWithExactly(timers.setTimeout, 100);
+            assert.callOrder(browser.captureViewportImage, timers.setTimeout);
+            assert.calledOnce(browser.open);
+            assert.calledOnce(browser.evalScript);
+            assert.notCalled(blankImage.save);
+            assert.equal(result.top, 2);
+            assert.equal(result.left, 2);
+        });
+    });
+
+    it("should stop after 10 attempts and save the last screenshot", async () => {
+        const firstImage = mkBlankImage();
+        const lastImage = mkBlankImage();
+        browser.captureViewportImage.resolves(firstImage);
+        browser.captureViewportImage.onCall(9).resolves(lastImage);
+
+        await assert.isRejected(calibrator.calibrate(browser), CoreError);
+
+        assert.callCount(browser.captureViewportImage, 10);
+        assert.callCount(timers.setTimeout, 9);
+        assert.alwaysCalledWithExactly(timers.setTimeout, 100);
+        assert.notCalled(firstImage.save);
+        assert.calledWith(lastImage.save, path.join(require("os").tmpdir(), "testplane-calibration-page.png"));
+        assert.calledOnce(logger.error);
+    });
+
+    it("should fail on broken calibration page", async () => {
         setScreenshot("calibrate-broken.png");
 
-        return assert.isRejected(calibrator.calibrate(browser), CoreError);
+        await assert.isRejected(calibrator.calibrate(browser), CoreError);
     });
 
     describe("when image has iCCP chunk", () => {
@@ -95,7 +146,7 @@ describe("calibrator", () => {
             const { width, height } = image.getSize();
             const centerX = Math.floor(width / 2);
             const centerY = Math.floor(height / 2);
-            const centerColor = { R: 50, G: 100, B: 150 };
+            const centerColor = { R: 174, G: 248, B: 77 };
             const markerLeft = 7;
             const markerTop = 4;
 
@@ -123,8 +174,11 @@ describe("calibrator", () => {
     describe("when image does not have iCCP chunk", () => {
         it("should use hardcoded green color as search color", async () => {
             const image = setScreenshot("calibrate.png");
+            const { width, height } = image.getSize();
+            const centerX = Math.floor(width / 2);
+            const centerY = Math.floor(height / 2);
             sinon.stub(image, "getRGB").callsFake(async (x, y) => {
-                if (x === 3 && y === 5) {
+                if ((x === 3 && y === 5) || (x === centerX && y === centerY)) {
                     return { R: 148, G: 250, B: 0 };
                 }
 
