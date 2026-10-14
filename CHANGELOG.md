@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.47.7 (2026-10-14)
+
+
+### Bug Fixes
+
+* compute pixel ratio based on image size in case of oopif ([#1332](https://github.com/gemini-testing/testplane/issues/1332)) ([b9d57a8](https://github.com/gemini-testing/testplane/commit/b9d57a8448210e67a654c9f5ea3c091f5822f519))
+
 ### 8.47.6 (2026-08-26)
 
 ### [8.47.5](https://github.com/gemini-testing/testplane/compare/v8.47.4...v8.47.5) (2026-08-21)
