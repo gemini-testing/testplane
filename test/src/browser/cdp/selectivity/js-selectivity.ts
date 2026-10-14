@@ -932,6 +932,183 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
     });
 
+    describe("late parsed source-map metadata", () => {
+        const scriptId = "late-map";
+        const sourceUrl = "http://example.com/app.js";
+        const generatedSource = "function used() { return 'used'; }";
+        const sourceMap = JSON.stringify({
+            version: 3,
+            sources: ["src/app.js"],
+            sourcesContent: [generatedSource],
+            names: [],
+            mappings: "AAAA",
+        });
+        const coverage = {
+            timestamp: 1,
+            result: [
+                {
+                    scriptId,
+                    url: sourceUrl,
+                    functions: [
+                        {
+                            functionName: "used",
+                            isBlockCoverage: false,
+                            ranges: [{ startOffset: 0, endOffset: generatedSource.length, count: 1 }],
+                        },
+                    ],
+                },
+            ],
+        };
+
+        beforeEach(() => {
+            // Keep production parsing/extraction and stub only source/map/cache I/O.
+            getCachedSelectivityFileStub.resolves(null);
+            setCachedSelectivityFileStub.rejects(new Error("File cache disabled"));
+            const fsCacheStubs = {
+                getCachedSelectivityFile: getCachedSelectivityFileStub,
+                hasCachedSelectivityFile: hasCachedSelectivityFileStub,
+                setCachedSelectivityFile: setCachedSelectivityFileStub,
+            };
+            const utils = proxyquire("src/browser/cdp/selectivity/utils", { "./fs-cache": fsCacheStubs });
+
+            JSSelectivity = proxyquire("src/browser/cdp/selectivity/js-selectivity", {
+                "./utils": { ...utils, fetchTextWithBrowserFallback: fetchTextWithBrowserFallbackStub },
+                "./fs-cache": fsCacheStubs,
+            }).JSSelectivity;
+            cdpMock.debugger.getScriptSource.resolves({ scriptSource: generatedSource });
+            fetchTextWithBrowserFallbackStub.resolves(sourceMap);
+            cdpMock.profiler.takePreciseCoverage.resolves(coverage);
+        });
+
+        for (const initiallyParsed of [false, true]) {
+            it(
+                initiallyParsed
+                    ? "should accept valid late metadata after authoritative empty parsed metadata"
+                    : "should accept a late valid map after a no-comment coverage fallback",
+                async () => {
+                    const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+                    await jsSelectivity.start();
+                    const scriptParsed = cdpMock.debugger.on.getCall(0).args[1];
+                    if (initiallyParsed) {
+                        scriptParsed({ scriptId, url: sourceUrl, sourceMapURL: "", hash: "AAA" }, sessionId);
+                    }
+                    await jsSelectivity.takeCoverageSnapshot(); // The source has no comment, so fallback resolves null.
+                    assert.notCalled(fetchTextWithBrowserFallbackStub);
+                    scriptParsed({ scriptId, url: sourceUrl, sourceMapURL: "app.js.map", hash: "AAA" }, sessionId);
+
+                    const dependencies = await jsSelectivity.stop();
+
+                    assert.deepEqual(Array.from(dependencies || []), [`${sourceRoot}/src/app.js`]);
+                    assert.calledOnceWithExactly(cdpMock.debugger.getScriptSource, sessionId, scriptId);
+                    assert.calledOnceWithExactly(
+                        fetchTextWithBrowserFallbackStub,
+                        "http://example.com/app.js.map",
+                        cdpMock.runtime,
+                        sessionId,
+                    );
+                    assert.notCalled(parseSourceMapRangesStub);
+                    assert.notCalled(extractSourceFilesDepsStub);
+                },
+            );
+        }
+
+        it("should preserve a mapper-excluded fallback when valid parsed metadata arrives later", async () => {
+            cdpMock.debugger.getScriptSource.resolves({
+                scriptSource: `${generatedSource}\n//# sourceMappingURL=app.js.map`,
+            });
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, () => false);
+
+            await jsSelectivity.start();
+            await jsSelectivity.takeCoverageSnapshot();
+            cdpMock.debugger.on
+                .getCall(0)
+                .args[1]({ scriptId, url: sourceUrl, sourceMapURL: "app.js.map", hash: "AAA" }, sessionId);
+
+            const dependencies = await jsSelectivity.stop();
+
+            assert.deepEqual(Array.from(dependencies || []), []);
+            assert.calledOnceWithExactly(cdpMock.debugger.getScriptSource, sessionId, scriptId);
+            assert.notCalled(fetchTextWithBrowserFallbackStub);
+        });
+
+        it("should honor mapper=false on the late parsed map after an unexcluded no-comment fallback", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, () => false);
+
+            await jsSelectivity.start();
+            await jsSelectivity.takeCoverageSnapshot();
+            cdpMock.debugger.on
+                .getCall(0)
+                .args[1]({ scriptId, url: sourceUrl, sourceMapURL: "app.js.map", hash: "AAA" }, sessionId);
+
+            const dependencies = await jsSelectivity.stop();
+
+            assert.deepEqual(Array.from(dependencies || []), []);
+            assert.calledOnceWithExactly(cdpMock.debugger.getScriptSource, sessionId, scriptId);
+            assert.notCalled(fetchTextWithBrowserFallbackStub);
+        });
+
+        it("should not reload a no-comment source on later coverage without new parsed metadata", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            await jsSelectivity.start();
+            await jsSelectivity.takeCoverageSnapshot();
+            await jsSelectivity.takeCoverageSnapshot();
+
+            const dependencies = await jsSelectivity.stop();
+
+            assert.deepEqual(Array.from(dependencies || []), []);
+            assert.calledOnceWithExactly(cdpMock.debugger.getScriptSource, sessionId, scriptId);
+            assert.notCalled(fetchTextWithBrowserFallbackStub);
+        });
+
+        it("should not let an old no-comment fallback clear a reused id's newer map", async () => {
+            let releaseSource!: (source: { scriptSource: string }) => void;
+            let signalSourceRequested!: () => void;
+            const sourceRequested = new Promise<void>(resolve => {
+                signalSourceRequested = resolve;
+            });
+            const sourcePromise = new Promise<{ scriptSource: string }>(resolve => {
+                releaseSource = resolve;
+            });
+            cdpMock.debugger.getScriptSource.onFirstCall().callsFake(() => {
+                signalSourceRequested();
+                return sourcePromise;
+            });
+            cdpMock.debugger.getScriptSource.onSecondCall().resolves({
+                scriptSource: `${generatedSource}\n//# sourceMappingURL=next.js.map`,
+            });
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            await jsSelectivity.start();
+            const snapshot = jsSelectivity.takeCoverageSnapshot();
+            await sourceRequested;
+            cdpMock.debugger.on
+                .getCall(0)
+                .args[1](
+                    { scriptId, url: "http://example.com/next.js", sourceMapURL: "next.js.map", hash: "BBB" },
+                    sessionId,
+                );
+            releaseSource({ scriptSource: generatedSource });
+            await snapshot;
+            cdpMock.profiler.takePreciseCoverage.resolves({
+                ...coverage,
+                result: [{ ...coverage.result[0], url: "http://example.com/next.js" }],
+            });
+
+            const dependencies = await jsSelectivity.stop();
+
+            assert.deepEqual(Array.from(dependencies || []), [`${sourceRoot}/src/app.js`]);
+            assert.calledTwice(cdpMock.debugger.getScriptSource);
+            assert.calledOnceWithExactly(
+                fetchTextWithBrowserFallbackStub,
+                "http://example.com/next.js.map",
+                cdpMock.runtime,
+                sessionId,
+            );
+        });
+    });
+
     describe("original source extensions", () => {
         beforeEach(() => {
             // Keep the production collector, source-map parser and coverage extractor. Only I/O is stubbed.

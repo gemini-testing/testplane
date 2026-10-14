@@ -236,6 +236,10 @@ export class JSSelectivity {
 
                     // Source maps are not generated for this source file
                     if (sourceMapsStartIndex === -1) {
+                        // A settled Promise<null> must not hide valid metadata from a later parsed event.
+                        if (this._scriptsSourceMap[scriptId] === scriptSourceMapPromise) {
+                            this._scriptsSourceMap[scriptId] = null;
+                        }
                         return null;
                     }
 
