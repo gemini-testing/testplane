@@ -320,16 +320,27 @@ export class JSSelectivity {
     private async _resolveCoverageToDeps(coverageScripts: CDPScriptCoverage[]): Promise<void> {
         const grouppedByScriptCoverage = groupBy(coverageScripts, "scriptId");
         const scriptIds = Object.keys(grouppedByScriptCoverage);
+        // Preserve this coverage window's assets before loading yields and a parsed event reuses the scriptId.
+        const scripts = scriptIds.map(scriptId => ({
+            scriptId,
+            sourceState: this._scriptsSource[scriptId],
+            sourceMapState: this._scriptsSourceMap[scriptId],
+            sourceMapUrl: this._scriptIdToSourceMapUrl[scriptId],
+            // Every "scriptId" has only one uniq "url" within this coverage window.
+            sourceUrl: this._scriptIdToSourceUrl[scriptId] || grouppedByScriptCoverage[scriptId][0].url,
+        }));
+
+        await this._waitForLoadingScripts();
 
         await Promise.all(
-            scriptIds.map(async scriptId => {
-                const [source, sourceMaps] = await Promise.all([
-                    this._scriptsSource[scriptId],
-                    this._scriptsSourceMap[scriptId],
-                ]);
-                const sourceMapUrl = this._scriptIdToSourceMapUrl[scriptId];
-                // Every "scriptId" has only one uniq "url"
-                const sourceUrl = this._scriptIdToSourceUrl[scriptId] || grouppedByScriptCoverage[scriptId][0].url;
+            scripts.map(async ({ scriptId, sourceState, sourceMapState, sourceMapUrl, sourceUrl }) => {
+                const [source, sourceMaps] = await Promise.all([sourceState, sourceMapState]);
+                // Coverage fallback discovers the map URL asynchronously. Do not borrow a reused id's metadata.
+                const resolvedSourceMapUrl =
+                    sourceMapUrl ??
+                    (this._scriptsSourceMap[scriptId] === sourceMapState
+                        ? this._scriptIdToSourceMapUrl[scriptId]
+                        : null);
 
                 // Function was called, but source maps were not generated for the file
                 // Or its anonymous script, without source url
@@ -345,20 +356,21 @@ export class JSSelectivity {
 
                 if (sourceMaps instanceof Error) {
                     throw new Error(
-                        [`JS Selectivity: Couldn't load source maps from ${sourceMapUrl}`, String(sourceMaps)].join(
-                            "\n",
-                        ),
+                        [
+                            `JS Selectivity: Couldn't load source maps from ${resolvedSourceMapUrl}`,
+                            String(sourceMaps),
+                        ].join("\n"),
                     );
                 }
 
-                if (isCachedOnFs(sourceMaps) && !sourceMapUrl) {
+                if (isCachedOnFs(sourceMaps) && !resolvedSourceMapUrl) {
                     throw new Error("Assertation failed: souce map url has to present if source maps are fs-cached");
                 }
 
                 const [sourceString, sourceMapsString] = await Promise.all([
                     isCachedOnFs(source) ? getCachedSelectivityFile(CacheType.Asset, sourceUrl) : source,
                     isCachedOnFs(sourceMaps)
-                        ? getCachedSelectivityFile(CacheType.Asset, sourceMapUrl as string)
+                        ? getCachedSelectivityFile(CacheType.Asset, resolvedSourceMapUrl as string)
                         : sourceMaps,
                 ]);
 
@@ -403,8 +415,6 @@ export class JSSelectivity {
 
         this._ensureScriptsAreLoading(coveragePart.result);
 
-        await this._waitForLoadingScripts();
-
         // Missing a dependency is worse than failing the test, so resolution errors are propagated (and turned into a
         // test failure by the orchestrator in index.ts), never swallowed into a partial dump.
         await this._resolveCoverageToDeps(coveragePart.result);
@@ -420,8 +430,6 @@ export class JSSelectivity {
         const coveragePart = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
 
         this._ensureScriptsAreLoading(coveragePart.result);
-
-        await this._waitForLoadingScripts();
 
         await this._resolveCoverageToDeps(coveragePart.result);
 
@@ -449,8 +457,6 @@ export class JSSelectivity {
             const coverageLastPart = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
 
             this._ensureScriptsAreLoading(coverageLastPart.result);
-
-            await this._waitForLoadingScripts();
 
             await this._resolveCoverageToDeps(coverageLastPart.result);
 
