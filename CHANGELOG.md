@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.3.3 (2026-10-14)
+
+
+### Bug Fixes
+
+* fix DPR bug for oopif by calculating pixel ratio based on screenshot size ([#1331](https://github.com/gemini-testing/testplane/issues/1331)) ([63bf133](https://github.com/gemini-testing/testplane/commit/63bf1331afaedcd7d37790d742901bdaf7f4ea08))
+
 ### 9.3.2 (2026-10-07)
 
 ### 9.3.1 (2026-09-28)
