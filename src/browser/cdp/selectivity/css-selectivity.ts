@@ -323,7 +323,7 @@ export class CSSSelectivity {
                     const sourceMap = await this._stylesSourceMap[styleSheetId];
                     const sourceMapUrl = this._styleSheetIdToSourceMapUrl[styleSheetId];
 
-                    if (!sourceMap) {
+                    if (sourceMap === null || sourceMap === undefined) {
                         return;
                     }
 
@@ -346,7 +346,7 @@ export class CSSSelectivity {
                         ? await getCachedSelectivityFile(CacheType.Asset, sourceMapUrl as string)
                         : sourceMap;
 
-                    if (!sourceMapString) {
+                    if (sourceMapString === null || sourceMapString === undefined) {
                         throw new Error(`CSS Selectivity: fs-cache is broken for ${sourceMapUrl}`);
                     }
 
