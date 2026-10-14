@@ -1,5 +1,6 @@
 import { sortedLastIndex, memoize } from "lodash";
 import { TraceMap, eachMapping, type EncodedSourceMap } from "@jridgewell/trace-mapping";
+import { createHash } from "node:crypto";
 import fs from "fs";
 import path from "path";
 import { URL } from "url";
@@ -102,15 +103,40 @@ const getSourceLineOffsetArray = (source: string): number[] => {
     return offsetToLine;
 };
 
+const getSourceMapRangesCacheKey = (...inputs: Array<string | null | undefined>): string => {
+    const version = "source-map-ranges:v2:";
+    const hash = createHash("sha256").update(version);
+    const chunkSize = 64 * 1024;
+
+    for (const input of inputs) {
+        if (typeof input !== "string") {
+            hash.update(input === null ? "null:" : "undefined:");
+            continue;
+        }
+
+        hash.update(`string:${input.length}:`);
+        // Hash raw UTF-16 code units, including lone surrogates. Bound temporary encoding buffers,
+        // without splitting surrogate pairs into lossy UTF-8 replacement characters.
+        for (let offset = 0; offset < input.length; offset += chunkSize) {
+            hash.update(input.slice(offset, offset + chunkSize), "utf16le");
+        }
+    }
+
+    // fs-cache hashes string keys again using ASCII, so pass a small ASCII digest, not the input texts.
+    return version + hash.digest("hex");
+};
+
 export const parseSourceMapRanges = async (
     source: string,
     sourceMaps: string,
     sourceRoot: string,
 ): Promise<ParsedSourceMapRanges> => {
+    // Offsets depend on the generated source layout, and resolved filenames depend on the sourceRoot override.
+    const cacheKey = getSourceMapRangesCacheKey(source, sourceMaps, sourceRoot);
     let jsonCachedResult: ParsedSourceMapRanges | null = null;
 
     try {
-        const cachedResult = await getCachedSelectivityFile(CacheType.SourceMapParseResult, sourceMaps);
+        const cachedResult = await getCachedSelectivityFile(CacheType.SourceMapParseResult, cacheKey);
         jsonCachedResult = cachedResult ? JSON.parse(cachedResult) : null;
     } catch {} // eslint-disable-line no-empty
 
@@ -148,7 +174,7 @@ export const parseSourceMapRanges = async (
         lastRecordedSource = mappingSource;
     });
 
-    setCachedSelectivityFile(CacheType.SourceMapParseResult, sourceMaps, JSON.stringify(result)).catch(() => {});
+    setCachedSelectivityFile(CacheType.SourceMapParseResult, cacheKey, JSON.stringify(result)).catch(() => {});
 
     return result;
 };

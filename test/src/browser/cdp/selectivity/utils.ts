@@ -1,5 +1,6 @@
 import sinon, { type SinonStub, type SinonStubbedInstance } from "sinon";
 import proxyquire from "proxyquire";
+import { createHash } from "node:crypto";
 import type { CDPRuntime } from "src/browser/cdp/domains/runtime";
 import { NormalizedDependencies, TestDependenciesFileContents } from "src/browser/cdp/selectivity/types";
 
@@ -465,8 +466,15 @@ describe("CDP/Selectivity/Utils", () => {
             });
 
         beforeEach(() => {
-            getCachedSelectivityFileStub = sandbox.stub().resolves(null);
-            setCachedSelectivityFileStub = sandbox.stub().resolves(undefined);
+            const cache = new Map<string, string>();
+            getCachedSelectivityFileStub = sandbox
+                .stub()
+                .callsFake(async (_type: string, key: string): Promise<string | null> => cache.get(key) ?? null);
+            setCachedSelectivityFileStub = sandbox
+                .stub()
+                .callsFake(async (_type: string, key: string, value: string): Promise<void> => {
+                    cache.set(key, value);
+                });
 
             // Use the real "@jridgewell/trace-mapping" here (no override) so eachMapping actually walks segments
             utilsReal = proxyquire("src/browser/cdp/selectivity/utils", {
@@ -508,7 +516,144 @@ describe("CDP/Selectivity/Utils", () => {
             const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "");
 
             assert.deepEqual(result, { offset: [0, 8], filename: ["a.js", "b.js"] });
-            assert.calledWith(setCachedSelectivityFileStub, "source-map-parse-result", sourceMaps, sinon.match.string);
+            const cacheKey = getCachedSelectivityFileStub.firstCall.args[1];
+            assert.match(cacheKey, /^source-map-ranges:v2:[a-f0-9]{64}$/);
+            assert.calledWith(getCachedSelectivityFileStub, "source-map-parse-result", cacheKey);
+            assert.calledWith(setCachedSelectivityFileStub, "source-map-parse-result", cacheKey, sinon.match.string);
+        });
+
+        it("should hash large inputs without serializing them on cache hits", async () => {
+            const source = '"\\\n'.repeat(256 * 1024);
+            const sourceMaps = mkSourceMaps(["large.js"], [[[0, 0, 0, 0]]]);
+            const cached = { offset: [0], filename: ["large.js"] };
+            getCachedSelectivityFileStub.resolves(JSON.stringify(cached));
+            const stringifySpy = sandbox.spy(JSON, "stringify");
+            const updateSpy = sandbox.spy(Object.getPrototypeOf(createHash("sha256")), "update");
+
+            const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "/large");
+
+            assert.deepEqual(result, cached);
+            assert.notCalled(stringifySpy);
+            assert.match(getCachedSelectivityFileStub.firstCall.args[1], /^source-map-ranges:v2:[a-f0-9]{64}$/);
+            const inputUpdates = updateSpy.getCalls().filter(call => call.args[1] === "utf16le");
+            assert.isAbove(inputUpdates.length, 3);
+            assert.isTrue(inputUpdates.every(call => call.args[0].length <= 64 * 1024));
+        });
+
+        it("should not reuse legacy raw-map or JSON tuple cache entries", async () => {
+            const source = "x\ny";
+            const sourceMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+            const legacyKeys = [sourceMaps, JSON.stringify([source, sourceMaps, "/new"])];
+            getCachedSelectivityFileStub.callsFake(
+                async (_type: string, key: string): Promise<string | null> =>
+                    legacyKeys.includes(key) ? '{"offset":[999],"filename":["stale.js"]}' : null,
+            );
+
+            const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "/new");
+
+            assert.deepEqual(result, { offset: [0, 2], filename: ["/new/a.js", "/new/b.js"] });
+            assert.calledOnce(setCachedSelectivityFileStub);
+        });
+
+        it("should frame input boundaries even when concatenated inputs are identical", async () => {
+            getCachedSelectivityFileStub.resolves('{"offset":[],"filename":[]}');
+            const inputs = [
+                ["ab", "c", ""],
+                ["a", "bc", ""],
+                ["a", "b", "c"],
+                ["", "a", "bc"],
+            ];
+
+            for (const [source, sourceMaps, sourceRoot] of inputs) {
+                await utilsReal.parseSourceMapRanges(source, sourceMaps, sourceRoot);
+            }
+
+            const keys = getCachedSelectivityFileStub.getCalls().map(call => call.args[1]);
+            assert.equal(new Set(keys).size, inputs.length);
+        });
+
+        it("should distinguish absent, null and empty sourceRoot values by type", async () => {
+            getCachedSelectivityFileStub.resolves('{"offset":[],"filename":[]}');
+
+            for (const sourceRoot of [undefined, null, ""]) {
+                await utilsReal.parseSourceMapRanges("x", "map", sourceRoot as unknown as string);
+            }
+
+            const keys = getCachedSelectivityFileStub.getCalls().map(call => call.args[1]);
+            assert.equal(new Set(keys).size, 3);
+        });
+
+        it("should preserve raw UTF-16 code units instead of replacing lone surrogates", async () => {
+            getCachedSelectivityFileStub.resolves('{"offset":[],"filename":[]}');
+
+            for (const source of ["\ud800", "\ud801", "\ufffd", "\u010a", "\n"]) {
+                await utilsReal.parseSourceMapRanges(source, "map", "");
+            }
+
+            const keys = getCachedSelectivityFileStub.getCalls().map(call => call.args[1]);
+            assert.equal(new Set(keys).size, 5);
+        });
+
+        it("should hash surrogate pairs across chunk boundaries like contiguous UTF-16 input", async () => {
+            const source = "x".repeat(64 * 1024 - 1) + "\ud83d\ude00\ud800";
+            const sourceMaps = mkSourceMaps(["unicode.js"], [[[0, 0, 0, 0]]]);
+            const sourceRoot = "/\ud801/\ufffd";
+            const hash = createHash("sha256").update("source-map-ranges:v2:");
+            for (const input of [source, sourceMaps, sourceRoot]) {
+                hash.update(`string:${input.length}:`).update(input, "utf16le");
+            }
+            const expectedKey = `source-map-ranges:v2:${hash.digest("hex")}`;
+            getCachedSelectivityFileStub.resolves('{"offset":[],"filename":[]}');
+
+            await utilsReal.parseSourceMapRanges(source, sourceMaps, sourceRoot);
+            await utilsReal.parseSourceMapRanges(source, sourceMaps, sourceRoot);
+
+            assert.alwaysCalledWith(getCachedSelectivityFileStub, "source-map-parse-result", expectedKey);
+        });
+
+        it("should not reuse cached offsets for a different generated source", async () => {
+            const sourceMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+
+            const shortSource = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "");
+            const longSource = await utilsReal.parseSourceMapRanges("longer-line\ny", sourceMaps, "");
+
+            assert.deepEqual(shortSource, { offset: [0, 2], filename: ["a.js", "b.js"] });
+            assert.deepEqual(longSource, { offset: [0, 12], filename: ["a.js", "b.js"] });
+            assert.calledTwice(setCachedSelectivityFileStub);
+        });
+
+        it("should not reuse cached filenames for a different sourceRoot override", async () => {
+            const sourceMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+
+            const firstRoot = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "/first");
+            const secondRoot = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "/second");
+
+            assert.deepEqual(firstRoot, { offset: [0, 2], filename: ["/first/a.js", "/first/b.js"] });
+            assert.deepEqual(secondRoot, { offset: [0, 2], filename: ["/second/a.js", "/second/b.js"] });
+            assert.calledTwice(setCachedSelectivityFileStub);
+        });
+
+        it("should not reuse cached results for different source maps", async () => {
+            const firstMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+            const secondMaps = mkSourceMaps(["c.js", "d.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+
+            const firstResult = await utilsReal.parseSourceMapRanges("x\ny", firstMaps, "");
+            const secondResult = await utilsReal.parseSourceMapRanges("x\ny", secondMaps, "");
+
+            assert.deepEqual(firstResult, { offset: [0, 2], filename: ["a.js", "b.js"] });
+            assert.deepEqual(secondResult, { offset: [0, 2], filename: ["c.js", "d.js"] });
+            assert.calledTwice(setCachedSelectivityFileStub);
+        });
+
+        it("should reuse cached results when source, source maps and sourceRoot are identical", async () => {
+            const sourceMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+
+            const firstResult = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "/same");
+            const cachedResult = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "/same");
+
+            assert.deepEqual(cachedResult, firstResult);
+            assert.calledTwice(getCachedSelectivityFileStub);
+            assert.calledOnce(setCachedSelectivityFileStub);
         });
 
         it("should record glue boundaries for generated-only mappings (no source)", async () => {
