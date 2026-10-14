@@ -348,7 +348,13 @@ export class JSSelectivity {
 
                 // Function was called, but source maps were not generated for the file
                 // Or its anonymous script, without source url
-                if (!source || !sourceMaps || !sourceUrl) {
+                if (
+                    source === null ||
+                    source === undefined ||
+                    sourceMaps === null ||
+                    sourceMaps === undefined ||
+                    !sourceUrl
+                ) {
                     return;
                 }
 
@@ -378,7 +384,12 @@ export class JSSelectivity {
                         : sourceMaps,
                 ]);
 
-                if (!sourceString || !sourceMapsString) {
+                if (
+                    sourceString === null ||
+                    sourceString === undefined ||
+                    sourceMapsString === null ||
+                    sourceMapsString === undefined
+                ) {
                     throw new Error(`JS Selectivity: fs-cache is broken for ${sourceUrl}`);
                 }
 
