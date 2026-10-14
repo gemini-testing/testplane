@@ -760,6 +760,178 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
     });
 
+    describe("pending coverage state", () => {
+        const scriptId = "pending-id";
+        const generatedSource = "function used() { return 'used'; }";
+        const sourceUrlFor = (name: string): string => `http://example.com/${name}.js`;
+        const sourceFor = (name: string): string => `${generatedSource}\n//# sourceMappingURL=${name}.js.map`;
+        const sourceMapFor = (name: string): string =>
+            JSON.stringify({
+                version: 3,
+                sources: [`src/${name}.js`],
+                sourcesContent: [generatedSource],
+                names: [],
+                mappings: "AAAA",
+            });
+        const coverageFor = (name: string): any => ({
+            timestamp: 1,
+            result: [
+                {
+                    scriptId,
+                    url: sourceUrlFor(name),
+                    functions: [
+                        {
+                            functionName: "used",
+                            isBlockCoverage: false,
+                            ranges: [{ startOffset: 0, endOffset: generatedSource.length, count: 1 }],
+                        },
+                    ],
+                },
+            ],
+        });
+        const deferred = <T>(): { promise: Promise<T>; resolve: (value: T) => void } => {
+            let resolve!: (value: T) => void;
+            const promise = new Promise<T>(fulfill => {
+                resolve = fulfill;
+            });
+
+            return { promise, resolve };
+        };
+
+        beforeEach(() => {
+            // Run the production collector, parser and extractor, with only asset/cache I/O stubbed.
+            getCachedSelectivityFileStub.resolves(null);
+            setCachedSelectivityFileStub.rejects(new Error("File cache disabled"));
+            const fsCacheStubs = {
+                getCachedSelectivityFile: getCachedSelectivityFileStub,
+                hasCachedSelectivityFile: hasCachedSelectivityFileStub,
+                setCachedSelectivityFile: setCachedSelectivityFileStub,
+            };
+            const utils = proxyquire("src/browser/cdp/selectivity/utils", { "./fs-cache": fsCacheStubs });
+
+            JSSelectivity = proxyquire("src/browser/cdp/selectivity/js-selectivity", {
+                "./utils": { ...utils, fetchTextWithBrowserFallback: fetchTextWithBrowserFallbackStub },
+                "./fs-cache": fsCacheStubs,
+            }).JSSelectivity;
+            cdpMock.debugger.getScriptSource.resolves({ scriptSource: sourceFor("b") });
+            fetchTextWithBrowserFallbackStub.callsFake((url: string) => {
+                return Promise.resolve(sourceMapFor(url.endsWith("/a.js.map") ? "a" : "b"));
+            });
+            cdpMock.profiler.takePreciseCoverage.resolves(coverageFor("a"));
+        });
+
+        for (const method of ["takeCoverageSnapshot", "flushPage"] as const) {
+            for (const laterCoverage of [false, true]) {
+                it(`${method} should retain pending A when parsed B reuses its id${
+                    laterCoverage ? " and union later B coverage" : " without attributing A coverage to B"
+                }`, async () => {
+                    const sourceA = deferred<{ scriptSource: string }>();
+                    const sourceRequested = deferred<void>();
+                    cdpMock.debugger.getScriptSource.onFirstCall().callsFake(() => {
+                        sourceRequested.resolve();
+                        return sourceA.promise;
+                    });
+                    const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+                    await jsSelectivity.start();
+                    const scriptParsed = cdpMock.debugger.on.getCall(0).args[1];
+                    scriptParsed(
+                        { scriptId, url: sourceUrlFor("a"), sourceMapURL: "a.js.map", hash: "AAA" },
+                        sessionId,
+                    );
+
+                    const snapshot = jsSelectivity[method]();
+                    await sourceRequested.promise;
+                    scriptParsed(
+                        { scriptId, url: sourceUrlFor("b"), sourceMapURL: "b.js.map", hash: "BBB" },
+                        sessionId,
+                    );
+                    sourceA.resolve({ scriptSource: sourceFor("a") });
+                    await snapshot;
+                    cdpMock.profiler.takePreciseCoverage.resolves(
+                        laterCoverage ? coverageFor("b") : { timestamp: 2, result: [] },
+                    );
+
+                    const dependencies = await jsSelectivity.stop();
+
+                    assert.deepEqual(
+                        Array.from(dependencies || []).sort(),
+                        laterCoverage
+                            ? [`${sourceRoot}/src/a.js`, `${sourceRoot}/src/b.js`]
+                            : [`${sourceRoot}/src/a.js`],
+                    );
+                    assert.notCalled(parseSourceMapRangesStub);
+                    assert.notCalled(extractSourceFilesDepsStub);
+                });
+            }
+        }
+
+        it("should capture pending fs-cache asset URLs together with the snapshot states", async () => {
+            const cacheA = deferred<boolean>();
+            hasCachedSelectivityFileStub.callsFake((_type: string, url: string) => {
+                return url === sourceUrlFor("a") ? cacheA.promise : Promise.resolve(true);
+            });
+            getCachedSelectivityFileStub.callsFake((_type: string, url: string) => {
+                if (url === sourceUrlFor("a") || url === sourceUrlFor("b")) {
+                    return Promise.resolve(sourceFor(url.endsWith("/a.js") ? "a" : "b"));
+                }
+                if (url === `${sourceUrlFor("a")}.map` || url === `${sourceUrlFor("b")}.map`) {
+                    return Promise.resolve(sourceMapFor(url.endsWith("/a.js.map") ? "a" : "b"));
+                }
+
+                return Promise.resolve(null);
+            });
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            await jsSelectivity.start();
+            const scriptParsed = cdpMock.debugger.on.getCall(0).args[1];
+            scriptParsed({ scriptId, url: sourceUrlFor("a"), sourceMapURL: "a.js.map", hash: "AAA" }, sessionId);
+
+            const snapshot = jsSelectivity.takeCoverageSnapshot();
+            // The coverage response resumes before this checkpoint, while the old source cache lookup stays pending.
+            await Promise.resolve();
+            scriptParsed({ scriptId, url: sourceUrlFor("b"), sourceMapURL: "b.js.map", hash: "BBB" }, sessionId);
+            cacheA.resolve(true);
+            await snapshot;
+            cdpMock.profiler.takePreciseCoverage.resolves({ timestamp: 2, result: [] });
+
+            const dependencies = await jsSelectivity.stop();
+
+            assert.deepEqual(Array.from(dependencies || []), [`${sourceRoot}/src/a.js`]);
+            assert.calledWith(getCachedSelectivityFileStub, sinon.match.any, sourceUrlFor("a"));
+            assert.calledWith(getCachedSelectivityFileStub, sinon.match.any, `${sourceUrlFor("a")}.map`);
+            assert.notCalled(cdpMock.debugger.getScriptSource);
+            assert.notCalled(fetchTextWithBrowserFallbackStub);
+        });
+
+        it("should still wait for pending parsed assets before resetting an empty page", async () => {
+            const sourceA = deferred<{ scriptSource: string }>();
+            const sourceRequested = deferred<void>();
+            cdpMock.debugger.getScriptSource.onFirstCall().callsFake(() => {
+                sourceRequested.resolve();
+                return sourceA.promise;
+            });
+            cdpMock.profiler.takePreciseCoverage.resolves({ timestamp: 1, result: [] });
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            await jsSelectivity.start();
+            cdpMock.debugger.on
+                .getCall(0)
+                .args[1]({ scriptId, url: sourceUrlFor("a"), sourceMapURL: "a.js.map", hash: "AAA" }, sessionId);
+
+            const flush = jsSelectivity.flushPage();
+            await sourceRequested.promise;
+            assert.notCalled(cdpMock.profiler.stopPreciseCoverage);
+            assert.calledOnce(cdpMock.profiler.startPreciseCoverage);
+            sourceA.resolve({ scriptSource: sourceFor("a") });
+            await flush;
+
+            assert.calledOnceWithExactly(cdpMock.profiler.stopPreciseCoverage, sessionId);
+            assert.calledTwice(cdpMock.profiler.startPreciseCoverage);
+            assert.deepEqual(Array.from((await jsSelectivity.stop()) || []), []);
+        });
+    });
+
     describe("original source extensions", () => {
         beforeEach(() => {
             // Keep the production collector, source-map parser and coverage extractor. Only I/O is stubbed.
