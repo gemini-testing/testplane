@@ -579,6 +579,91 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
     });
 
+    describe("original source extensions", () => {
+        beforeEach(() => {
+            // Keep the production collector, source-map parser and coverage extractor. Only I/O is stubbed.
+            const fsCacheStubs = {
+                getCachedSelectivityFile: sandbox.stub().resolves(null),
+                hasCachedSelectivityFile: sandbox.stub().resolves(false),
+                setCachedSelectivityFile: sandbox.stub().rejects(new Error("File cache disabled")),
+            };
+            const utils = proxyquire("src/browser/cdp/selectivity/utils", { "./fs-cache": fsCacheStubs });
+
+            JSSelectivity = proxyquire("src/browser/cdp/selectivity/js-selectivity", {
+                "./utils": { ...utils, fetchTextWithBrowserFallback: fetchTextWithBrowserFallbackStub },
+                "./fs-cache": fsCacheStubs,
+            }).JSSelectivity;
+        });
+
+        const originals = [
+            ...[".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"].map(extension => ({
+                extension,
+                contents: "export function render() { return 'used'; }",
+                supported: true,
+            })),
+            { extension: ".vue", contents: "<template><p>used</p></template>", supported: true },
+            { extension: ".svelte", contents: "<p>used</p>", supported: true },
+            { extension: ".css", contents: "p { color: red; }", supported: false },
+            { extension: ".json", contents: '{"text":"used"}', supported: false },
+        ];
+
+        for (const { extension, contents, supported } of originals) {
+            it(`should ${supported ? "collect only executed" : "exclude"} ${extension} originals`, async () => {
+                const sourceUrl = "http://example.com/components.js";
+                const usedCode = "function renderUsed() { return 'used'; }";
+                const unusedCode = "function renderUnused() { return 'unused'; }";
+                const source = `${usedCode}\n${unusedCode}`;
+                const sourceMap = JSON.stringify({
+                    version: 3,
+                    sources: [`src/Used${extension}`, `src/Unused${extension}`],
+                    sourcesContent: [contents, contents.replace("used", "unused")],
+                    names: [],
+                    mappings: "AAAA;ACAA",
+                });
+
+                cdpMock.debugger.getScriptSource.resolves({ scriptSource: source });
+                fetchTextWithBrowserFallbackStub.resolves(sourceMap);
+                cdpMock.profiler.takePreciseCoverage.resolves({
+                    timestamp: 1,
+                    result: [
+                        {
+                            scriptId: "components",
+                            url: sourceUrl,
+                            functions: [
+                                {
+                                    functionName: "renderUsed",
+                                    isBlockCoverage: false,
+                                    ranges: [{ startOffset: 0, endOffset: usedCode.length, count: 1 }],
+                                },
+                                {
+                                    functionName: "renderUnused",
+                                    isBlockCoverage: false,
+                                    ranges: [{ startOffset: usedCode.length + 1, endOffset: source.length, count: 0 }],
+                                },
+                            ],
+                        },
+                    ],
+                });
+
+                const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+                await jsSelectivity.start();
+                cdpMock.debugger.on
+                    .getCall(0)
+                    .args[1]({ scriptId: "components", url: sourceUrl, sourceMapURL: "components.js.map" }, sessionId);
+
+                const dependencies = await jsSelectivity.stop();
+
+                assert.deepEqual(
+                    Array.from(dependencies || []),
+                    supported ? [`${sourceRoot}/src/Used${extension}`] : [],
+                );
+                assert.notCalled(parseSourceMapRangesStub);
+                assert.notCalled(extractSourceFilesDepsStub);
+            });
+        }
+    });
+
     describe("stop", () => {
         it("should return empty array when drop is true", async () => {
             const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);

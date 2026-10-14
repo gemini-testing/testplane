@@ -16,7 +16,8 @@ import type { CDPRuntimeScriptId, CDPScriptCoverage, CDPSessionId } from "../typ
 import type { SelectivityAssetState } from "./types";
 import type { SelectivityMapSourceMapUrlFn } from "../../../config/types";
 
-const SOURCE_CODE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"];
+// Component originals retain their extensions in the source maps of compiled JavaScript.
+const SOURCE_CODE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".svelte"];
 
 const PRECISE_COVERAGE_PARAMS = { callCount: false, detailed: false, allowTriggeredUpdates: false } as const;
 
