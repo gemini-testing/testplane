@@ -19,6 +19,7 @@ import WorkersRegistry from "../utils/workers-registry";
 import PromiseGroup from "./promise-group";
 import { TestCollection } from "../test-collection";
 import * as logger from "../utils/logger";
+import { promiseTimeout } from "../utils/promise";
 import { Config } from "../config";
 import type { runTest, cancel } from "../worker";
 import type { Stats as RunnerStats } from "../stats";
@@ -27,6 +28,8 @@ import { Test } from "../types";
 import { SelectivityRunner } from "../browser/cdp/selectivity/runner";
 import { noopProfilerRuntime } from "../profiler/runtime/noop";
 import type { ProfilerRuntimeLike } from "../profiler/runtime/types";
+
+const FAILURE_CLEANUP_TIMEOUT = 10_000;
 
 interface WorkerMethods {
     runTest: typeof runTest;
@@ -117,18 +120,47 @@ export class MainRunner extends RunnableEmitter {
     async run(testCollection: TestCollection, stats: RunnerStats, opts?: RunnerRunOptions): Promise<void> {
         this.runned = true;
 
+        let failed = false;
         try {
+            await this._configureDocker(testCollection);
             await this.emitAndWait(MasterEvents.RUNNER_START, this);
             this.emit(MasterEvents.BEGIN);
             await this._runTests(testCollection, opts);
+        } catch (error) {
+            failed = true;
+            // Report the cause before waiting for plugin and worker cleanup.
+            logger.error(error instanceof Error ? error.stack || error.message : error);
+            throw error;
         } finally {
-            try {
+            const finish = async (): Promise<void> => {
                 this.emit(MasterEvents.END);
                 await this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn);
-                await this.workersRegistry.end();
-            } finally {
-                await stopDockerRun(this.config);
+            };
+            if (failed) {
+                // A stalled cleanup must not hide the original error or block the CLI exit.
+                await this._cleanupAfterFailure("RUNNER_END handlers", finish);
+                await this._cleanupAfterFailure("workers", () => this.workersRegistry.end());
+                await this._cleanupAfterFailure("Docker", () => stopDockerRun(this.config));
+            } else {
+                try {
+                    await finish();
+                    await this.workersRegistry.end();
+                } finally {
+                    await stopDockerRun(this.config);
+                }
             }
+        }
+    }
+
+    private async _cleanupAfterFailure(name: string, cleanup: () => Promise<void>): Promise<void> {
+        try {
+            await promiseTimeout(
+                cleanup(),
+                FAILURE_CLEANUP_TIMEOUT,
+                `Timed out waiting for ${name} cleanup after a runner error (${FAILURE_CLEANUP_TIMEOUT} ms)`,
+            );
+        } catch (error) {
+            logger.warn(error);
         }
     }
 
@@ -148,7 +180,7 @@ export class MainRunner extends RunnableEmitter {
         return true;
     }
 
-    protected async _runTests(testCollection: TestCollection, opts?: RunnerRunOptions): Promise<void> {
+    private async _configureDocker(testCollection: TestCollection): Promise<void> {
         if (!RuntimeConfig.getInstance().local) {
             const dockerSessions = testCollection.getBrowsers().reduce((total, browserId) => {
                 const browser = this.config.forBrowser(browserId);
@@ -165,7 +197,9 @@ export class MainRunner extends RunnableEmitter {
                 );
             }
         }
+    }
 
+    protected async _runTests(testCollection: TestCollection, opts?: RunnerRunOptions): Promise<void> {
         const runTestFn = this._addTestToBrowserRunner.bind(this);
         const selectivityRunner = SelectivityRunner.create(this, this.config, runTestFn, {
             shouldDisableSelectivity: opts?.shouldDisableSelectivity,
