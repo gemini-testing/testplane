@@ -250,6 +250,31 @@ describe("CDP/Selectivity/Utils", () => {
             assert.calledOnceWith(browserFetchStub, url);
         });
 
+        [
+            { name: "quotes and backslashes", url: 'http://example.com/sourcemap.js.map?path=\\nested&name="quoted"' },
+            { name: "a trailing backslash", url: "http://example.com/sourcemap.js.map?path=folder\\" },
+            {
+                name: "literal control characters",
+                url: "http://example.com/sourcemap.js.map?line=first\nsecond&tab=\tvalue",
+            },
+        ].forEach(({ name, url }) => {
+            it(`should preserve ${name} in the URL passed to browser fetch`, async () => {
+                const browserFetchStub = sandbox.stub().resolves(new Response("browser fetched content"));
+                fetchStub.rejects(new Error("Network error"));
+                runtimeStub.evaluate.callsFake(async (_sessionId, { expression }) => ({
+                    result: { type: "string", value: await runInNewContext(expression, { fetch: browserFetchStub }) },
+                }));
+
+                const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+                assert.equal(result, "browser fetched content");
+                assert.calledOnceWith(fetchStub, url);
+                assert.calledOnce(runtimeStub.evaluate);
+                assert.calledOnceWith(browserFetchStub, url);
+                assert.include(runtimeStub.evaluate.firstCall.args[1].expression, `fetch(${JSON.stringify(url)})`);
+            });
+        });
+
         it("should reject Runtime.evaluate exceptionDetails instead of returning undefined", async () => {
             const url = "http://example.com/sourcemap.js.map";
             fetchStub.rejects(new Error("Network error"));
