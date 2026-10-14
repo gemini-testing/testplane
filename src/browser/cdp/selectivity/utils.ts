@@ -58,15 +58,32 @@ export const fetchTextWithBrowserFallback = async (
     // At first, trying to fetch sourceMaps directly from the node.js
     // Then falling back to do it via browser (if Testplane has no direct network access to it, for example)
     try {
-        return await fetch(url).then(r => r.text());
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            // Release the connection without buffering a potentially large error body.
+            await response.body?.cancel().catch(() => {});
+            throw new Error(`HTTP ${response.status} while fetching "${url}"`);
+        }
+
+        return await response.text();
     } catch {
         return runtime
             .evaluate<string>(sessionId, {
-                expression: `fetch("${url.replaceAll('"', '\\"')}").then(r => r.text())`,
+                expression: `fetch("${url.replaceAll('"', '\\"')}").then(r => {
+                    if (!r.ok) throw new Error("HTTP " + r.status);
+                    return r.text();
+                })`,
                 awaitPromise: true,
                 returnByValue: true,
             })
-            .then(r => r.result.value);
+            .then(response => {
+                if (response.exceptionDetails) {
+                    throw new Error(`Browser fetch failed for "${url}": ${JSON.stringify(response.exceptionDetails)}`);
+                }
+
+                return response.result.value;
+            });
     }
 };
 

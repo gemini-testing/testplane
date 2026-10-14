@@ -1,6 +1,7 @@
 import sinon, { type SinonStub, type SinonStubbedInstance } from "sinon";
 import proxyquire from "proxyquire";
 import { createHash } from "node:crypto";
+import { runInNewContext } from "node:vm";
 import type { CDPRuntime } from "src/browser/cdp/domains/runtime";
 import { NormalizedDependencies, TestDependenciesFileContents } from "src/browser/cdp/selectivity/types";
 
@@ -91,12 +92,15 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should try direct fetch first for non-embedded URLs", async () => {
             const url = "http://example.com/sourcemap.js.map";
-            fetchStub.resolves({ text: () => Promise.resolve("source map content") });
+            const response = new Response("source map content");
+            const cancelSpy = sandbox.spy(response.body as ReadableStream, "cancel");
+            fetchStub.resolves(response);
 
             const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
 
             assert.equal(result, "source map content");
             assert.calledOnceWith(fetchStub, url);
+            assert.notCalled(cancelSpy);
             assert.notCalled(runtimeStub.evaluate);
         });
 
@@ -109,11 +113,191 @@ describe("CDP/Selectivity/Utils", () => {
 
             assert.equal(result, "browser fetched content");
             assert.calledOnceWith(fetchStub, url);
+            const expression = runtimeStub.evaluate.firstCall.args[1].expression;
+            assert.include(expression, `fetch(${JSON.stringify(url)})`);
             assert.calledOnceWith(runtimeStub.evaluate, sessionId, {
-                expression: `fetch("${url}").then(r => r.text())`,
+                expression,
                 awaitPromise: true,
                 returnByValue: true,
             });
+        });
+
+        it("should fall back once when direct fetch returns an HTTP error with valid JSON", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            const sourceMap = '{"version":3,"sources":["a.js"],"names":[],"mappings":"AAAA"}';
+            fetchStub.resolves(new Response(sourceMap, { status: 404 }));
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+            assert.equal(result, "browser fetched content");
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        it("should cancel a rejected native Response body before browser fallback without reading it", async () => {
+            const response = new Response("HTTP error body", { status: 500 });
+            const cancelSpy = sandbox.spy(response.body as ReadableStream, "cancel");
+            const textSpy = sandbox.spy(response, "text");
+            fetchStub.resolves(response);
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(
+                "http://example.com/app.js.map",
+                runtimeStub,
+                sessionId,
+            );
+
+            assert.equal(result, "browser fetched content");
+            assert.calledOnce(cancelSpy);
+            assert.callOrder(cancelSpy, runtimeStub.evaluate);
+            assert.isTrue(response.bodyUsed);
+            assert.notCalled(textSpy);
+        });
+
+        it("should await rejected-body cancellation before starting browser fallback", async () => {
+            let finishCancel = (): void => {};
+            const cancellation = new Promise<void>(resolve => {
+                finishCancel = resolve;
+            });
+            const cancel = sandbox.stub().returns(cancellation);
+            fetchStub.resolves({ ok: false, status: 500, body: { cancel } });
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const pendingFetch = utils.fetchTextWithBrowserFallback(
+                "http://example.com/app.js.map",
+                runtimeStub,
+                sessionId,
+            );
+            await Promise.resolve();
+
+            assert.calledOnce(cancel);
+            assert.notCalled(runtimeStub.evaluate);
+            finishCancel();
+            assert.equal(await pendingFetch, "browser fetched content");
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        for (const browserSucceeds of [true, false]) {
+            it(`should preserve browser ${
+                browserSucceeds ? "success" : "failure"
+            } when cancellation rejects`, async () => {
+                const cancel = sandbox.stub().rejects(new Error("Cancellation failed"));
+                const text = sandbox.stub();
+                fetchStub.resolves({ ok: false, status: 500, body: { cancel }, text });
+                if (browserSucceeds) {
+                    runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+                } else {
+                    runtimeStub.evaluate.rejects(new Error("Browser unavailable"));
+                }
+
+                const result = utils.fetchTextWithBrowserFallback(
+                    "http://example.com/app.js.map",
+                    runtimeStub,
+                    sessionId,
+                );
+
+                if (browserSucceeds) {
+                    assert.equal(await result, "browser fetched content");
+                } else {
+                    await assert.isRejected(result, "Browser unavailable");
+                }
+                assert.calledOnce(cancel);
+                assert.calledOnce(runtimeStub.evaluate);
+                assert.notCalled(text);
+            });
+        }
+
+        it("should fall back for an HTTP error without a response body", async () => {
+            fetchStub.resolves(new Response(null, { status: 304 }));
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(
+                "http://example.com/app.js.map",
+                runtimeStub,
+                sessionId,
+            );
+
+            assert.equal(result, "browser fetched content");
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        it("should fall back when reading the direct response body fails", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            fetchStub.resolves({ ok: true, text: sandbox.stub().rejects(new Error("Body read failed")) });
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+            assert.equal(result, "browser fetched content");
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        it("should make the browser fetch expression reject an HTTP error with a valid source map", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            const sourceMap = '{"version":3,"sources":["a.js"],"names":[],"mappings":"AAAA"}';
+            const browserFetchStub = sandbox.stub().resolves(new Response(sourceMap, { status: 404 }));
+            fetchStub.rejects(new Error("Network error"));
+            runtimeStub.evaluate.callsFake(async (_sessionId, { expression }) => ({
+                result: { type: "string", value: await runInNewContext(expression, { fetch: browserFetchStub }) },
+            }));
+
+            await assert.isRejected(utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId), "HTTP 404");
+
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
+            assert.calledOnceWith(browserFetchStub, url);
+        });
+
+        it("should reject Runtime.evaluate exceptionDetails instead of returning undefined", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            fetchStub.rejects(new Error("Network error"));
+            runtimeStub.evaluate.resolves({
+                result: { type: "object", subtype: "error", value: undefined },
+                exceptionDetails: { text: "Uncaught (in promise) TypeError: Failed to fetch" },
+            });
+
+            await assert.isRejected(utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId), "Failed to fetch");
+
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        it("should reject Runtime.evaluate exceptionDetails even when the result value is a string", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            fetchStub.rejects(new Error("Network error"));
+            runtimeStub.evaluate.resolves({
+                result: { type: "string", value: "fetch error" },
+                exceptionDetails: { text: "Uncaught (in promise) fetch error" },
+            });
+
+            await assert.isRejected(utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId), "fetch error");
+
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        it("should preserve an empty successful direct response", async () => {
+            const url = "http://example.com/empty.js";
+            fetchStub.resolves(new Response(""));
+
+            const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+            assert.equal(result, "");
+            assert.calledOnceWith(fetchStub, url);
+            assert.notCalled(runtimeStub.evaluate);
+        });
+
+        it("should preserve an empty successful browser response", async () => {
+            const url = "http://example.com/empty.js";
+            fetchStub.rejects(new Error("Network error"));
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+            assert.equal(result, "");
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
         });
 
         it("should throw error if both fetch methods fail", async () => {
