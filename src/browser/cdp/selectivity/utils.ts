@@ -182,9 +182,10 @@ export const extractSourceFilesDeps = (
                 continue;
             }
 
-            // Ignore full-file wrapper
+            // Ignore full-file wrappers, counting unique originals rather than source-map transitions.
+            // Interleaved mappings such as beta.jsx -> shared.jsx -> beta.jsx still describe two files.
             if (range.startOffset <= offset[0] && range.endOffset >= offset[offset.length - 1]) {
-                const filesCount = filename.reduce((acc, val) => acc + (val ? 1 : 0), 0);
+                const filesCount = new Set(filename.filter(Boolean)).size;
 
                 if (filesCount > 2) {
                     continue;
