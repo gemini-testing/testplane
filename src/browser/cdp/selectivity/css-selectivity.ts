@@ -1,7 +1,7 @@
 import { groupBy } from "lodash";
 import fs from "node:fs";
 import path from "node:path";
-import { resolve as urlResolve } from "node:url";
+import { fileURLToPath, resolve as urlResolve } from "node:url";
 import { CSS_SOURCE_MAP_URL_COMMENT } from "../../../error-snippets/constants";
 import {
     fetchTextWithBrowserFallback,
@@ -367,9 +367,15 @@ export class CSSSelectivity {
                             return;
                         }
 
+                        // sourceRoot is a directory, and URL roots must keep their protocol when resolving sources.
                         const sourceRoot = rawSourceMap.sourceRoot || "";
                         const sourceRootHasProtocol = hasProtocol(sourceRoot);
-                        const sourceRootBasedPath = path.posix.join(sourceRoot, sourceFilePath);
+                        const sourceRootBasedPath = sourceRootHasProtocol
+                            ? urlResolve(
+                                  sourceRoot.endsWith("/") ? sourceRoot : `${sourceRoot}/`,
+                                  sourceFilePath.replace(/^\/+/, ""),
+                              )
+                            : path.posix.join(sourceRoot, sourceFilePath);
 
                         // A leading slash can be a logical source-map path, not a host filesystem absolute.
                         // Keep genuine absolute originals too. If both local candidates exist, retain both:
@@ -380,8 +386,12 @@ export class CSSSelectivity {
                         ) {
                             totalDependingSourceFiles.add(sourceFilePath);
 
-                            if (!sourceRootHasProtocol) {
-                                if (!fs.existsSync(decodeURIComponent(sourceRootBasedPath))) {
+                            if (!sourceRootHasProtocol || sourceRoot.startsWith("file://")) {
+                                const rootedFilePath = sourceRootHasProtocol
+                                    ? fileURLToPath(sourceRootBasedPath)
+                                    : decodeURIComponent(sourceRootBasedPath);
+
+                                if (!fs.existsSync(rootedFilePath)) {
                                     return;
                                 }
                             }

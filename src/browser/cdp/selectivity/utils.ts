@@ -308,16 +308,15 @@ export const transformSourceDependencies = (
         typedResultSet: Set<string>,
         reason: SelectivityDependencyReason,
     ): void => {
-        dependency = decodeURIComponent(softFileURLToPath(dependency));
+        const fileUrlPath = softFileURLToPath(dependency);
+
+        // fileURLToPath already decodes URL escapes. Ordinary paths retain one decode.
+        dependency = fileUrlPath !== dependency ? fileUrlPath : decodeURIComponent(dependency);
 
         const protocol = getProtocol(dependency);
-
-        if (protocol) {
-            warnUnsupportedProtocol(protocol, dependency);
-            return;
-        }
-
-        const initialDependencyRelativePath = path.posix.relative(path.posix.resolve(), path.posix.resolve(dependency));
+        const initialDependencyRelativePath = protocol
+            ? dependency
+            : path.posix.relative(path.posix.resolve(), path.posix.resolve(dependency));
         const mapDependencyPathResult = mapDependencyPathFn
             ? mapDependencyPathFn({
                   scope,
@@ -332,6 +331,15 @@ export const transformSourceDependencies = (
 
         const dependencyRelativePath =
             mapDependencyPathResult === true ? initialDependencyRelativePath : mapDependencyPathResult;
+        const mappedProtocol = protocol ? getProtocol(dependencyRelativePath) : null;
+
+        // URI originals can be mapped explicitly to real local files before suppression.
+        // An identity mapper (or a URI-to-URI mapper) has not supplied a physical dependency.
+        if (mappedProtocol) {
+            warnUnsupportedProtocol(mappedProtocol, dependencyRelativePath);
+            return;
+        }
+
         const nodeModulesLabelPos = dependencyRelativePath.indexOf(nodeModulesLabel);
 
         if (nodeModulesLabelPos === -1) {
