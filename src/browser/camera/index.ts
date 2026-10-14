@@ -17,6 +17,12 @@ export interface PageMeta {
     documentWidth: number;
 }
 
+export interface ViewportImage extends Image {
+    /** Calibrated screenshot dimensions before cropping to the viewport. */
+    readonly uncroppedSize: Pick<ImageArea, "width" | "height">;
+    readonly isFullPage: boolean;
+}
+
 interface Calibration {
     left: number;
     top: number;
@@ -41,7 +47,7 @@ export class Camera {
         this._calibration = calibration;
     }
 
-    async captureViewportImage(page?: PageMeta): Promise<Image> {
+    async captureViewportImage(page?: PageMeta): Promise<ViewportImage> {
         const base64 = await this._takeScreenshot();
         const image = Image.fromBase64(base64);
 
@@ -49,13 +55,17 @@ export class Camera {
         const imageArea: ImageArea = { left: 0, top: 0, width, height };
 
         const calibratedArea = this._calibrateArea(imageArea);
-        const viewportCroppedArea = this._cropAreaToViewport(calibratedArea, page);
+        const isFullPage = page ? utils.isFullPage(calibratedArea, page, this._screenshotMode) : false;
+        const viewportCroppedArea = this._cropAreaToViewport(calibratedArea, isFullPage, page);
 
         if (viewportCroppedArea.width !== width || viewportCroppedArea.height !== height) {
             await image.crop(viewportCroppedArea);
         }
 
-        return image;
+        return Object.assign(image, {
+            uncroppedSize: { width: calibratedArea.width, height: calibratedArea.height },
+            isFullPage,
+        });
     }
 
     private _calibrateArea(imageArea: ImageArea): ImageArea {
@@ -68,12 +78,11 @@ export class Camera {
         return { left, top, width: imageArea.width - left, height: imageArea.height - top };
     }
 
-    private _cropAreaToViewport(imageArea: ImageArea, page?: PageMeta): ImageArea {
+    private _cropAreaToViewport(imageArea: ImageArea, isFullPage: boolean, page?: PageMeta): ImageArea {
         if (!page) {
             return imageArea;
         }
 
-        const isFullPage = utils.isFullPage(imageArea, page, this._screenshotMode);
         const cropArea = _.clone(page.viewport);
 
         if (!isFullPage) {

@@ -142,6 +142,9 @@ function prepareScreenshotUnsafe(areas, opts) {
         })
             .scale(pixelRatio)
             .serialize(),
+        viewportSizeInCss: { width: viewportWidth, height: viewportHeight },
+        isTopLevelViewport: util.getOwnerWindow(mainDocumentElem) === window.top,
+        documentSizeInCss: { width: documentWidth, height: documentHeight },
         documentHeight: Math.ceil(documentHeight * pixelRatio),
         documentWidth: Math.ceil(documentWidth * pixelRatio),
         canHaveCaret: isEditable(document.activeElement),
