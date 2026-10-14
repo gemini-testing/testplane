@@ -70,7 +70,7 @@ export const fetchTextWithBrowserFallback = async (
     } catch {
         return runtime
             .evaluate<unknown>(sessionId, {
-                expression: `fetch("${url.replaceAll('"', '\\"')}").then(r => {
+                expression: `fetch(${JSON.stringify(url)}).then(r => {
                     if (!r.ok) throw new Error("HTTP " + r.status);
                     return r.text();
                 })`,
