@@ -277,6 +277,27 @@ describe("CDP/Selectivity/Utils", () => {
             assert.calledOnce(runtimeStub.evaluate);
         });
 
+        [
+            { name: "undefined", result: { type: "undefined" as const, value: undefined } },
+            { name: "null", result: { type: "object" as const, value: null } },
+            { name: "object", result: { type: "object" as const, value: { version: 3 } } },
+            { name: "number", result: { type: "number" as const, value: 42 } },
+        ].forEach(({ name, result }) => {
+            it(`should reject a non-string browser result (${name})`, async () => {
+                const url = "http://example.com/sourcemap.js.map";
+                fetchStub.rejects(new Error("Network error"));
+                runtimeStub.evaluate.resolves({ result });
+
+                await assert.isRejected(
+                    utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId),
+                    "expected text",
+                );
+
+                assert.calledOnceWith(fetchStub, url);
+                assert.calledOnce(runtimeStub.evaluate);
+            });
+        });
+
         it("should preserve an empty successful direct response", async () => {
             const url = "http://example.com/empty.js";
             fetchStub.resolves(new Response(""));
