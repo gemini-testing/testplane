@@ -254,16 +254,88 @@ describe("CDP/Selectivity/Utils", () => {
             assert.isTrue(result.has("b.js"));
         });
 
-        it("should ignore a full-span wrapper when the bundle has more than 2 real files", () => {
-            // parsedMaps has 3 real files (a.js, b.js, c.js) -> a function covering the whole
-            // bundle is the whole-bundle wrapper and must be dropped
+        it("should ignore a full-span wrapper with more than two unique source files", () => {
             const result = utils.extractSourceFilesDeps(parsedMaps, mkCoverages([{ startOffset: 0, endOffset: 400 }]));
 
             assert.equal(result.size, 0);
         });
 
+        it("should still collect called modules after ignoring their full-span wrapper", () => {
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([
+                    { startOffset: 0, endOffset: 400 },
+                    { startOffset: 30, endOffset: 90 },
+                    { startOffset: 210, endOffset: 290 },
+                ]),
+            );
+
+            assert.sameMembers([...result], ["a.js", "b.js"]);
+        });
+
+        it("should count repeated source names once when deciding whether to ignore a wrapper", () => {
+            const maps = { offset: [10, 20, 30, 40, 50], filename: ["a.js", "b.js", "a.js", "b.js", "a.js"] };
+
+            const result = utils.extractSourceFilesDeps(maps, mkCoverages([{ startOffset: 0, endOffset: 60 }]));
+
+            assert.sameMembers([...result], ["a.js", "b.js"]);
+        });
+
+        it("should ignore a wrapper when interleaved segments contain a third unique file", () => {
+            const maps = { offset: [10, 20, 30, 40, 50], filename: ["a.js", "b.js", "a.js", "c.js", "a.js"] };
+
+            const result = utils.extractSourceFilesDeps(maps, mkCoverages([{ startOffset: 0, endOffset: 60 }]));
+
+            assert.equal(result.size, 0);
+        });
+
+        it("should not apply the full-span heuristic to a partial function with three originals", () => {
+            const maps = { offset: [0, 10, 20, 30, 40], filename: ["a.js", "b.js", "c.js", "d.js", "e.js"] };
+
+            const result = utils.extractSourceFilesDeps(maps, mkCoverages([{ startOffset: 10, endOffset: 35 }]));
+
+            assert.sameMembers([...result], ["b.js", "c.js", "d.js"]);
+        });
+
+        it("should ignore a three-original IIFE but keep its separately called function", () => {
+            // Reduced from esbuild plain IIFE precise coverage with detailed:false.
+            // The wrapper heuristic intentionally trades top-level-only originals for narrower dependencies.
+            const maps = { offset: [479, 610, 916], filename: ["src/shared.js", "src/lazy.js", "src/alpha.js"] };
+            const coverages = mkCoverages([
+                { startOffset: 0, endOffset: 1668 },
+                { startOffset: 1, endOffset: 1629 },
+                { startOffset: 530, endOffset: 585 },
+                { startOffset: 678, endOffset: 694, count: 0 },
+                { startOffset: 703, endOffset: 815, count: 0 },
+                { startOffset: 846, endOffset: 890, count: 0 },
+                { startOffset: 1189, endOffset: 1625, count: 0 },
+            ]);
+
+            const result = utils.extractSourceFilesDeps(maps, coverages);
+
+            // More than two unique originals suppresses both wrappers; only the shared function is called.
+            assert.sameMembers([...result], ["src/shared.js"]);
+        });
+
+        it("should retain interleaved originals in an esbuild React IIFE", () => {
+            // Reduced from esbuild React IIFE precise coverage with detailed:false.
+            // beta.jsx has a called function, but shared.jsx only has top-level code.
+            const maps = {
+                offset: [1226132, 1226255, 1226304],
+                filename: ["src/beta.jsx", "src/shared.jsx", "src/beta.jsx"],
+            };
+            const coverages = mkCoverages([
+                { startOffset: 0, endOffset: 1227936 },
+                { startOffset: 1, endOffset: 1226664 },
+                { startOffset: 1226306, endOffset: 1226526 },
+            ]);
+
+            const result = utils.extractSourceFilesDeps(maps, coverages);
+
+            assert.sameMembers([...result], ["src/beta.jsx", "src/shared.jsx"]);
+        });
+
         it("should keep the file of a full-span function in a single-file bundle", () => {
-            // Only one real file -> a function spanning everything is a legitimate file wrapper, not noise
             const oneFileMaps = { offset: [10], filename: ["a.js"] };
 
             const result = utils.extractSourceFilesDeps(oneFileMaps, mkCoverages([{ startOffset: 0, endOffset: 50 }]));
@@ -272,10 +344,7 @@ describe("CDP/Selectivity/Utils", () => {
             assert.isTrue(result.has("a.js"));
         });
 
-        it("should keep files of a full-span function when the bundle has 2 real files (glue not counted)", () => {
-            // 3 segments but only 2 real files (the middle one is glue). A function spanning the whole
-            // bundle is treated as a legitimate (possibly concatenated) wrapper, so both files are kept.
-            // If glue were counted as a file the total would be 3 and they'd be wrongly dropped.
+        it("should keep files of a full-span function without treating glue as a dependency", () => {
             const twoFileMaps = { offset: [10, 100, 200], filename: ["a.js", "", "b.js"] };
 
             const result = utils.extractSourceFilesDeps(twoFileMaps, mkCoverages([{ startOffset: 0, endOffset: 250 }]));
@@ -292,6 +361,31 @@ describe("CDP/Selectivity/Utils", () => {
             );
 
             assert.equal(result.size, 0);
+        });
+
+        it("should collect an executed nested function even when its enclosing function has count:0", () => {
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([
+                    { startOffset: 0, endOffset: 400, count: 0 },
+                    { startOffset: 210, endOffset: 290 },
+                ]),
+            );
+
+            assert.sameMembers([...result], ["b.js"]);
+        });
+
+        it("should conservatively retain sources in nested zero-count blocks of a two-original function", () => {
+            const maps = { offset: [10, 100, 200, 300], filename: ["a.js", "", "b.js", "a.js"] };
+            const coverages = mkCoverages([{ startOffset: 0, endOffset: 400 }]);
+            const functionCoverage = coverages[0].functions[0];
+            functionCoverage.isBlockCoverage = true;
+            functionCoverage.ranges.push({ startOffset: 200, endOffset: 300, count: 0 });
+
+            const result = utils.extractSourceFilesDeps(maps, coverages);
+
+            // This collector uses function granularity even if given block coverage.
+            assert.sameMembers([...result], ["a.js", "b.js"]);
         });
 
         it("should skip functions without ranges", () => {
@@ -329,6 +423,27 @@ describe("CDP/Selectivity/Utils", () => {
 
             assert.equal(result.size, 1);
             assert.isTrue(result.has("a.js"));
+        });
+
+        it("should filter sources of a retained full-span wrapper", () => {
+            const maps = { offset: [10, 100, 200], filename: ["a.js", "b.js", "a.js"] };
+            const result = utils.extractSourceFilesDeps(
+                maps,
+                mkCoverages([{ startOffset: 0, endOffset: 400 }]),
+                file => file === "b.js",
+            );
+
+            assert.sameMembers([...result], ["b.js"]);
+        });
+
+        it("should count unique originals before applying the optional source filter", () => {
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([{ startOffset: 0, endOffset: 400 }]),
+                file => file === "b.js",
+            );
+
+            assert.equal(result.size, 0);
         });
     });
 
