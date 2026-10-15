@@ -49,6 +49,7 @@ export class ViteServer {
                 // listed deps are CJS packages and need to be compiled to ESM by Vite
                 include: [
                     "expect",
+                    "debug",
                     // webdriverio deps
                     "aria-query",
                     "css-shorthand-properties",
