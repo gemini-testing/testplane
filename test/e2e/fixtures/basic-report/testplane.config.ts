@@ -1,4 +1,12 @@
 import path from "path";
+import Module from "module";
+
+const moduleAliasesPath = path.resolve(__dirname, "../../module-aliases");
+
+// In this repository Testplane is the package root, not an installed peer dependency.
+// Expose its built entry point so html-reporter can detect Time Travel while generating the fixture.
+process.env.NODE_PATH = [moduleAliasesPath, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+(Module as typeof Module & { _initPaths: () => void })._initPaths();
 
 const SERVER_PORT = 3700;
 
@@ -14,7 +22,12 @@ export default {
 
     sets: {
         assertView: {
-            files: path.join(__dirname, "tests/**/*.testplane.js"),
+            files: path.join(__dirname, "tests/test.testplane.js"),
+            browsers: ["chrome"],
+        },
+        timeTravel: {
+            files: path.join(__dirname, "tests/time-travel.testplane.js"),
+            browsers: ["time-travel-chrome"],
         },
     },
 
@@ -29,6 +42,17 @@ export default {
                 ignoreDiffPixelCount: 4,
             },
             windowSize: "1280x1024",
+            desiredCapabilities: {
+                browserName: "chrome",
+                "goog:chromeOptions": {
+                    args: ["headless", "no-sandbox", "hide-scrollbars", "disable-dev-shm-usage"],
+                    binary: "/usr/bin/chromium",
+                },
+            },
+            waitTimeout: 3000,
+        },
+        "time-travel-chrome": {
+            timeTravel: "on",
             desiredCapabilities: {
                 browserName: "chrome",
                 "goog:chromeOptions": {
