@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import * as http from "node:http";
 import { WebSocket, WebSocketServer } from "ws";
 import sinon, { SinonStub, SinonFakeTimers } from "sinon";
@@ -171,6 +172,7 @@ describe('"WsConnection"', () => {
     const sandbox = sinon.createSandbox();
     let clock: SinonFakeTimers;
     let exponentiallyWaitStub: SinonStub;
+    let webSocketConstructorStub: SinonStub;
     let WsConnectionProxied: typeof WsConnection;
     let TestWsConnectionProxied: typeof TestWsConnection;
 
@@ -180,8 +182,13 @@ describe('"WsConnection"', () => {
         wsServer = createWsServer();
         clock = sinon.useFakeTimers({ shouldClearNativeTimers: true });
         exponentiallyWaitStub = sandbox.stub().resolves();
+        webSocketConstructorStub = sandbox
+            .stub()
+            .callsFake((...args: ConstructorParameters<typeof WebSocket>) => new WebSocket(...args));
+        webSocketConstructorStub.prototype = WebSocket.prototype;
 
         WsConnectionProxied = proxyquire("src/ws-connection", {
+            ws: { WebSocket: webSocketConstructorStub },
             "./utils": {
                 exponentiallyWait: exponentiallyWaitStub,
             },
@@ -318,6 +325,49 @@ describe('"WsConnection"', () => {
             } finally {
                 badConnection.close();
             }
+        });
+
+        it("should cancel a timed out handshake and handle its errors after a successful retry", async () => {
+            const socket = Object.assign(new EventEmitter(), {
+                CONNECTING: WebSocket.CONNECTING,
+                readyState: WebSocket.CONNECTING,
+                close: sandbox.stub(),
+            });
+            webSocketConstructorStub.onFirstCall().returns(socket);
+
+            const requestPromise = connection.request<unknown>("Successful.Method");
+            await clock.tickAsync(3000);
+
+            assert.deepEqual(await requestPromise, { id: 1 });
+            assert.calledOnce(socket.close);
+            assert.doesNotThrow(() => socket.emit("error", new Error("aborted handshake")));
+
+            socket.emit("close");
+            assert.equal(socket.listenerCount("error"), 0);
+        });
+
+        it("should reuse an in-flight connection on repeated forceReconnect calls", async () => {
+            const requestPromise = connection.request<unknown>("Successful.Method");
+
+            connection.forceReconnect("First reconnect");
+            connection.forceReconnect("Second reconnect");
+
+            assert.deepEqual(await requestPromise, { id: 1 });
+            assert.calledOnce(webSocketConstructorStub);
+        });
+
+        it("should cancel an in-flight connection on close", async () => {
+            const requestPromise = connection.request("Successful.Method");
+
+            connection.close();
+
+            await assert.isRejected(requestPromise, WsConnectionTerminatedError);
+        });
+
+        it("should prevent connecting after close before the first request", async () => {
+            connection.close();
+
+            await assert.isRejected(connection.request("Successful.Method"), WsConnectionTerminatedError);
         });
 
         it("should connect once on multiple requests", async () => {
