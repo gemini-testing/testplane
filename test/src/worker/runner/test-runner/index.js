@@ -131,7 +131,13 @@ describe("worker/runner/test-runner", () => {
             const sessionOpts = opts.sessionOpts || "default-session-opts";
             const state = opts.state || {};
 
-            await runner.prepareBrowser({ sessionId, sessionCaps, sessionOpts, state });
+            await runner.prepareBrowser({
+                sessionId,
+                sessionCaps,
+                sessionOpts,
+                cdpAvailable: opts.cdpAvailable,
+                state,
+            });
             return runner.run();
         };
 
@@ -150,6 +156,7 @@ describe("worker/runner/test-runner", () => {
                 sessionId: "100500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
+                cdpAvailable: false,
                 state: {},
             };
 

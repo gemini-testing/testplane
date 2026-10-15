@@ -6,7 +6,17 @@ import type { BrowserDownloadMirrors } from "../config/types";
 type BrowserVersion = string;
 type Port = string;
 type ChildProcessWithStatus = { process: ChildProcess; gridUrl: string; isBusy: boolean };
-export type WdProcess = { gridUrl: string; free: () => void; kill: () => void; getPid: () => number | undefined };
+export type WdProcess = {
+    gridUrl: string;
+    free: () => void | Promise<void>;
+    kill: () => void | Promise<void>;
+    getPid: () => number | undefined;
+    setSessionId?: (sessionId: string | undefined) => void;
+    selenoidOptions?: { version: string; labels: Record<string, string>; logName: string };
+    getLogs?: () => Promise<string>;
+    saveLogs?: (sessionId: string) => Promise<string>;
+    prepareCdp?: (sessionId: string) => Promise<boolean | void>;
+};
 
 export class WebdriverPool {
     private driverProcess: Map<SupportedBrowser, Map<BrowserVersion, Record<Port, ChildProcessWithStatus>>>;

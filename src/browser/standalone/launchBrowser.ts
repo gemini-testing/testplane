@@ -36,6 +36,7 @@ export async function launchBrowser(
             ...desiredCapabilities,
         },
         gridUrl: options.gridUrl || LOCAL_GRID_URL,
+        docker: options.docker,
         baseUrl: options.baseUrl,
         headless: options.headless !== undefined ? options.headless : true,
         pageLoadTimeout: options.pageLoadTimeout,
@@ -95,6 +96,7 @@ export async function launchBrowser(
     await existingBrowser.init(
         {
             sessionId: session.sessionId,
+            cdpAvailable: newBrowser.cdpAvailable,
             sessionCaps: session.capabilities,
             sessionOpts: {
                 capabilities: session.capabilities,
