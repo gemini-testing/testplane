@@ -56,16 +56,17 @@ interface WsConnectionOptions {
     onMessage: (data: RawData, isBinary: boolean) => void | Promise<void>;
 }
 
-// Closing WS when its still not connected produces error:
-// https://github.com/websockets/ws/blob/86eac5b44ac2bff9087ec40c9bd06bc7b4f0da07/lib/websocket.js#L297-L301
 const closeWsConnection = (ws: WebSocket): void => {
-    if (ws.readyState !== ws.CONNECTING) {
-        ws.close();
-    } else {
-        ws.once("open", () => {
-            ws.close();
+    if (ws.readyState === ws.CONNECTING) {
+        const onError = (): void => {};
+
+        ws.on("error", onError);
+        ws.once("close", () => {
+            ws.off("error", onError);
         });
     }
+
+    ws.close();
 };
 
 export class WsConnection<
@@ -119,23 +120,22 @@ export class WsConnection<
 
     /** @description Tries to establish ws connection with timeout */
     private async _tryToEstablishWsConnection(endpoint: string): Promise<WebSocket | Error> {
+        if (this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
+            return new this._errors.ConnectionTerminated();
+        }
+
         return new Promise<WebSocket | Error>(resolve => {
             try {
                 const onConnectionCloseFn = (): void => done(new this._errors.ConnectionTerminated());
-
-                if (this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
-                    onConnectionCloseFn();
-                } else {
-                    this._onConnectionCloseFn = onConnectionCloseFn;
-                }
 
                 // eslint-disable-next-line
                 const cdpConnectionInstance = this;
                 const ws = new WebSocket(endpoint, { headers: this._requestHeaders });
                 let isSettled = false;
 
+                this._onConnectionCloseFn = onConnectionCloseFn;
+
                 const timeoutId = setTimeout(() => {
-                    closeWsConnection(ws);
                     done(
                         new this._errors.ConnectionTimeout({
                             message: `Couldn't establish WS connection to "${endpoint}" in ${this._timeouts.createSession}ms`,
@@ -147,9 +147,7 @@ export class WsConnection<
                     done(ws);
                 };
 
-                const onUnexpectedResponse = async (ws: WebSocket, res: IncomingMessage): Promise<void> => {
-                    closeWsConnection(ws);
-
+                const onUnexpectedResponse = async (_ws: WebSocket, res: IncomingMessage): Promise<void> => {
                     const reason = await consumeText(res).catch(() => "Unknown reason");
 
                     done(
@@ -161,7 +159,6 @@ export class WsConnection<
                 };
 
                 const onError = (error: unknown): void => {
-                    closeWsConnection(ws);
                     done(
                         new this._errors.ConnectionEstablishment({
                             message: `Couldn't establish WS connection to "${endpoint}": ${error}`,
@@ -202,6 +199,11 @@ export class WsConnection<
                     ws.off("error", onError);
                     ws.off("close", onClose);
                     ws.off("upgrade", onUpgrade);
+
+                    if (result instanceof Error) {
+                        closeWsConnection(ws);
+                    }
+
                     resolve(result);
                 }
             } catch (err) {
@@ -443,8 +445,7 @@ export class WsConnection<
     ): void {
         const ws = this._wsConnection;
 
-        if (!ws || this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
-            this._wsConnection = null;
+        if (this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
             return;
         }
 
@@ -452,12 +453,13 @@ export class WsConnection<
 
         const isClosing = status === WsConnectionStatus.CLOSED;
 
+        this._wsConnectionStatus = status;
+
         if (isClosing && this._onConnectionCloseFn) {
             this._onConnectionCloseFn();
         }
 
         this._wsConnection = null;
-        this._wsConnectionStatus = status;
         this._abortPendingRequests(`Request was aborted because ${sessionAbortMessage}`, isClosing);
         this._pingHealthCheckStop();
 
@@ -467,7 +469,9 @@ export class WsConnection<
             this._onDisconnect?.();
         }
 
-        closeWsConnection(ws);
+        if (ws) {
+            closeWsConnection(ws);
+        }
     }
 
     /**
