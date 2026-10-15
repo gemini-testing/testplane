@@ -142,7 +142,10 @@ module.exports = {
     },
     passive: false,
     useWsDriver: true,
-    timeTravel: TimeTravelMode.Off,
+    timeTravel: {
+        mode: TimeTravelMode.Off,
+        network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 },
+    },
     selectivity: {
         enabled: false,
         saveIncompleteDumpOnFail: false,

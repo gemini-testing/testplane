@@ -83,6 +83,7 @@ export interface CDPTargetInfo {
     attached: boolean;
     /** Opener target Id */
     openerId?: CDPTargetId;
+    browserContextId?: CDPBrowserContextId;
 }
 
 interface CoverageRange {
@@ -371,6 +372,8 @@ export interface CDPNetworkRequest {
     headers: CDPNetworkHeaders;
     /** HTTP POST request data. */
     postData?: string;
+    /** Raw request body entries, base64 encoded when available. */
+    postDataEntries?: { bytes?: string }[];
     /** True when the request has POST data. */
     hasPostData?: boolean;
     /** The mixed content type of the request. */

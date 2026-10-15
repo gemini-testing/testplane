@@ -9,6 +9,7 @@ const { AssertViewError } = require("src/browser/commands/assert-view/errors/ass
 const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
 const { Suite, Test } = require("src/test-reader/test-object");
 const history = require("src/browser/history");
+const { startNetworkRecording } = require("src/browser/network-interception/network-recorder");
 const { SAVE_HISTORY_MODE } = require("src/constants/config");
 const RuntimeConfig = require("src/config/runtime-config");
 const { REPL_INSTRUMENTED_FN_FLAG } = require("src/constants/repl");
@@ -19,6 +20,8 @@ describe("worker/runner/test-runner", () => {
     const sandbox = sinon.createSandbox();
     let historyRunGroupStub;
     let captureFailScreenshotStub;
+    let startNetworkRecordingStub;
+    let requestDomSnapshotsStub;
     let TestRunner;
 
     const mkTest_ = (opts = {}) => {
@@ -91,13 +94,19 @@ describe("worker/runner/test-runner", () => {
     beforeEach(() => {
         historyRunGroupStub = sandbox.stub().callsFake(history.runGroup);
         captureFailScreenshotStub = sandbox.stub().resolves(null);
+        startNetworkRecordingStub = sandbox.stub().resolves(null);
+        requestDomSnapshotsStub = sandbox.stub().callsFake(history.requestDomSnapshots);
 
         TestRunner = proxyquire("src/worker/runner/test-runner", {
             "../../../browser/history": {
                 runGroup: historyRunGroupStub,
+                requestDomSnapshots: requestDomSnapshotsStub,
             },
             "../../../browser/cdp/selectivity": {
                 startSelectivity: sandbox.stub().resolves(() => Promise.resolve()),
+            },
+            "../../../browser/network-interception/network-recorder": {
+                startNetworkRecording: startNetworkRecordingStub,
             },
             "./capture-fail-screenshot": {
                 captureFailScreenshot: captureFailScreenshotStub,
@@ -1003,6 +1012,73 @@ describe("worker/runner/test-runner", () => {
 
                 await run_().catch(err => {
                     assert.isUndefined(err.history);
+                });
+            });
+        });
+
+        describe("network recording integration", () => {
+            let originalSend;
+
+            beforeEach(() => {
+                originalSend = process.send;
+                process.send = sandbox.stub();
+            });
+
+            afterEach(() => {
+                if (originalSend === undefined) {
+                    delete process.send;
+                } else {
+                    process.send = originalSend;
+                }
+            });
+
+            it("should collect DOM snapshots without creating a network monitor when network is disabled", async () => {
+                startNetworkRecordingStub.callsFake(startNetworkRecording);
+                const snapshots = [{ type: 4, timestamp: 100, data: { width: 800, height: 600 } }];
+                const snapshotHistory = proxyquire("src/browser/history", {
+                    "./rrweb": { installRrwebAndCollectEvents: sandbox.stub().resolves(snapshots) },
+                });
+                requestDomSnapshotsStub.callsFake(snapshotHistory.requestDomSnapshots);
+                const getCdp = sandbox.stub().rejects(new Error("CDP must not be accessed"));
+                const browser = mkBrowser_({
+                    // eslint-disable-next-line camelcase
+                    prototype: { unstable_getCdp: getCdp },
+                });
+                browser.callstackHistory = callstackHistoryStub;
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+                const config = makeConfigStub({
+                    timeTravel: { mode: "on", network: { enabled: false, maxBodySizeBytes: 1024 } },
+                });
+                const test = mkTest_();
+                await run_({ runner: mkRunner_({ test, config }) });
+
+                assert.notCalled(getCdp);
+                assert.calledOnceWithExactly(process.send, {
+                    event: "domSnapshots",
+                    context: { testPath: test.titlePath(), browserId: test.browserId },
+                    data: { rrwebSnapshots: snapshots },
+                });
+            });
+
+            it("should send collected requests even when the test fails", async () => {
+                const requests = [{ url: "https://example.com" }];
+                const stop = sandbox.stub().resolves(requests);
+                startNetworkRecordingStub.resolves({ stop });
+                ExecutionThread.prototype.run.rejects(new Error("test failed"));
+                const test = mkTest_();
+                const config = makeConfigStub({
+                    timeTravel: { mode: "on", network: { enabled: true, maxBodySizeBytes: 1024 } },
+                });
+
+                const result = run_({ runner: mkRunner_({ test, config }) });
+
+                await assert.isRejected(result, /test failed/);
+                assert.calledWithExactly(startNetworkRecordingStub, sinon.match.object, config.timeTravel, false);
+                assert.callOrder(stop, process.send, BrowserAgent.prototype.freeBrowser);
+                assert.calledOnceWithExactly(process.send, {
+                    event: "networkRequests",
+                    context: { testPath: test.titlePath(), browserId: test.browserId },
+                    data: { requests },
                 });
             });
         });

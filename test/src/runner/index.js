@@ -141,6 +141,22 @@ describe("NodejsEnvRunner", () => {
         });
 
         describe("workers", () => {
+            it("should forward NETWORK_REQUESTS from the workers registry", async () => {
+                const registry = new WorkersRegistry();
+                registry.emit.restore();
+                registry.on.restore();
+                const context = { testPath: ["test"], browserId: "chrome" };
+                const data = { requests: [] };
+                registry.init.callsFake(() => registry.emit(RunnerEvents.NETWORK_REQUESTS, context, data));
+                WorkersRegistry.create.returns(registry);
+                const listener = sinon.spy();
+                const runner = new Runner(makeConfigStub()).on(RunnerEvents.NETWORK_REQUESTS, listener);
+
+                await run_({ runner });
+
+                assert.calledOnceWithExactly(listener, context, data);
+            });
+
             it("should create workers", async () => {
                 const config = makeConfigStub();
                 const runner = new Runner(config);

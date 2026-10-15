@@ -1943,6 +1943,57 @@ describe("config browser-options", () => {
     });
 
     describe("timeTravel", () => {
+        it("should keep network recording opt-in when DOM snapshots are enabled", async () => {
+            Config.read.resolves({ timeTravel: { mode: "on" } });
+
+            const config = await createConfig();
+
+            assert.deepEqual(config.timeTravel, {
+                mode: "on",
+                network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 },
+            });
+        });
+
+        it("should enable network recording with the default body limit", async () => {
+            Config.read.resolves({ timeTravel: { mode: "on", network: true } });
+
+            const config = await createConfig();
+
+            assert.deepEqual(config.timeTravel.network, { enabled: true, maxBodySizeBytes: 10 * 1024 * 1024 });
+        });
+
+        it("should inherit a custom body limit and allow a browser to disable recording", async () => {
+            Config.read.resolves({
+                timeTravel: { mode: "on", network: { enabled: true, maxBodySizeBytes: 1024 } },
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({ timeTravel: { mode: "on", network: false } }),
+                },
+            });
+
+            const config = await createConfig();
+
+            assert.deepEqual(config.browsers.b1.timeTravel.network, { enabled: true, maxBodySizeBytes: 1024 });
+            assert.deepEqual(config.browsers.b2.timeTravel, {
+                mode: "on",
+                network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 },
+            });
+        });
+
+        for (const network of [
+            { enabled: "true" },
+            { enabled: true, maxBodySizeBytes: 0 },
+            { enabled: true, maxBodySizeBytes: 1.5 },
+        ]) {
+            it(`should reject invalid network options ${JSON.stringify(network)}`, async () => {
+                Config.read.resolves({ timeTravel: { mode: "on", network } });
+
+                const result = createConfig();
+
+                await assert.isRejected(result, /timeTravel.network/);
+            });
+        }
+
         it("should set timeTravel to off by default", async () => {
             const readConfig = {};
 
@@ -1950,7 +2001,10 @@ describe("config browser-options", () => {
 
             const config = await createConfig();
 
-            assert.deepEqual(config.timeTravel, { mode: "off" });
+            assert.deepEqual(config.timeTravel, {
+                mode: "off",
+                network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 },
+            });
         });
 
         it("should throw if timeTravel is not a valid string", async () => {
@@ -1968,7 +2022,10 @@ describe("config browser-options", () => {
 
             const config = await createConfig();
 
-            assert.deepEqual(config.timeTravel, { mode: TimeTravelMode.RetriesOnly });
+            assert.deepEqual(config.timeTravel, {
+                mode: TimeTravelMode.RetriesOnly,
+                network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 },
+            });
         });
 
         it("should throw if timeTravel.mode is invalid", async () => {
@@ -1986,7 +2043,10 @@ describe("config browser-options", () => {
 
             const config = await createConfig();
 
-            assert.deepEqual(config.timeTravel, { mode: TimeTravelMode.RetriesOnly });
+            assert.deepEqual(config.timeTravel, {
+                mode: TimeTravelMode.RetriesOnly,
+                network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 },
+            });
         });
 
         it("should work correctly with browser overrides", async () => {
@@ -2001,8 +2061,14 @@ describe("config browser-options", () => {
 
             const config = await createConfig();
 
-            assert.deepEqual(config.browsers.b1.timeTravel, { mode: TimeTravelMode.RetriesOnly });
-            assert.deepEqual(config.browsers.b2.timeTravel, { mode: TimeTravelMode.Off });
+            assert.deepEqual(config.browsers.b1.timeTravel, {
+                mode: TimeTravelMode.RetriesOnly,
+                network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 },
+            });
+            assert.deepEqual(config.browsers.b2.timeTravel, {
+                mode: TimeTravelMode.Off,
+                network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 },
+            });
         });
     });
 });

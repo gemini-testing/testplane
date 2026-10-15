@@ -431,14 +431,30 @@ function buildBrowserOptions(defaultFactory, extra) {
                 }
 
                 validateMode(value.mode);
+                const { network } = value;
+                if (network !== undefined && typeof network !== "boolean") {
+                    if (!_.isPlainObject(network) || typeof network.enabled !== "boolean") {
+                        throw new Error('"timeTravel.network" must be a boolean or an object with a boolean "enabled"');
+                    }
+                    if (
+                        network.maxBodySizeBytes !== undefined &&
+                        (!Number.isSafeInteger(network.maxBodySizeBytes) || network.maxBodySizeBytes <= 0)
+                    ) {
+                        throw new Error('"timeTravel.network.maxBodySizeBytes" must be a positive integer');
+                    }
+                }
                 return true;
             },
             map: value => {
-                if (typeof value === "string") {
-                    return { mode: value };
-                }
-
-                return value;
+                const config = typeof value === "string" ? { mode: value } : value;
+                const network = typeof config.network === "boolean" ? { enabled: config.network } : config.network;
+                return {
+                    ...config,
+                    network: {
+                        enabled: network?.enabled ?? false,
+                        maxBodySizeBytes: network?.maxBodySizeBytes ?? defaults.timeTravel.network.maxBodySizeBytes,
+                    },
+                };
             },
         }),
 
