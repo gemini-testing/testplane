@@ -16,7 +16,8 @@ import type { CDPRuntimeScriptId, CDPScriptCoverage, CDPSessionId } from "../typ
 import type { SelectivityAssetState } from "./types";
 import type { SelectivityMapSourceMapUrlFn } from "../../../config/types";
 
-const SOURCE_CODE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"];
+// Component originals retain their extensions in the source maps of compiled JavaScript.
+const SOURCE_CODE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".svelte"];
 
 const PRECISE_COVERAGE_PARAMS = { callCount: false, detailed: false, allowTriggeredUpdates: false } as const;
 
@@ -97,8 +98,12 @@ export class JSSelectivity {
         // navigation may restart ids before the next boundary clears the maps). Detect reuse by content hash and drop
         // the now-stale mapping, so the "||=" below repopulates it for the new script instead of keeping the old one.
         const previousHash = this._scriptIdToHash[scriptId];
+        const previousSourceUrl = this._scriptIdToSourceUrl[scriptId];
+        // Coverage fallback has no hash. A different named URL cannot reuse its source/map on the first parsed event.
+        const hasDifferentUnhashedSource =
+            previousHash === undefined && Boolean(previousSourceUrl && url && previousSourceUrl !== url);
 
-        if (previousHash !== undefined && previousHash !== hash) {
+        if ((previousHash !== undefined && previousHash !== hash) || hasDifferentUnhashedSource) {
             delete this._scriptsSource[scriptId];
             delete this._scriptsSourceMap[scriptId];
             delete this._scriptIdToSourceUrl[scriptId];
@@ -109,6 +114,7 @@ export class JSSelectivity {
 
         this._scriptIdToSourceUrl[scriptId] ||= url;
 
+        // Parsed metadata is authoritative. A source may contain marker-like text inside a string or template.
         if (!url || !sourceMapURL || url.startsWith("chrome-error://")) {
             this._scriptsSource[scriptId] ||= null;
             this._scriptsSourceMap[scriptId] ||= null;
@@ -220,7 +226,7 @@ export class JSSelectivity {
             this._scriptsSource[scriptId] ||= scriptSourcePromise;
 
             if (!this._scriptsSourceMap[scriptId] || shouldRecalculateSource) {
-                this._scriptsSourceMap[scriptId] = scriptSourcePromise.then(async sourceCode => {
+                const scriptSourceMapPromise: SelectivityAssetState = scriptSourcePromise.then(async sourceCode => {
                     if (sourceCode instanceof Error) {
                         return sourceCode;
                     }
@@ -230,6 +236,10 @@ export class JSSelectivity {
 
                     // Source maps are not generated for this source file
                     if (sourceMapsStartIndex === -1) {
+                        // A settled Promise<null> must not hide valid metadata from a later parsed event.
+                        if (this._scriptsSourceMap[scriptId] === scriptSourceMapPromise) {
+                            this._scriptsSourceMap[scriptId] = null;
+                        }
                         return null;
                     }
 
@@ -247,14 +257,22 @@ export class JSSelectivity {
                         ? this._mapSourceMapUrl({ type: "js", sourceUrl: fixedUrl, sourceMapUrl: resolvedSourceMapUrl })
                         : true;
 
+                    // A pending fallback may finish after scriptParsed has replaced this scriptId's assets.
+                    const isCurrentScript = this._scriptsSourceMap[scriptId] === scriptSourceMapPromise;
+
                     if (!mappedResult) {
-                        this._scriptsSource[scriptId] = null;
+                        if (isCurrentScript) {
+                            this._scriptsSource[scriptId] = null;
+                        }
                         return null;
                     }
 
                     if (mappedResult !== true) {
-                        this._scriptIdToSourceMapUrl[scriptId] = resolvedSourceMapUrl = mappedResult;
-                    } else {
+                        resolvedSourceMapUrl = mappedResult;
+                        if (isCurrentScript) {
+                            this._scriptIdToSourceMapUrl[scriptId] = resolvedSourceMapUrl;
+                        }
+                    } else if (isCurrentScript) {
                         this._scriptIdToSourceMapUrl[scriptId] ||= resolvedSourceMapUrl;
                     }
 
@@ -286,6 +304,7 @@ export class JSSelectivity {
                         return err as Error;
                     }
                 });
+                this._scriptsSourceMap[scriptId] = scriptSourceMapPromise;
             }
         });
     }
@@ -305,20 +324,37 @@ export class JSSelectivity {
     private async _resolveCoverageToDeps(coverageScripts: CDPScriptCoverage[]): Promise<void> {
         const grouppedByScriptCoverage = groupBy(coverageScripts, "scriptId");
         const scriptIds = Object.keys(grouppedByScriptCoverage);
+        // Preserve this coverage window's assets before loading yields and a parsed event reuses the scriptId.
+        const scripts = scriptIds.map(scriptId => ({
+            scriptId,
+            sourceState: this._scriptsSource[scriptId],
+            sourceMapState: this._scriptsSourceMap[scriptId],
+            sourceMapUrl: this._scriptIdToSourceMapUrl[scriptId],
+            // Every "scriptId" has only one uniq "url" within this coverage window.
+            sourceUrl: this._scriptIdToSourceUrl[scriptId] || grouppedByScriptCoverage[scriptId][0].url,
+        }));
+
+        await this._waitForLoadingScripts();
 
         await Promise.all(
-            scriptIds.map(async scriptId => {
-                const [source, sourceMaps] = await Promise.all([
-                    this._scriptsSource[scriptId],
-                    this._scriptsSourceMap[scriptId],
-                ]);
-                const sourceMapUrl = this._scriptIdToSourceMapUrl[scriptId];
-                // Every "scriptId" has only one uniq "url"
-                const sourceUrl = this._scriptIdToSourceUrl[scriptId] || grouppedByScriptCoverage[scriptId][0].url;
+            scripts.map(async ({ scriptId, sourceState, sourceMapState, sourceMapUrl, sourceUrl }) => {
+                const [source, sourceMaps] = await Promise.all([sourceState, sourceMapState]);
+                // Coverage fallback discovers the map URL asynchronously. Do not borrow a reused id's metadata.
+                const resolvedSourceMapUrl =
+                    sourceMapUrl ??
+                    (this._scriptsSourceMap[scriptId] === sourceMapState
+                        ? this._scriptIdToSourceMapUrl[scriptId]
+                        : null);
 
                 // Function was called, but source maps were not generated for the file
                 // Or its anonymous script, without source url
-                if (!source || !sourceMaps || !sourceUrl) {
+                if (
+                    source === null ||
+                    source === undefined ||
+                    sourceMaps === null ||
+                    sourceMaps === undefined ||
+                    !sourceUrl
+                ) {
                     return;
                 }
 
@@ -330,24 +366,30 @@ export class JSSelectivity {
 
                 if (sourceMaps instanceof Error) {
                     throw new Error(
-                        [`JS Selectivity: Couldn't load source maps from ${sourceMapUrl}`, String(sourceMaps)].join(
-                            "\n",
-                        ),
+                        [
+                            `JS Selectivity: Couldn't load source maps from ${resolvedSourceMapUrl}`,
+                            String(sourceMaps),
+                        ].join("\n"),
                     );
                 }
 
-                if (isCachedOnFs(sourceMaps) && !sourceMapUrl) {
+                if (isCachedOnFs(sourceMaps) && !resolvedSourceMapUrl) {
                     throw new Error("Assertation failed: souce map url has to present if source maps are fs-cached");
                 }
 
                 const [sourceString, sourceMapsString] = await Promise.all([
                     isCachedOnFs(source) ? getCachedSelectivityFile(CacheType.Asset, sourceUrl) : source,
                     isCachedOnFs(sourceMaps)
-                        ? getCachedSelectivityFile(CacheType.Asset, sourceMapUrl as string)
+                        ? getCachedSelectivityFile(CacheType.Asset, resolvedSourceMapUrl as string)
                         : sourceMaps,
                 ]);
 
-                if (!sourceString || !sourceMapsString) {
+                if (
+                    sourceString === null ||
+                    sourceString === undefined ||
+                    sourceMapsString === null ||
+                    sourceMapsString === undefined
+                ) {
                     throw new Error(`JS Selectivity: fs-cache is broken for ${sourceUrl}`);
                 }
 
@@ -388,8 +430,6 @@ export class JSSelectivity {
 
         this._ensureScriptsAreLoading(coveragePart.result);
 
-        await this._waitForLoadingScripts();
-
         // Missing a dependency is worse than failing the test, so resolution errors are propagated (and turned into a
         // test failure by the orchestrator in index.ts), never swallowed into a partial dump.
         await this._resolveCoverageToDeps(coveragePart.result);
@@ -405,8 +445,6 @@ export class JSSelectivity {
         const coveragePart = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
 
         this._ensureScriptsAreLoading(coveragePart.result);
-
-        await this._waitForLoadingScripts();
 
         await this._resolveCoverageToDeps(coveragePart.result);
 
@@ -434,8 +472,6 @@ export class JSSelectivity {
             const coverageLastPart = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
 
             this._ensureScriptsAreLoading(coverageLastPart.result);
-
-            await this._waitForLoadingScripts();
 
             await this._resolveCoverageToDeps(coverageLastPart.result);
 

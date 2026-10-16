@@ -206,6 +206,7 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
     });
 
     let pageSwitchPromise: Promise<void> = Promise.resolve();
+    let debuggerPauseGeneration = 0;
     let isSelectivityStopped = false;
     // A failure to process coverage means the test's dependencies would be incomplete. Missing a dependency is worse
     // than failing the test (an incomplete dump silently under-runs later), so we remember the error and rethrow it
@@ -222,6 +223,7 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
             return;
         }
 
+        const pauseGeneration = ++debuggerPauseGeneration;
         const coveragePause = getCoveragePause(callFrames[0]?.functionName);
         const isBfcacheRestoreForClick =
             coveragePause === CoveragePause.BfcacheRestore && clickNavigationGuard?.onBfcacheRestorePause() === true;
@@ -251,7 +253,10 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
             } catch (err) {
                 pageSwitchError ||= err instanceof Error ? err : new Error(String(err));
             } finally {
-                await resume();
+                // A new document can pause while an older snapshot is pending. Only the latest handler owns resume.
+                if (pauseGeneration === debuggerPauseGeneration) {
+                    await resume();
+                }
 
                 // pageshow.persisted is emitted after the document was restored. It is the completion signal for a
                 // BFCache navigation because a restored page does not emit a new DOMContentLoaded/load event, and
