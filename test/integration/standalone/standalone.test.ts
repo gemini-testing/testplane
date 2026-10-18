@@ -35,8 +35,8 @@ describe("Standalone Browser E2E Tests", function () {
         const title = await browser.getTitle();
         assert.strictEqual(title, "Example Domain", "Page title should match");
 
-        const h1Text = await browser.$("h1").getText();
-        assert.strictEqual(h1Text, "Example Domain", "H1 text should match");
+        const linkText = await browser.$('a[href="https://iana.org/help/example-domains"]').getText();
+        assert.strictEqual(linkText, "Learn more", "Link text should match");
     });
 
     it("should execute JavaScript in the browser", async function () {
