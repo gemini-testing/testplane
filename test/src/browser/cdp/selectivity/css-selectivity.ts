@@ -1,5 +1,393 @@
 import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
+import path from "node:path";
+import fs from "node:fs";
+import os from "node:os";
+import { EventEmitter } from "node:events";
+import { pathToFileURL, resolve as urlResolve } from "node:url";
+import { TraceMap } from "@jridgewell/trace-mapping";
+import { hasProtocol, patchSourceMapSources, transformSourceDependencies } from "src/browser/cdp/selectivity/utils";
+import { CSSSelectivity as ProductionCSSSelectivity } from "src/browser/cdp/selectivity/css-selectivity";
+
+describe("CDP/Selectivity/CSSSelectivity source-root compatibility", () => {
+    let project: string;
+    let original: string;
+    let sequence = 0;
+
+    beforeEach(() => {
+        project = fs.mkdtempSync(path.join(os.tmpdir(), "testplane-css-roots-"));
+        original = path.join(project, "src/theme.css");
+        fs.mkdirSync(path.dirname(original), { recursive: true });
+        fs.writeFileSync(original, ".theme { color: red }");
+    });
+
+    afterEach(() => {
+        fs.rmSync(project, { recursive: true, force: true });
+    });
+
+    const relative = (file: string): string => path.posix.relative(process.cwd(), file);
+
+    const collect = async ({
+        sources,
+        configuredRoot = "",
+        mapRoot = "",
+        used = true,
+        lostEvent = false,
+        snapshot = false,
+    }: {
+        sources: string[];
+        configuredRoot?: string;
+        mapRoot?: string;
+        used?: boolean;
+        lostEvent?: boolean;
+        snapshot?: boolean;
+    }): Promise<Set<string>> => {
+        const sourceMap = {
+            version: 3,
+            sources,
+            sourceRoot: mapRoot,
+            sourcesContent: sources.map(() => fs.readFileSync(original, "utf8")),
+            names: [],
+            mappings: "AAAA",
+        };
+        const sourceMapURL = `data:application/json;base64,${Buffer.from(JSON.stringify(sourceMap)).toString(
+            "base64",
+        )}`;
+        const emitter = new EventEmitter();
+        const sessionId = `css-roots-${process.pid}-${sequence++}`;
+        const styleSheetId = "stylesheet";
+        const ruleUsage = [{ styleSheetId, startOffset: 0, endOffset: 100, used }];
+        const cdp = {
+            css: {
+                on: emitter.on.bind(emitter),
+                off: emitter.off.bind(emitter),
+                startRuleUsageTracking: async () => ({}),
+                stopRuleUsageTracking: async () => ({ ruleUsage: snapshot ? [] : ruleUsage }),
+                takeCoverageDelta: async () => ({ coverage: ruleUsage }),
+                getStyleSheetText: async () => ({
+                    text: `.theme { color: red }\n/*# sourceMappingURL=${sourceMapURL} */`,
+                }),
+            },
+            runtime: {},
+        };
+        const collector = new ProductionCSSSelectivity(cdp as any, sessionId, sessionId, configuredRoot, null);
+
+        await collector.start();
+        if (!lostEvent) {
+            emitter.emit(
+                "styleSheetAdded",
+                { header: { styleSheetId, sourceURL: "http://example.com/styles.css", sourceMapURL } },
+                sessionId,
+            );
+        }
+        if (snapshot) {
+            await collector.takeCoverageSnapshot();
+        }
+        const dependencies = await collector.stop();
+
+        assert.equal(emitter.listenerCount("styleSheetAdded"), 0);
+        assert.isNotNull(dependencies);
+        return dependencies as Set<string>;
+    };
+
+    [
+        { title: "configured absolute root", configured: true },
+        { title: "source map absolute root", configured: false },
+        { title: "configured relative root", configured: true, relativeRoot: true },
+        { title: "unused stylesheet", configured: true, used: false },
+        { title: "lost stylesheet event", configured: true, lostEvent: true },
+        { title: "coverage snapshot", configured: true, snapshot: true },
+    ].forEach(({ title, configured, relativeRoot, used, lostEvent, snapshot }) => {
+        it(`should apply ${title} to logical leading-slash originals`, async () => {
+            const root = relativeRoot ? relative(project) : project;
+            const dependencies = await collect({
+                sources: ["/src/theme.css"],
+                configuredRoot: configured ? root : "",
+                mapRoot: configured ? "/ignored-map-root" : root,
+                used,
+                lostEvent,
+                snapshot,
+            });
+            const mapper = sinon.spy(() => true);
+            const normalized = transformSourceDependencies(
+                { css: dependencies, js: null, png: null },
+                mapper,
+                "browser",
+            );
+
+            assert.deepEqual(normalized.css, [relative(original)]);
+            assert.calledOnce(mapper);
+            assert.deepEqual(mapper.firstCall.args, [
+                {
+                    scope: "browser",
+                    reason: "browser-css-import",
+                    relativePath: relative(original),
+                },
+            ]);
+        });
+    });
+
+    it("should preserve a genuine existing absolute original with a relative configured root", async () => {
+        const dependencies = await collect({ sources: [original], configuredRoot: "dist" });
+
+        assert.deepEqual([...dependencies], [original]);
+        assert.deepEqual(transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser").css, [
+            relative(original),
+        ]);
+    });
+
+    it("should apply a dot source map root to a logical leading-slash original", async () => {
+        const dependencies = await collect({ sources: [`/${relative(original)}`], mapRoot: "." });
+
+        assert.deepEqual(transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser").css, [
+            relative(original),
+        ]);
+    });
+
+    it("should preserve a genuine absolute original with a file URL root", async () => {
+        const dependencies = await collect({ sources: [original], configuredRoot: pathToFileURL(project).href });
+
+        assert.deepEqual([...dependencies], [original]);
+        assert.deepEqual(transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser").css, [
+            relative(original),
+        ]);
+    });
+
+    it("should not hide malformed URI escapes while checking an absolute candidate", async () => {
+        await assert.isRejected(collect({ sources: ["/src/theme%.css"], configuredRoot: project }), URIError);
+    });
+
+    it("should preserve an existing encoded absolute original", async () => {
+        const spacedOriginal = path.join(project, "src/spaced theme.css");
+        fs.writeFileSync(spacedOriginal, ".theme { color: blue }");
+        const encodedOriginal = spacedOriginal.replace("spaced theme", "spaced%20theme");
+        const dependencies = await collect({ sources: [encodedOriginal], configuredRoot: "dist" });
+
+        assert.deepEqual([...dependencies], [encodedOriginal]);
+        assert.deepEqual(transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser").css, [
+            relative(spacedOriginal),
+        ]);
+    });
+
+    it("should conservatively retain both existing absolute and root-prefixed originals", async () => {
+        const rootedOriginal = path.posix.join(project, original);
+        fs.mkdirSync(path.dirname(rootedOriginal), { recursive: true });
+        fs.writeFileSync(rootedOriginal, ".theme { color: blue }");
+        const dependencies = await collect({ sources: [original], configuredRoot: project });
+
+        assert.deepEqual([...dependencies].sort(), [original, rootedOriginal].sort());
+        assert.deepEqual(
+            transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser").css,
+            [relative(original), relative(rootedOriginal)].sort((a, b) => a.localeCompare(b)),
+        );
+    });
+
+    it("should retain missing logical originals and fail normalization instead of silently dropping them", async () => {
+        const dependencies = await collect({ sources: ["/src/missing.css"], configuredRoot: project });
+
+        assert.deepEqual([...dependencies], [path.join(project, "src/missing.css")]);
+        assert.throws(
+            () => transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser"),
+            /Couldn't find/,
+        );
+    });
+
+    describe("URL roots downstream compatibility", () => {
+        ["http://example.com", "https://example.com", "webpack://project", "runtime://generated"].forEach(
+            protocolRoot => {
+                [false, true].forEach(configured => {
+                    it(`should allow an explicit mapper for ${
+                        configured ? "configured" : "map"
+                    } root ${protocolRoot}`, async () => {
+                        const root = `${protocolRoot}/workspace/dist${configured ? "/" : ""}`;
+                        const dependencies = await collect({
+                            sources: ["src/theme.css", "../src/theme.css", "/src/theme.css"],
+                            mapRoot: configured ? "/ignored-map-root" : root,
+                            configuredRoot: configured ? root : "",
+                        });
+                        const expectedUris = [
+                            `${protocolRoot}/workspace/dist/src/theme.css`,
+                            `${protocolRoot}/workspace/src/theme.css`,
+                        ];
+                        const mapper = sinon.spy((input: { relativePath: string }) =>
+                            relative(path.join(project, "src", path.posix.basename(input.relativePath))),
+                        );
+                        const normalized = transformSourceDependencies(
+                            { css: dependencies, js: null, png: null },
+                            mapper,
+                            "browser",
+                        );
+
+                        assert.deepEqual([...dependencies].sort(), expectedUris.sort());
+                        assert.deepEqual(normalized.css, [relative(original)]);
+                        assert.deepEqual(
+                            mapper
+                                .getCalls()
+                                .map(call => call.args[0])
+                                .sort((a, b) => a.relativePath.localeCompare(b.relativePath)),
+                            expectedUris
+                                .sort((a, b) => a.localeCompare(b))
+                                .map(relativePath => ({
+                                    scope: "browser",
+                                    reason: "browser-css-import",
+                                    relativePath,
+                                })),
+                        );
+                    });
+                });
+            },
+        );
+
+        it("should keep ignoring unmapped unsupported URIs", async () => {
+            const dependencies = await collect({
+                sources: ["src/theme.css"],
+                mapRoot: "runtime://generated/workspace",
+            });
+
+            assert.deepEqual(transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser"), {
+                css: [],
+                js: [],
+                modules: [],
+                png: [],
+            });
+        });
+
+        [true, false].forEach(result => {
+            it(`should invoke a mapper returning ${result} for an unsupported URI without recording it`, async () => {
+                const dependencies = await collect({
+                    sources: ["src/theme.css"],
+                    mapRoot: "runtime://generated/workspace",
+                });
+                const mapper = sinon.spy(() => result);
+
+                assert.deepEqual(
+                    transformSourceDependencies({ css: dependencies, js: null, png: null }, mapper, "browser"),
+                    { css: [], js: [], modules: [], png: [] },
+                );
+                assert.calledOnce(mapper);
+                assert.deepEqual(mapper.firstCall.args, [
+                    {
+                        scope: "browser",
+                        reason: "browser-css-import",
+                        relativePath: "runtime://generated/workspace/src/theme.css",
+                    },
+                ]);
+            });
+        });
+
+        it("should reject a missing explicitly mapped local CSS original", async () => {
+            const dependencies = await collect({
+                sources: ["src/theme.css"],
+                mapRoot: "https://example.com/workspace",
+            });
+            const mapper = sinon.spy(() => relative(path.join(project, "src/missing.css")));
+
+            assert.throws(
+                () => transformSourceDependencies({ css: dependencies, js: null, png: null }, mapper, "browser"),
+                /Couldn't find/,
+            );
+            assert.calledOnce(mapper);
+        });
+
+        [false, true].forEach(configured => {
+            it(`should decode percent once with a ${configured ? "configured" : "map"} file URL root`, async () => {
+                const percentOriginal = path.join(project, "src/style%.css");
+                fs.writeFileSync(percentOriginal, ".theme { color: blue }");
+                const root = pathToFileURL(project).href;
+                const dependencies = await collect({
+                    sources: ["src/style%25.css"],
+                    mapRoot: configured ? "/ignored-root" : root,
+                    configuredRoot: configured ? root : "",
+                });
+                const mapper = sinon.spy(() => true);
+
+                assert.deepEqual(
+                    transformSourceDependencies({ css: dependencies, js: null, png: null }, mapper, "browser").css,
+                    [relative(percentOriginal)],
+                );
+                assert.calledOnce(mapper);
+                assert.deepEqual(mapper.firstCall.args, [
+                    {
+                        scope: "browser",
+                        reason: "browser-css-import",
+                        relativePath: relative(percentOriginal),
+                    },
+                ]);
+            });
+        });
+
+        it("should not substitute a different existing file when the original name contains encoded percent-space", async () => {
+            const percentOriginal = path.join(project, "src/style%20.css");
+            fs.writeFileSync(percentOriginal, ".theme { color: blue }");
+            fs.writeFileSync(path.join(project, "src/style .css"), ".theme { color: green }");
+            const dependencies = await collect({
+                sources: ["src/style%2520.css"],
+                mapRoot: pathToFileURL(project).href,
+            });
+
+            assert.deepEqual(
+                transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser").css,
+                [relative(percentOriginal)],
+            );
+        });
+
+        it("should not turn a doubly encoded source directory into traversal", async () => {
+            const percentOriginal = path.join(project, "src/%2e%2e/theme.css");
+            fs.mkdirSync(path.dirname(percentOriginal), { recursive: true });
+            fs.writeFileSync(percentOriginal, ".theme { color: blue }");
+            fs.writeFileSync(path.join(project, "theme.css"), ".theme { color: green }");
+            const dependencies = await collect({
+                sources: ["src/%252e%252e/theme.css"],
+                mapRoot: pathToFileURL(project).href,
+            });
+
+            assert.deepEqual(
+                transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser").css,
+                [relative(percentOriginal)],
+            );
+        });
+
+        it("should allow explicit exclusion of a file URL original whose decoded name contains percent", async () => {
+            const dependencies = await collect({ sources: ["src/style%25.css"], mapRoot: pathToFileURL(project).href });
+            const mapper = sinon.spy(() => false);
+
+            assert.deepEqual(
+                transformSourceDependencies({ css: dependencies, js: null, png: null }, mapper, "browser"),
+                { css: [], js: [], modules: [], png: [] },
+            );
+            assert.calledOnce(mapper);
+        });
+
+        it("should decode explicit file URL originals once, independent of the configured root", async () => {
+            const percentOriginal = path.join(project, "src/style%20.css");
+            fs.writeFileSync(percentOriginal, ".theme { color: blue }");
+            fs.writeFileSync(path.join(project, "src/style .css"), ".theme { color: green }");
+            const dependencies = await collect({
+                sources: [pathToFileURL(percentOriginal).href],
+                configuredRoot: "/ignored-root",
+            });
+
+            assert.deepEqual(
+                transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser").css,
+                [relative(percentOriginal)],
+            );
+        });
+
+        it("should retain file URL originals containing encoded space, query and hash characters", async () => {
+            const specialOriginal = path.join(project, "src/style name?x#.css");
+            fs.writeFileSync(specialOriginal, ".theme { color: blue }");
+            const dependencies = await collect({
+                sources: ["src/style%20name%3Fx%23.css"],
+                mapRoot: pathToFileURL(project).href,
+            });
+
+            assert.deepEqual(
+                transformSourceDependencies({ css: dependencies, js: null, png: null }, null, "browser").css,
+                [relative(specialOriginal)],
+            );
+        });
+    });
+});
 
 describe("CDP/Selectivity/CSSSelectivity", () => {
     const sandbox = sinon.createSandbox();
@@ -22,7 +410,6 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
     let patchSourceMapSourcesStub: SinonStub;
     let urlResolveStub: SinonStub;
     let groupByStub: SinonStub;
-    let pathStub: { posix: { join: SinonStub } };
     let hasProtocolStub: SinonStub;
     let isDataProtocolStub: SinonStub;
     let canParseStub: SinonStub;
@@ -95,9 +482,6 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
             });
             return result;
         });
-        pathStub = {
-            posix: { join: sandbox.stub().callsFake((...args) => args.join("/")) },
-        };
         hasProtocolStub = sandbox.stub().returns(false);
         isDataProtocolStub = sandbox.stub().callsFake((url: string) => url.startsWith("data:"));
         // In production "urlResolve" yields an absolute (parseable) url; the stub above returns a relative one,
@@ -111,7 +495,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
 
         CSSSelectivity = proxyquire("src/browser/cdp/selectivity/css-selectivity", {
             lodash: { groupBy: groupByStub },
-            path: pathStub,
+            "node:path": path,
             "node:url": { resolve: urlResolveStub, URL: global.URL },
             "./utils": {
                 fetchTextWithBrowserFallback: fetchTextWithBrowserFallbackStub,
@@ -669,6 +1053,111 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
                 "/root/src/b-styles.css",
                 "/root/src/z-styles.css",
             ]);
+        });
+
+        [
+            {
+                title: "should prepend a configured source root to missing logical leading-slash originals",
+                configuredRoot: sourceRoot,
+                mapRoot: "/map-root",
+                sources: ["/absolute/path/styles.css", "src/theme.css"],
+                dependencies: [`${sourceRoot}/absolute/path/styles.css`, `${sourceRoot}/src/theme.css`],
+                used: true,
+            },
+            {
+                title: "should prepend the source map root to missing logical leading-slash originals",
+                configuredRoot: "",
+                mapRoot: "/map-root",
+                sources: ["/absolute/path/styles.css", "src/theme.css"],
+                dependencies: ["/map-root/absolute/path/styles.css", "/map-root/src/theme.css"],
+                used: true,
+            },
+            {
+                title: "should retain relative and file URL originals for unused stylesheet rules",
+                configuredRoot: sourceRoot,
+                mapRoot: "/map-root",
+                sources: ["file:///absolute/path/styles.css", "src/theme.css", "<no source>", ""],
+                dependencies: ["file:///absolute/path/styles.css", `${sourceRoot}/src/theme.css`],
+                used: false,
+            },
+        ].forEach(({ title, configuredRoot, mapRoot, sources, dependencies, used }) => {
+            it(title, async () => {
+                const sourceMap = { ...mockSourceMap, sources, sourceRoot: mapRoot };
+                getCachedSelectivityFileStub.resolves(null);
+                setCachedSelectivityFileStub.rejects(new Error("fs-cache unavailable"));
+                fetchTextWithBrowserFallbackStub.resolves(JSON.stringify(sourceMap));
+                patchSourceMapSourcesStub.callsFake(patchSourceMapSources);
+                hasProtocolStub.callsFake(hasProtocol);
+                cdpMock.css.stopRuleUsageTracking.resolves({
+                    ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used }],
+                });
+                const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, wdSessionId, configuredRoot, null);
+
+                await cssSelectivity.start();
+                cdpMock.css.on.getCall(0).args[1](styleSheetEvent, sessionId);
+                const result = await cssSelectivity.stop();
+
+                assert.deepEqual(Array.from(result || []).sort(), dependencies.sort());
+            });
+        });
+
+        [
+            { root: "file:///workspace", configured: false },
+            { root: "file:///workspace/", configured: false },
+            { root: "http://example.com/workspace", configured: false },
+            { root: "https://example.com/workspace/", configured: false },
+            { root: "file:///configured/workspace", configured: true },
+            { root: "runtime://generated/workspace", configured: false },
+        ].forEach(({ root, configured }) => {
+            it(`should resolve relative originals with ${
+                configured ? "configured" : "map"
+            } URL root ${root}`, async () => {
+                const relativeSources = ["src/styles.css", "../src/theme.css", "/absolute/path/styles.css"];
+                const unchangedSources = [
+                    "file:///absolute/path/styles.css",
+                    "https://other.example.com/styles.css",
+                    "turbopack://generated/styles.css",
+                ];
+                const sourceMap = {
+                    ...mockSourceMap,
+                    version: 3 as const,
+                    sources: [...relativeSources, ...unchangedSources],
+                    sourceRoot: configured ? "/original-root" : root,
+                };
+                const configuredRoot = configured ? root : "";
+                const expectedRelativeSources = new TraceMap(
+                    patchSourceMapSources({ ...sourceMap, sources: relativeSources }, configuredRoot),
+                ).resolvedSources;
+                getCachedSelectivityFileStub.resolves(null);
+                setCachedSelectivityFileStub.rejects(new Error("fs-cache unavailable"));
+                fetchTextWithBrowserFallbackStub.resolves(JSON.stringify(sourceMap));
+                patchSourceMapSourcesStub.callsFake(patchSourceMapSources);
+                hasProtocolStub.callsFake(hasProtocol);
+                urlResolveStub.callsFake(urlResolve);
+                const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, wdSessionId, configuredRoot, null);
+
+                await cssSelectivity.start();
+                cdpMock.css.on.getCall(0).args[1](styleSheetEvent, sessionId);
+                const result = await cssSelectivity.stop();
+
+                assert.deepEqual(
+                    Array.from(result || []).sort(),
+                    [...expectedRelativeSources, ...unchangedSources].sort(),
+                );
+                if (root.startsWith("runtime://")) {
+                    const unsupportedDeps = new Set(
+                        Array.from(result || []).filter(source => source.startsWith("runtime://")),
+                    );
+                    assert.equal(unsupportedDeps.size, relativeSources.length);
+                    const normalized = transformSourceDependencies(
+                        { css: unsupportedDeps, js: null, png: null },
+                        null,
+                        "browser",
+                    );
+
+                    assert.deepEqual(normalized, { css: [], js: [], modules: [], png: [] });
+                }
+            });
         });
     });
 
