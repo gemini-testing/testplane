@@ -127,6 +127,39 @@ const rootSection = section(
 
         plugins: options.anyObject(),
 
+        exitOnError: section({
+            enabled: options.boolean("exitOnError.enabled"),
+            filters: option({
+                defaultValue: defaults.exitOnError.filters,
+                validate: value => {
+                    if (!Array.isArray(value)) {
+                        throw new Error('"exitOnError.filters" must be an array of named rules');
+                    }
+
+                    const names = new Set();
+                    for (const [index, rule] of value.entries()) {
+                        const path = `exitOnError.filters[${index}]`;
+                        if (!_.isPlainObject(rule)) {
+                            throw new Error(`"${path}" must be an object`);
+                        }
+                        if (typeof rule.name !== "string" || !rule.name.trim()) {
+                            throw new Error(`"${path}.name" must be a non-empty string`);
+                        }
+                        if (names.has(rule.name)) {
+                            throw new Error(`"${path}.name" must be unique: duplicate rule name "${rule.name}"`);
+                        }
+                        names.add(rule.name);
+                        if (typeof rule.filter !== "function" && !_.isRegExp(rule.filter)) {
+                            throw new Error(`"${path}.filter" must be a function or RegExp`);
+                        }
+                        if (!Number.isSafeInteger(rule.limit) || rule.limit <= 0) {
+                            throw new Error(`"${path}.limit" must be a positive safe integer`);
+                        }
+                    }
+                },
+            }),
+        }),
+
         lastFailed: section({
             only: options.boolean("lastFailed.only"),
             input: option({

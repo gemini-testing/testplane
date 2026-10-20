@@ -18,6 +18,112 @@ describe("config options", () => {
 
     afterEach(() => sandbox.restore());
 
+    describe("exitOnError", () => {
+        it("should be disabled with no filters by default", () => {
+            assert.deepEqual(parse_().exitOnError, { enabled: false, filters: [] });
+        });
+
+        it("should preserve named function and RegExp filters", () => {
+            const exitOnError = {
+                enabled: true,
+                filters: [
+                    { name: "quota", filter: /Too Many Requests/i, limit: 5 },
+                    { name: "access", filter: text => text.includes("Access denied"), limit: 1 },
+                ],
+            };
+
+            assert.deepEqual(parse_({ options: { exitOnError } }).exitOnError, exitOnError);
+        });
+
+        it("should allow partial config and override enabled from environment", () => {
+            const result = parse_({
+                options: { exitOnError: { filters: [{ name: "quota", filter: /429/, limit: 1 }] } },
+                env: { ["testplane_exit_on_error_enabled"]: "true" },
+            });
+
+            assert.isTrue(result.exitOnError.enabled);
+            assert.equal(result.exitOnError.filters[0].limit, 1);
+        });
+
+        [null, {}, "quota", true].forEach(filters => {
+            it(`should reject invalid filters: ${JSON.stringify(filters)}`, () => {
+                assert.throws(
+                    () => parse_({ options: { exitOnError: { filters } } }),
+                    '"exitOnError.filters" must be an array',
+                );
+            });
+        });
+
+        [null, [], "quota"].forEach(rule => {
+            it(`should reject invalid rule: ${JSON.stringify(rule)}`, () => {
+                assert.throws(
+                    () => parse_({ options: { exitOnError: { filters: [rule] } } }),
+                    '"exitOnError.filters[0]" must be an object',
+                );
+            });
+        });
+
+        [undefined, null, "", "   ", 42, {}, []].forEach(name => {
+            it(`should reject invalid rule name: ${JSON.stringify(name)}`, () => {
+                assert.throws(
+                    () =>
+                        parse_({
+                            options: { exitOnError: { filters: [{ name, filter: /429/, limit: 1 }] } },
+                        }),
+                    '"exitOnError.filters[0].name" must be a non-empty string',
+                );
+            });
+        });
+
+        [true, false].forEach(enabled => {
+            it(`should reject duplicate rule names when enabled is ${enabled}`, () => {
+                assert.throws(
+                    () =>
+                        parse_({
+                            options: {
+                                exitOnError: {
+                                    enabled,
+                                    filters: [
+                                        { name: "quota", filter: /429/, limit: 1 },
+                                        { name: "access", filter: /403/, limit: 2 },
+                                        { name: "quota", filter: /503/, limit: 3 },
+                                    ],
+                                },
+                            },
+                        }),
+                    '"exitOnError.filters[2].name" must be unique: duplicate rule name "quota"',
+                );
+            });
+        });
+
+        it("should accept rule names matching object prototype properties", () => {
+            const filters = [
+                { name: "__proto__", filter: /429/, limit: 1 },
+                { name: "constructor", filter: /403/, limit: 2 },
+            ];
+
+            assert.deepEqual(parse_({ options: { exitOnError: { filters } } }).exitOnError.filters, filters);
+        });
+
+        [null, "429", 42, {}].forEach(filter => {
+            it(`should reject invalid filter: ${JSON.stringify(filter)}`, () => {
+                assert.throws(
+                    () => parse_({ options: { exitOnError: { filters: [{ name: "quota", filter, limit: 1 }] } } }),
+                    '"exitOnError.filters[0].filter" must be a function or RegExp',
+                );
+            });
+        });
+
+        [undefined, 0, -1, 1.5, Infinity, NaN, "5", Number.MAX_SAFE_INTEGER + 1].forEach(limit => {
+            it(`should reject invalid limit: ${limit}`, () => {
+                assert.throws(
+                    () => parse_({ options: { exitOnError: { filters: [{ name: "quota", filter: /429/, limit }] } } }),
+                    '"exitOnError.filters[0].limit" must be a positive safe integer',
+                );
+            });
+        });
+    });
+
     describe("browserDownloadMirrors", () => {
         it("should be empty by default", () => {
             const result = parse_();

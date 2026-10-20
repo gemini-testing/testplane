@@ -35,7 +35,14 @@ export type {
 } from "./types";
 export type { Config, ProfilerConfig, ProfilerLevel } from "./config";
 export { TimeTravelMode, SelectivityMode } from "./config";
-export type { ConfigInput, AssertViewOpts, BrowserDownloadMirrors, BrowserDownloadMirrorsInput } from "./config/types";
+export type {
+    ConfigInput,
+    AssertViewOpts,
+    BrowserDownloadMirrors,
+    BrowserDownloadMirrorsInput,
+    ExitOnErrorConfig,
+    ExitOnErrorRule,
+} from "./config/types";
 export type { ProfilerResultV1 } from "./profiler/schema";
 export type {
     TestCollection,

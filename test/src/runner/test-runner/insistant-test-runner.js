@@ -8,6 +8,7 @@ const BrowserAgent = require("src/runner/browser-agent");
 const { AssertViewError } = require("src/browser/commands/assert-view/errors/assert-view-error");
 const { NoRefImageError } = require("src/browser/commands/assert-view/errors/no-ref-image-error");
 const { Test } = require("src/test-reader/test-object");
+const { ExitOnError } = require("src/runner/exit-on-error");
 
 const { makeConfigStub } = require("../../../utils");
 
@@ -28,7 +29,7 @@ describe("runner/test-runner/insistant-test-runner", () => {
         const browserAgent = opts.browserAgent || BrowserAgent.create();
         browserAgent.browserId = browserId;
 
-        return InsistantTestRunner.create(test, config, browserAgent);
+        return InsistantTestRunner.create(test, config, browserAgent, undefined, opts.checkTestError);
     };
 
     const run_ = (opts = {}) => {
@@ -66,6 +67,72 @@ describe("runner/test-runner/insistant-test-runner", () => {
     afterEach(() => sandbox.restore());
 
     describe("run", () => {
+        it("should reach the error limit through retries of a single test", async () => {
+            const checker = new ExitOnError({
+                enabled: true,
+                filters: [{ name: "quota", filter: /429/, limit: 3 }],
+            });
+            const runner = mkRunner_({
+                config: makeConfigStub({ retry: 5 }),
+                checkTestError: test => checker.check(test),
+            });
+            const failedTest = Object.assign(new Test({ id: "same-test", file: "test.js" }), {
+                err: new Error("429"),
+            });
+            const onRetry = sandbox.spy();
+            const onFail = sandbox.spy();
+            runner.on(Events.RETRY, onRetry).on(Events.TEST_FAIL, onFail);
+            onEachTestRun_(innerRunner => innerRunner.emit(Events.TEST_FAIL, failedTest));
+
+            await run_({ runner });
+
+            assert.calledThrice(RegularTestRunner.prototype.run);
+            assert.calledTwice(onRetry);
+            assert.calledOnceWith(onFail, failedTest);
+        });
+
+        it("should check errors before deciding whether to retry and preserve the original failure", async () => {
+            const failedTest = makeFailedTest_();
+            const stopError = new Error("quota limit reached");
+            const checkTestError = sandbox.stub().returns(stopError);
+            const shouldRetry = sandbox.stub().returns(true);
+            const runner = mkRunner_({ config: makeConfigStub({ retry: 5, shouldRetry }), checkTestError });
+            const onFail = sandbox.spy();
+            const onRetry = sandbox.spy();
+            runner.on(Events.TEST_FAIL, onFail).on(Events.RETRY, onRetry);
+            onEachTestRun_(innerRunner => innerRunner.emit(Events.TEST_FAIL, failedTest));
+
+            await run_({ runner });
+
+            assert.calledOnceWith(checkTestError, failedTest);
+            assert.notCalled(shouldRetry);
+            assert.notCalled(onRetry);
+            assert.calledOnceWith(onFail, failedTest);
+            assert.calledOnce(RegularTestRunner.prototype.run);
+        });
+
+        it("should keep retrying errors below the limit", async () => {
+            const checkTestError = sandbox.stub();
+            const runner = mkRunner_({ config: makeConfigStub({ retry: 2 }), checkTestError });
+            onEachTestRun_(innerRunner => innerRunner.emit(Events.TEST_FAIL, makeFailedTest_()));
+
+            await run_({ runner });
+
+            assert.calledThrice(checkTestError);
+            assert.calledThrice(RegularTestRunner.prototype.run);
+        });
+
+        it("should not check errors caused by cancellation", async () => {
+            const checkTestError = sandbox.stub();
+            const runner = mkRunner_({ checkTestError });
+            runner.cancel(new Error("cancelled"));
+            onEachTestRun_(innerRunner => innerRunner.emit(Events.TEST_FAIL, makeFailedTest_()));
+
+            await run_({ runner });
+
+            assert.notCalled(checkTestError);
+        });
+
         it("should pass cancel error to a regular runner created later", async () => {
             const error = new Error("Tests were stopped by the user");
             const cancelSpy = sandbox.spy(RegularTestRunner.prototype, "cancel");

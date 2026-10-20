@@ -101,6 +101,59 @@ describe("NodejsEnvRunner", () => {
 
     afterEach(() => sandbox.restore());
 
+    describe("exitOnError", () => {
+        it("should share counters across browsers and cancel all runners once before intercepted events", async () => {
+            const config = makeConfigStub({
+                exitOnError: { enabled: true, filters: [{ name: "quota", filter: /429/, limit: 2 }] },
+            });
+            const interceptor = sandbox.stub().returns({ event: RunnerEvents.TEST_PASS });
+            const runner = new Runner(config, [{ event: RunnerEvents.TEST_FAIL, handler: interceptor }]);
+            const onError = sandbox.spy(error => runner.cancel(error));
+            const cancel = sandbox.spy(BrowserRunner.prototype, "cancel");
+            const workers = mkWorkers_();
+            WorkersRegistry.prototype.register.returns(workers);
+            runner.on(RunnerEvents.ERROR, onError);
+            const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
+            let checks = 0;
+            onWaitTestsCompletion_(() => {
+                const check = BrowserRunner.create.getCall(checks).args[5];
+                const failedTest = { id: "same-test", file: "test.js", err: new Error("429") };
+                const error = check(failedTest);
+                if (checks++ === 0) {
+                    assert.isUndefined(error);
+                } else {
+                    assert.instanceOf(error, Error);
+                    assert.isUndefined(check(failedTest));
+                }
+            });
+
+            await run_({ runner, testCollection });
+
+            assert.calledOnce(onError);
+            assert.include(onError.firstCall.args[0].message, '"quota"');
+            assert.calledTwice(cancel);
+            assert.calledOnce(workers.cancel);
+            assert.notCalled(interceptor);
+        });
+
+        it("should not invoke filters after cancellation", async () => {
+            const filter = sandbox.spy(() => true);
+            const config = makeConfigStub({
+                exitOnError: { enabled: true, filters: [{ name: "quota", filter, limit: 1 }] },
+            });
+            const runner = new Runner(config);
+            runner.cancel(new Error("cancelled"));
+            onWaitTestsCompletion_(() => {
+                const check = BrowserRunner.create.firstCall.args[5];
+                check({ id: "one", err: new Error("cancelled") });
+            });
+
+            await run_({ runner });
+
+            assert.notCalled(filter);
+        });
+    });
+
     describe("constructor", () => {
         it("should init temp with dir from config", () => {
             const config = makeConfigStub({ system: { tempDir: "some/dir" } });
