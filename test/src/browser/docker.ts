@@ -529,7 +529,7 @@ describe("browser/docker", () => {
 
     it("should route Firefox sessions through /wd/hub inside the browser container", async () => {
         const driver = await start(
-            "registry.yandex.net/selenium/firefox:148.0",
+            "registry.example.com/selenium/firefox:148.0",
             {
                 browserName: "firefox",
                 browserVersion: "148.0",
