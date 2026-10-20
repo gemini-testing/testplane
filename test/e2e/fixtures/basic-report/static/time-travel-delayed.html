@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Time Travel delayed rrweb installation</title>
+    </head>
+    <body>
+        <input id="value" value="" />
+        <script>
+            const nativeEval = window.eval;
+            let shouldDelayRrweb = true;
+
+            window.eval = function evalWithDelayedRrwebInstallation(code) {
+                if (shouldDelayRrweb && String(code).includes('define("rrweb"')) {
+                    shouldDelayRrweb = false;
+                    const startedAt = performance.now();
+                    const deadline = startedAt + 1200;
+
+                    while (performance.now() < deadline) {
+                        // Intentionally delay only the recorder installation.
+                    }
+
+                    window.rrwebInstallDelayMs = performance.now() - startedAt;
+                }
+
+                return nativeEval.call(window, code);
+            };
+        </script>
+    </body>
+</html>
