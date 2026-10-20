@@ -378,6 +378,12 @@ export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;
 export interface DockerConfig {
     /** Required for Docker startup, either here or inherited from the top-level docker option. No default. */
     selenoidImage?: string;
+    /** Browser image platform. Defaults to linux/amd64. */
+    platform?: string;
+    /** Selenoid controller platform, independent of the browser. Defaults to linux/amd64. */
+    selenoidPlatform?: string;
+    /** Absolute engine socket path on the daemon's Linux host. Defaults to /var/run/docker.sock. */
+    socketPath?: string;
     image?: string;
     path?: string;
     port?: string;

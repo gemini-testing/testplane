@@ -39,7 +39,12 @@ async function imageExists(image: string, docker: Docker): Promise<boolean> {
 }
 
 /** Persist the repaired adapter in Docker's image store, never in a host binary cache. */
-export async function prepareDockerBrowserImage(source: string, scope: string, docker: Docker): Promise<string> {
+export async function prepareDockerBrowserImage(
+    source: string,
+    scope: string,
+    docker: Docker,
+    platform = "linux/amd64",
+): Promise<string> {
     const [metadata] = JSON.parse(await docker(["image", "inspect", source])) as {
         Id: string;
         Config: { User?: string };
@@ -49,7 +54,7 @@ export async function prepareDockerBrowserImage(source: string, scope: string, d
         throw new Error(`Invalid Docker image metadata for "${source}"`);
     }
     const recipe = `${RECIPE}USER ${user}\n`;
-    const key = createHash("sha256").update(`${metadata.Id}\n${recipe}`).digest("hex");
+    const key = createHash("sha256").update(`${metadata.Id}\n${platform}\n${recipe}`).digest("hex");
     const image = `testplane-browser:${key}`;
     if (await imageExists(image, docker)) {
         debugDocker(`[Docker timing][${scope}] prepared browser image: ${image}`);
@@ -61,7 +66,7 @@ export async function prepareDockerBrowserImage(source: string, scope: string, d
             "run",
             "--rm",
             "--platform",
-            "linux/amd64",
+            platform,
             "--network",
             "none",
             "--user",
@@ -100,7 +105,7 @@ export async function prepareDockerBrowserImage(source: string, scope: string, d
             await docker(["image", "tag", metadata.Id, base]);
             await writeFile(path.join(directory, "Dockerfile"), `FROM ${base}\n${recipe}`);
             await timeDockerOperation(scope, `build browser image ${image}`, () =>
-                docker(["build", "--platform", "linux/amd64", "--pull=false", "--tag", image, directory], {
+                docker(["build", "--platform", platform, "--pull=false", "--tag", image, directory], {
                     timeout: BUILD_TIMEOUT,
                 }),
             );

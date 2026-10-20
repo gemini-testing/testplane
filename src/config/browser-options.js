@@ -33,10 +33,14 @@ exports.getPerBrowser = () => {
             parseCli: JSON.parse,
             validate: value => utils.assertOptionalObject(value, "docker"),
             map: (value, config) => {
-                if (!value || value.selenoidImage !== undefined || config.docker?.selenoidImage === undefined) {
-                    return value;
+                if (!value) return value;
+                const result = { ...value };
+                for (const key of ["selenoidImage", "platform", "selenoidPlatform", "socketPath"]) {
+                    if (result[key] === undefined && config.docker?.[key] !== undefined) {
+                        result[key] = config.docker[key];
+                    }
                 }
-                return { ...value, selenoidImage: config.docker.selenoidImage };
+                return result;
             },
         }),
         desiredCapabilities: option({
