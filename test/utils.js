@@ -43,7 +43,7 @@ function makeConfigStub(opts = {}) {
         timeTravel: { mode: "off" },
         selectivity: { enabled: false },
         profiler: { level: 0, output: null },
-        exitOnError: { enabled: false, filters: {} },
+        exitOnError: { enabled: false, filters: [] },
     });
 
     const config = {

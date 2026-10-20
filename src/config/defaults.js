@@ -89,7 +89,7 @@ module.exports = {
     shouldRetry: null,
     exitOnError: {
         enabled: false,
-        filters: {},
+        filters: [],
     },
     mochaOpts: {
         slow: 10000,

@@ -26,40 +26,11 @@ describe("exitOnError integration", function () {
             const { port } = server.address() as AddressInfo;
             const config = path.join(directory, "testplane.config.js");
             const tests = path.join(directory, "tests.js");
-            const plugin = path.join(directory, "events.js");
-            await fs.writeFile(
-                plugin,
-                `module.exports = testplane => {
-                    const counts = { retries: 0, failures: 0, errors: 0 };
-                    testplane.on(testplane.events.RETRY, () => counts.retries++);
-                    testplane.on(testplane.events.TEST_FAIL, () => counts.failures++);
-                    testplane.on(testplane.events.ERROR, () => counts.errors++);
-                    testplane.on(testplane.events.RUNNER_END, () => {
-                        console.log("EXIT_ON_ERROR_EVENTS:" + JSON.stringify(counts));
-                    });
-                };`,
-            );
-            await fs.writeFile(
-                config,
-                `module.exports = {
-                    gridUrl: "http://127.0.0.1:${port}/",
-                    retry: 5,
-                    sessionsPerBrowser: 1,
-                    system: { parallelLimit: 1 },
-                    plugins: { ${JSON.stringify(plugin)}: {} },
-                    exitOnError: { enabled: true, filters: {
-                        quota: { filter: /Too Many Requests/i, limit: 1 }
-                    } },
-                    browsers: { chrome: { desiredCapabilities: { browserName: "chrome" } } }
-                };`,
-            );
-            await fs.writeFile(
-                tests,
-                'describe("quota", () => { for (let i = 0; i < 4; i++) it("test " + i, () => {}); });',
-            );
+            await fs.cp(path.join(__dirname, "fixtures"), directory, { recursive: true });
 
             const result = await execa(process.execPath, [path.resolve("bin/testplane"), tests, "--config", config], {
                 cwd: directory,
+                env: { ["testplane_grid_url"]: `http://127.0.0.1:${port}/` },
                 reject: false,
                 timeout: 45000,
             });

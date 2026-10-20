@@ -12,7 +12,7 @@ describe("ExitOnError", () => {
 
     it("does not call filters when disabled", () => {
         const filter = sinon.spy(() => true);
-        const checker = create({ quota: { filter, limit: 1 } }, false);
+        const checker = create([{ name: "quota", filter, limit: 1 }], false);
 
         assert.isUndefined(checker.check(test("one")));
         sinon.assert.notCalled(filter);
@@ -20,7 +20,7 @@ describe("ExitOnError", () => {
 
     it("passes the error message to a function and stops exactly at the limit", () => {
         const filter = sinon.spy(text => text === "Too Many Requests");
-        const checker = create({ quota: { filter, limit: 2 } });
+        const checker = create([{ name: "quota", filter, limit: 2 }]);
 
         assert.isUndefined(checker.check(test("unrelated", "assertion failed")));
         assert.isUndefined(checker.check(test("one")));
@@ -35,7 +35,7 @@ describe("ExitOnError", () => {
     });
 
     it("counts every failed attempt of the same test", () => {
-        const checker = create({ quota: { filter: /Too Many Requests/, limit: 2 } });
+        const checker = create([{ name: "quota", filter: /Too Many Requests/, limit: 2 }]);
         const failedTest = test("one");
 
         assert.isUndefined(checker.check(failedTest));
@@ -43,17 +43,17 @@ describe("ExitOnError", () => {
     });
 
     it("counts the same test separately in different browsers", () => {
-        const checker = create({ quota: { filter: /Too Many Requests/, limit: 2 } });
+        const checker = create([{ name: "quota", filter: /Too Many Requests/, limit: 2 }]);
 
         assert.isUndefined(checker.check(test("one")));
         assert.instanceOf(checker.check(test("one", "Too Many Requests", "test.js", "firefox")), Error);
     });
 
     it("keeps independent counters for overlapping named rules across retries", () => {
-        const checker = create({
-            quota: { filter: /quota/, limit: 4 },
-            access: { filter: /access/, limit: 2 },
-        });
+        const checker = create([
+            { name: "quota", filter: /quota/, limit: 4 },
+            { name: "access", filter: /access/, limit: 2 },
+        ]);
 
         assert.isUndefined(checker.check(test("one", "quota exceeded")));
         assert.isUndefined(checker.check(test("one", "quota access denied")));
@@ -64,7 +64,7 @@ describe("ExitOnError", () => {
         it(`matches repeatedly with /${flags} without changing the user's RegExp`, () => {
             const filter = new RegExp("too many requests", flags + (flags.includes("i") ? "" : "i"));
             filter.lastIndex = 7;
-            const checker = create({ quota: { filter, limit: 2 } });
+            const checker = create([{ name: "quota", filter, limit: 2 }]);
 
             assert.isUndefined(checker.check(test("one")));
             assert.instanceOf(checker.check(test("two")), Error);
@@ -75,7 +75,7 @@ describe("ExitOnError", () => {
     it("turns a filter exception into one named fatal error", () => {
         const cause = new Error("broken filter");
         const filter = sinon.stub().throws(cause);
-        const checker = create({ quota: { filter, limit: 1 } });
+        const checker = create([{ name: "quota", filter, limit: 1 }]);
 
         const error = checker.check(test("one"));
 
@@ -89,7 +89,7 @@ describe("ExitOnError", () => {
         const filter = (async () => {
             throw new Error("async filter");
         }) as unknown as ExitOnErrorRule["filter"];
-        const checker = create({ quota: { filter, limit: 1 } });
+        const checker = create([{ name: "quota", filter, limit: 1 }]);
 
         const error = checker.check(test("one"));
         await Promise.resolve();
@@ -99,7 +99,7 @@ describe("ExitOnError", () => {
     });
 
     it("starts with fresh counters for each run", () => {
-        const config = { quota: { filter: /Too Many Requests/, limit: 2 } };
+        const config = [{ name: "quota", filter: /Too Many Requests/, limit: 2 }];
         const first = create(config);
         first.check(test("one"));
         first.check(test("two"));
@@ -112,10 +112,10 @@ describe("ExitOnError", () => {
 
     it("ignores missing errors and empty rules", () => {
         const filter = sinon.spy(() => true);
-        const checker = create({ quota: { filter, limit: 1 } });
+        const checker = create([{ name: "quota", filter, limit: 1 }]);
 
         assert.isUndefined(checker.check({ id: "one" } as Test));
         sinon.assert.notCalled(filter);
-        assert.isUndefined(create({}).check(test("one")));
+        assert.isUndefined(create([]).check(test("one")));
     });
 });
