@@ -140,8 +140,10 @@ export async function runDockerBrowser(
             if (standalone === state) standalone = undefined;
             // stop() may be awaiting closeBrowser(), which calls this release function.
             if (!state.manager.isStopping) {
-                standaloneStopping = state.manager.stop();
-                await standaloneStopping;
+                const stopping = state.manager.stop();
+                // New launches wait for cleanup but must not inherit its failure.
+                standaloneStopping = stopping.catch(() => undefined);
+                await stopping;
             }
         }
     };

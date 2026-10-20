@@ -156,6 +156,48 @@ describe("browser/docker-manager", () => {
         await first.free();
         assert.calledOnce(controller.kill);
     });
+
+    it("starts a new standalone controller after cleanup fails", async () => {
+        controller.kill.onFirstCall().rejects(new Error("cleanup failed"));
+        const first = await api.runDockerBrowser(docker, options, makeConfig(), "chrome", sandbox.stub().resolves());
+
+        await assert.isRejected(Promise.resolve(first.free()), "cleanup failed");
+
+        const second = await api.runDockerBrowser(docker, options, makeConfig(), "chrome", sandbox.stub().resolves());
+        assert.calledTwice(start);
+        await second.free();
+        assert.calledTwice(controller.kill);
+    });
+
+    it("waits for pending standalone cleanup and starts a new controller even if cleanup fails", async () => {
+        let rejectStop!: (error: Error) => void;
+        let notifyStopping!: () => void;
+        const stopping = new Promise<void>((_resolve, reject) => {
+            rejectStop = reject;
+        });
+        const startedStopping = new Promise<void>(resolve => {
+            notifyStopping = resolve;
+        });
+        controller.kill.onFirstCall().callsFake(() => {
+            notifyStopping();
+            return stopping;
+        });
+        const first = await api.runDockerBrowser(docker, options, makeConfig(), "chrome", sandbox.stub().resolves());
+        const released = assert.isRejected(Promise.resolve(first.free()), "cleanup failed");
+        await startedStopping;
+
+        const pending = api.runDockerBrowser(docker, options, makeConfig(), "chrome", sandbox.stub().resolves());
+        await Promise.resolve();
+        assert.calledOnce(start);
+
+        rejectStop(new Error("cleanup failed"));
+        await released;
+        const second = await pending;
+        assert.calledTwice(start);
+        await second.free();
+        assert.calledTwice(controller.kill);
+    });
+
     it("finishes standalone cleanup on shutdown without waiting on its own stop promise", async () => {
         const session: Awaited<ReturnType<typeof api.runDockerBrowser>> = await api.runDockerBrowser(
             docker,

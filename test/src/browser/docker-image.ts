@@ -80,6 +80,21 @@ describe("browser/docker-image", () => {
         assert.isTrue(docker.getCalls().every(call => call.args[0][1] === "inspect"));
     });
 
+    it("should use the selected platform for the adapter probe and image build", async () => {
+        await prepare("chrome:latest", "session", docker, "linux/arm64");
+        for (const operation of ["run", "build"]) {
+            const args = docker.getCalls().find(call => call.args[0][0] === operation)!.args[0];
+            assert.equal(args[args.indexOf("--platform") + 1], "linux/arm64");
+        }
+    });
+
+    it("should keep prepared image caches separate for different platforms", async () => {
+        const amd = await prepare("chrome:latest", "session", docker);
+        const arm = await prepare("chrome:latest", "session", docker, "linux/arm64");
+        assert.notEqual(amd, arm);
+        assert.calledTwice(build);
+    });
+
     it("should rebuild when the same source tag points to a new image", async () => {
         const first = await prepare("chrome:latest", "first", docker);
         metadata.Id = `sha256:${"b".repeat(64)}`;

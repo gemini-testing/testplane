@@ -113,7 +113,14 @@ describe("browser/docker", () => {
         it("should pull missing browser and controller images and prepare CDP without starting containers", async () => {
             for (const image of ["browser", selenoidImage]) {
                 command
-                    .withArgs(["image", "inspect", "--format", "{{.Os}}/{{.Architecture}}", "--", image])
+                    .withArgs([
+                        "image",
+                        "inspect",
+                        "--format",
+                        "{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}",
+                        "--",
+                        image,
+                    ])
                     .onFirstCall()
                     .rejects(new Error("No such image"));
             }
@@ -147,6 +154,168 @@ describe("browser/docker", () => {
                 "CDP image build failed",
             );
             assert.notCalled(writeConfig);
+        });
+    });
+
+    describe("platform selection", () => {
+        const imagePlatform = "{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}";
+
+        it("should prepare an ARM browser while keeping the default AMD64 controller", async () => {
+            command
+                .withArgs(["image", "inspect", "--format", imagePlatform, "--", "browser"])
+                .onFirstCall()
+                .rejects(new Error("No such image"))
+                .onSecondCall()
+                .resolves("linux/arm64/v8");
+            const driver = await start("browser", {}, { platform: "linux/arm64" });
+            assert.calledWith(command, ["pull", "--platform", "linux/arm64", "--quiet", "browser"]);
+            assert.calledWith(prepareImage, "browser", sinon.match.string, sinon.match.func, "linux/arm64");
+            const create = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+            assert.equal(create[create.indexOf("--platform") + 1], "linux/amd64");
+            const entry = JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"];
+            assert.notProperty(entry, "platform");
+            assert.notProperty(entry, "selenoidPlatform");
+            await driver.free();
+        });
+
+        it("should pull and start an ARM controller independently of the browser platform", async () => {
+            command
+                .withArgs(["image", "inspect", "--format", imagePlatform, "--", selenoidImage])
+                .onFirstCall()
+                .rejects(new Error("No such image"))
+                .onSecondCall()
+                .resolves("linux/arm64");
+            const driver = await start("browser", {}, { selenoidPlatform: "linux/arm64" });
+            assert.calledWith(command, ["pull", "--platform", "linux/arm64", "--quiet", selenoidImage]);
+            assert.calledWith(prepareImage, "browser", sinon.match.string, sinon.match.func, "linux/amd64");
+            const create = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+            assert.equal(create[create.indexOf("--platform") + 1], "linux/arm64");
+            assert.notProperty(JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"], "selenoidPlatform");
+            await driver.free();
+        });
+
+        it("should validate an explicitly requested image variant", async () => {
+            command.withArgs(["image", "inspect", "--format", imagePlatform, "--", "browser"]).resolves("linux/arm/v6");
+            await assert.isRejected(
+                start("browser", {}, { platform: "linux/arm/v7" }),
+                'targets "linux/arm/v6"; expected "linux/arm/v7"',
+            );
+            assert.notCalled(prepareImage);
+        });
+
+        for (const key of ["platform", "selenoidPlatform"]) {
+            for (const value of [null, "", "arm64", "--privileged", "linux/arm64 extra", "windows/amd64", 123]) {
+                it(`should reject invalid ${key}: ${JSON.stringify(value)}`, async () => {
+                    await assert.isRejected(start("browser", {}, { [key]: value }), `docker.${key}`);
+                    assert.notCalled(command);
+                });
+            }
+        }
+
+        it("should not share image validation across different requested platforms", async () => {
+            command.withArgs(["image", "inspect", "--format", imagePlatform, "--", "browser"]).resolves("linux/arm64");
+            const results = await Promise.allSettled([
+                prepareDockerImages({ image: "browser", selenoidImage, platform: "linux/arm64" }),
+                prepareDockerImages({ image: "browser", selenoidImage, platform: "linux/amd64" }),
+            ]);
+            assert.equal(results[0].status, "fulfilled");
+            assert.equal(results[1].status, "rejected");
+        });
+
+        it("should reject conflicting controller platforms before preparing images", async () => {
+            await assert.isRejected(
+                startDockerController({ image: "browser", selenoidImage }, {}, [
+                    {
+                        config: { image: "browser", selenoidImage, selenoidPlatform: "linux/arm64" },
+                        browserName: "chrome",
+                        browserVersion: "one",
+                    },
+                ]),
+                "same docker.selenoidPlatform",
+            );
+            assert.notCalled(command);
+        });
+
+        it("should reject a conflicting controller platform when adding a standalone browser", async () => {
+            const driver = await start("browser");
+            command.resetHistory();
+            await assert.isRejected(
+                driver.addBrowser({
+                    config: { image: "browser", selenoidImage, selenoidPlatform: "linux/arm64" },
+                    browserName: "chrome",
+                    browserVersion: "two",
+                }),
+                "same docker.selenoidPlatform",
+            );
+            assert.notCalled(command);
+            await driver.free();
+        });
+    });
+
+    describe("socket path", () => {
+        it("should mount a custom daemon socket at Selenoid's default socket path", async () => {
+            const socketPath = "/run/user/1000/podman/podman.sock";
+            const driver = await start("browser", {}, { socketPath });
+            const args = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+            assert.equal(args[args.indexOf("--volume") + 1], `${socketPath}:/var/run/docker.sock`);
+            assert.notProperty(JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"], "socketPath");
+            await driver.free();
+        });
+
+        for (const socketPath of [
+            null,
+            "",
+            "/",
+            "relative.sock",
+            "unix:///run/docker.sock",
+            "/run/docker.sock:ro",
+            "/run/\n.sock",
+            123,
+        ]) {
+            it(`should reject an invalid socket path: ${JSON.stringify(socketPath)}`, async () => {
+                await assert.isRejected(start("browser", {}, { socketPath } as DockerConfig), "docker.socketPath");
+                assert.notCalled(command);
+            });
+        }
+
+        it("should reject conflicting socket paths before preparing images", async () => {
+            await assert.isRejected(
+                startDockerController({ image: "browser", selenoidImage }, {}, [
+                    {
+                        config: { image: "browser", selenoidImage, socketPath: "/run/podman/podman.sock" },
+                        browserName: "chrome",
+                        browserVersion: "one",
+                    },
+                ]),
+                "same docker.socketPath",
+            );
+            assert.notCalled(command);
+        });
+
+        it("should accept an explicit default socket path in a shared controller", async () => {
+            const driver = await startDockerController({ image: "browser", selenoidImage }, {}, [
+                {
+                    config: { image: "browser", selenoidImage, socketPath: "/var/run/docker.sock" },
+                    browserName: "chrome",
+                    browserVersion: "one",
+                },
+            ]);
+            await driver.free();
+        });
+
+        it("should reject a conflicting socket when adding a standalone browser", async () => {
+            const driver = await start("browser");
+            command.resetHistory();
+            await assert.isRejected(
+                driver.addBrowser({
+                    config: { image: "browser", selenoidImage, socketPath: "/run/podman/podman.sock" },
+                    browserName: "chrome",
+                    browserVersion: "two",
+                }),
+                "same docker.socketPath",
+            );
+            assert.notCalled(command);
+            await driver.free();
         });
     });
 
@@ -224,6 +393,7 @@ describe("browser/docker", () => {
 
         assert.deepEqual(args.slice(0, 2), ["create", "--name"]);
         assert.match(name, /^testplane-/);
+        assert.calledWith(command, ["network", "create", "--ipv6", `${name}-network`]);
         assert.deepEqual(args.slice(3), [
             "--platform",
             "linux/amd64",
@@ -245,6 +415,7 @@ describe("browser/docker", () => {
             "-retry-count",
             "1",
             "-capture-driver-logs",
+            "-disable-privileged",
             "-service-startup-timeout",
             "30000ms",
             "-session-attempt-timeout",
@@ -315,7 +486,14 @@ describe("browser/docker", () => {
     it("should use a custom Selenoid image without passing it to browsers.json", async () => {
         const customImage = "registry/selenoid:custom";
         command
-            .withArgs(["image", "inspect", "--format", "{{.Os}}/{{.Architecture}}", "--", customImage])
+            .withArgs([
+                "image",
+                "inspect",
+                "--format",
+                "{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}",
+                "--",
+                customImage,
+            ])
             .onFirstCall()
             .rejects(new Error("No such image"))
             .onSecondCall()
@@ -742,7 +920,14 @@ describe("browser/docker", () => {
 
     it("should pull a missing Selenoid image too", async () => {
         command
-            .withArgs(["image", "inspect", "--format", "{{.Os}}/{{.Architecture}}", "--", selenoidImage])
+            .withArgs([
+                "image",
+                "inspect",
+                "--format",
+                "{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}",
+                "--",
+                selenoidImage,
+            ])
             .onFirstCall()
             .rejects(new Error("No such image"));
         const driver = await start("browser");

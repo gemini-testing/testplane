@@ -97,6 +97,56 @@ describe("config browser-options", () => {
             assert.equal(config.serialize().browsers.overridden.docker.selenoidImage, "selenoid:custom");
         });
 
+        it("should inherit the global socketPath and preserve browser overrides", async () => {
+            Config.read.resolves({
+                docker: { socketPath: "/run/podman/podman.sock" },
+                browsers: {
+                    inherited: mkBrowser_({ docker: { image: "browser:1" } }),
+                    overridden: mkBrowser_({ docker: { image: "browser:2", socketPath: "/var/run/docker.sock" } }),
+                    globalOnly: mkBrowser_(),
+                    disabled: mkBrowser_({ docker: null }),
+                },
+            });
+            const config = await createConfig();
+            assert.deepEqual(config.forBrowser("inherited").docker, {
+                image: "browser:1",
+                socketPath: "/run/podman/podman.sock",
+            });
+            assert.equal(config.forBrowser("globalOnly").docker.socketPath, "/run/podman/podman.sock");
+            assert.equal(config.serialize().browsers.inherited.docker.socketPath, "/run/podman/podman.sock");
+            assert.equal(config.serialize().browsers.overridden.docker.socketPath, "/var/run/docker.sock");
+            assert.isNull(config.forBrowser("disabled").docker);
+        });
+
+        it("should inherit Docker platforms independently and preserve browser overrides", async () => {
+            Config.read.resolves({
+                docker: { platform: "linux/arm64", selenoidPlatform: "linux/amd64" },
+                browsers: {
+                    inherited: mkBrowser_({ docker: { image: "browser:1" } }),
+                    browserOverride: mkBrowser_({ docker: { image: "browser:2", platform: "linux/amd64" } }),
+                    controllerOverride: mkBrowser_({ docker: { image: "browser:3", selenoidPlatform: "linux/arm64" } }),
+                    disabled: mkBrowser_({ docker: null }),
+                },
+            });
+            const config = await createConfig();
+            assert.deepEqual(config.forBrowser("inherited").docker, {
+                image: "browser:1",
+                platform: "linux/arm64",
+                selenoidPlatform: "linux/amd64",
+            });
+            assert.deepEqual(config.serialize().browsers.browserOverride.docker, {
+                image: "browser:2",
+                platform: "linux/amd64",
+                selenoidPlatform: "linux/amd64",
+            });
+            assert.deepEqual(config.serialize().browsers.controllerOverride.docker, {
+                image: "browser:3",
+                platform: "linux/arm64",
+                selenoidPlatform: "linux/arm64",
+            });
+            assert.isNull(config.forBrowser("disabled").docker);
+        });
+
         it("should allow Docker only for a selected browser", async () => {
             Config.read.resolves({
                 browsers: {

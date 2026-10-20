@@ -11,7 +11,8 @@ import { log, warn } from "../utils/logger";
 import { CHECK_DEVTOOLS, prepareDockerBrowserImage } from "./docker-image";
 import { timeDockerOperation } from "./docker-timing";
 
-const PLATFORM = "linux/amd64";
+const DEFAULT_PLATFORM = "linux/amd64";
+const IMAGE_PLATFORM = "{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}";
 const COMMAND_TIMEOUT = 30_000;
 const PULL_TIMEOUT = 10 * 60_000;
 const pendingImages = new Map<string, Promise<void>>();
@@ -121,7 +122,34 @@ async function appendDockerOutput(file: FileHandle, title: string, args: string[
     }
 }
 
-async function checkImage(image: string): Promise<void> {
+function getSocketPath(config: DockerConfig | null | undefined): string {
+    const value = config?.socketPath;
+    if (value === undefined) return "/var/run/docker.sock";
+    if (typeof value !== "string" || !path.posix.isAbsolute(value) || value === "/" || /[:\p{Cc}]/u.test(value)) {
+        throw new Error(
+            '"docker.socketPath" must be an absolute Linux socket path without colons or control characters.',
+        );
+    }
+    return value;
+}
+
+function getPlatform(config: DockerConfig | null | undefined, key: "platform" | "selenoidPlatform"): string {
+    const value = config?.[key];
+    if (value === undefined) return DEFAULT_PLATFORM;
+    if (typeof value !== "string" || !/^linux\/[a-z0-9_]+(?:\/[a-z0-9_.-]+)?$/.test(value)) {
+        throw new Error(`"docker.${key}" must be a Linux platform such as "linux/amd64" or "linux/arm64".`);
+    }
+    return value;
+}
+
+function matchesPlatform(actual: string, expected: string): boolean {
+    // An unspecified variant accepts the image's default for that architecture.
+    return expected.split("/").length === 2
+        ? actual.split("/").slice(0, 2).join("/") === expected
+        : actual === expected;
+}
+
+async function checkImage(image: string, expectedPlatform: string): Promise<void> {
     try {
         await docker(["info", "--format", "{{.OSType}}"]);
     } catch (error) {
@@ -135,46 +163,47 @@ async function checkImage(image: string): Promise<void> {
 
     let platform: string;
     try {
-        platform = await docker(["image", "inspect", "--format", "{{.Os}}/{{.Architecture}}", "--", image]);
+        platform = await docker(["image", "inspect", "--format", IMAGE_PLATFORM, "--", image]);
     } catch (error) {
         if (!/no such (image|object)/i.test(errorMessage(error))) {
             throw new Error(`Cannot inspect Docker image "${image}".\n${errorMessage(error)}`);
         }
 
-        log(`Docker image "${image}" is not available locally. Pulling it for ${PLATFORM}...`);
+        log(`Docker image "${image}" is not available locally. Pulling it for ${expectedPlatform}...`);
         try {
             await timeDockerOperation(image, "pull image", () =>
-                docker(["pull", "--platform", PLATFORM, "--quiet", image], { timeout: PULL_TIMEOUT }),
+                docker(["pull", "--platform", expectedPlatform, "--quiet", image], { timeout: PULL_TIMEOUT }),
             );
         } catch (pullError) {
             throw new Error(
-                `Cannot pull Docker image "${image}" for ${PLATFORM}. Check the image name, network connection and registry credentials (docker login).\n${errorMessage(
+                `Cannot pull Docker image "${image}" for ${expectedPlatform}. Check the image name, network connection and registry credentials (docker login).\n${errorMessage(
                     pullError,
                 )}`,
             );
         }
         try {
-            platform = await docker(["image", "inspect", "--format", "{{.Os}}/{{.Architecture}}", "--", image]);
+            platform = await docker(["image", "inspect", "--format", IMAGE_PLATFORM, "--", image]);
         } catch (inspectError) {
             throw new Error(`Cannot inspect Docker image "${image}" after pulling it.\n${errorMessage(inspectError)}`);
         }
     }
 
-    if (platform !== PLATFORM) {
+    if (!matchesPlatform(platform, expectedPlatform)) {
         throw new Error(
-            `Docker image "${image}" targets "${platform}"; expected "${PLATFORM}". Pull or build the ${PLATFORM} image.`,
+            `Docker image "${image}" targets "${platform}"; expected "${expectedPlatform}". Pull or build the ${expectedPlatform} image.`,
         );
     }
 }
 
-async function ensureImage(image: string): Promise<void> {
-    if (!pendingImages.has(image)) {
+async function ensureImage(image: string, platform: string): Promise<void> {
+    const key = `${image}\n${platform}`;
+    if (!pendingImages.has(key)) {
         pendingImages.set(
-            image,
-            checkImage(image).finally(() => pendingImages.delete(image)),
+            key,
+            checkImage(image, platform).finally(() => pendingImages.delete(key)),
         );
     }
-    await pendingImages.get(image);
+    await pendingImages.get(key);
 }
 
 async function waitForSelenoid(name: string, gridUrl: string, timeout: number): Promise<void> {
@@ -241,11 +270,15 @@ export async function prepareDockerImages(
         );
     }
 
-    await timeDockerOperation(scope, `prepare browser image ${image}`, () => ensureImage(image));
-    await timeDockerOperation(scope, `prepare Selenoid image ${selenoidImage}`, () => ensureImage(selenoidImage));
+    const platform = getPlatform(config, "platform");
+    const selenoidPlatform = getPlatform(config, "selenoidPlatform");
+    await timeDockerOperation(scope, `prepare browser image ${image}`, () => ensureImage(image, platform));
+    await timeDockerOperation(scope, `prepare Selenoid image ${selenoidImage}`, () =>
+        ensureImage(selenoidImage, selenoidPlatform),
+    );
     const preparedImage = ["chrome", "yandex"].includes(browserName.toLowerCase())
         ? await timeDockerOperation(scope, "prepare local browser image", () =>
-              prepareDockerBrowserImage(image, scope, docker),
+              prepareDockerBrowserImage(image, scope, docker, platform),
           )
         : image;
     return { image: preparedImage, selenoidImage };
@@ -273,6 +306,17 @@ export async function startDockerController(
     // Validate the controller choice before pulling or building anything.
     if (entries.some(entry => entry.config?.selenoidImage !== config?.selenoidImage)) {
         throw new Error("All Docker browsers in one run must use the same docker.selenoidImage.");
+    }
+    const selenoidPlatform = getPlatform(config, "selenoidPlatform");
+    for (const entry of entries) {
+        getPlatform(entry.config, "platform");
+        if (getPlatform(entry.config, "selenoidPlatform") !== selenoidPlatform) {
+            throw new Error("All Docker browsers in one run must use the same docker.selenoidPlatform.");
+        }
+    }
+    const socketPath = getSocketPath(config);
+    if (entries.some(entry => getSocketPath(entry.config) !== socketPath)) {
+        throw new Error("All Docker browsers in one run must use the same docker.socketPath.");
     }
     const prepared = await Promise.all(
         entries.map(async entry => ({
@@ -449,6 +493,9 @@ export async function startDockerController(
     const addEntry = (entry: DockerBrowserEntry, image: string): void => {
         const browserConfig = { ...entry.config };
         delete browserConfig.selenoidImage;
+        delete browserConfig.selenoidPlatform;
+        delete browserConfig.socketPath;
+        delete browserConfig.platform;
         browsers[entry.browserName] ??= { default: entry.browserVersion, versions: {} };
         browsers[entry.browserName].versions[entry.browserVersion] = {
             port: "4444",
@@ -480,14 +527,14 @@ export async function startDockerController(
         await writeFile(configPath, JSON.stringify(browsers));
         // Set before creation to also clean up when the CLI times out after creating the network.
         networkCreated = true;
-        await timeDockerOperation(name, "create network", () => docker(["network", "create", network]));
+        await timeDockerOperation(name, "create network", () => docker(["network", "create", "--ipv6", network]));
         await timeDockerOperation(name, "create Selenoid container", () =>
             docker([
                 "create",
                 "--name",
                 name,
                 "--platform",
-                PLATFORM,
+                selenoidPlatform,
                 "--pull",
                 "never",
                 "--publish",
@@ -496,7 +543,7 @@ export async function startDockerController(
                 network,
                 // This is the socket path on the daemon's Linux host, including Docker Desktop/Colima.
                 "--volume",
-                "/var/run/docker.sock:/var/run/docker.sock",
+                `${socketPath}:/var/run/docker.sock`,
                 ...controllerSecurityArgs,
                 selenoidImage,
                 "-conf",
@@ -508,6 +555,7 @@ export async function startDockerController(
                 "-retry-count",
                 "1",
                 "-capture-driver-logs",
+                "-disable-privileged",
                 "-service-startup-timeout",
                 `${timeout}ms`,
                 "-session-attempt-timeout",
@@ -613,8 +661,14 @@ export async function startDockerController(
             saveLogs,
             prepareCdp,
             addBrowser: async (entry): Promise<void> => {
+                if (getSocketPath(entry.config) !== socketPath) {
+                    throw new Error("All Docker browsers in one run must use the same docker.socketPath.");
+                }
                 if (entry.config?.selenoidImage !== selenoidImage) {
                     throw new Error("All Docker browsers in one run must use the same docker.selenoidImage.");
+                }
+                if (getPlatform(entry.config, "selenoidPlatform") !== selenoidPlatform) {
+                    throw new Error("All Docker browsers in one run must use the same docker.selenoidPlatform.");
                 }
                 const { image } = await prepareDockerImages(entry.config, entry.browserName, name);
                 addEntry(entry, image);
