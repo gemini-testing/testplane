@@ -1,3 +1,5 @@
+import { describe, it } from "testplane";
+
 const openAlarmViewSelector = 'android=new UiSelector().resourceId("com.google.android.deskclock:id/tab_menu_alarm")';
 const addAlarmBtnSelector = 'android=new UiSelector().resourceId("com.google.android.deskclock:id/fab")';
 const chooseHourSelector = 'android=new UiSelector().text("12")';
