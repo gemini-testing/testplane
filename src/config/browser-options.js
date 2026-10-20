@@ -20,12 +20,29 @@ function provideRootDefault(name) {
 
 exports.getTopLevel = () => {
     return buildBrowserOptions(provideRootDefault, {
+        docker: optionsBuilder(provideRootDefault).optionalObject("docker"),
         desiredCapabilities: optionsBuilder(provideRootDefault).optionalObject("desiredCapabilities"),
     });
 };
 
 exports.getPerBrowser = () => {
     return buildBrowserOptions(provideTopLevelDefault, {
+        docker: option({
+            defaultValue: provideTopLevelDefault("docker"),
+            parseEnv: JSON.parse,
+            parseCli: JSON.parse,
+            validate: value => utils.assertOptionalObject(value, "docker"),
+            map: (value, config) => {
+                if (!value) return value;
+                const result = { ...value };
+                for (const key of ["selenoidImage", "platform", "selenoidPlatform", "socketPath"]) {
+                    if (result[key] === undefined && config.docker?.[key] !== undefined) {
+                        result[key] = config.docker[key];
+                    }
+                }
+                return result;
+            },
+        }),
         desiredCapabilities: option({
             defaultValue: defaults.desiredCapabilities,
             parseEnv: JSON.parse,

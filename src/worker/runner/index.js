@@ -93,6 +93,7 @@ module.exports = class Runner extends AsyncEmitter {
             sessionId,
             sessionCaps,
             sessionOpts,
+            cdpAvailable,
             state,
             attempt,
             attemptId,
@@ -128,7 +129,7 @@ module.exports = class Runner extends AsyncEmitter {
             config.selectivity && selectivityShouldWrite(config.selectivity.enabled) && isRunInNodeJsEnv(this._config);
 
         const prepareParseAndRun = async () => {
-            runner.prepareBrowser({ sessionId, sessionCaps, sessionOpts, state });
+            runner.prepareBrowser({ sessionId, sessionCaps, sessionOpts, cdpAvailable, state });
 
             const readTestsFn = () => this._testParser.parse({ file, browserId });
             const tests = shouldRecordSelectivityDeps

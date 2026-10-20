@@ -228,6 +228,7 @@ describe("worker/runner", () => {
                         sessionId: "100500",
                         sessionCaps: "some-caps",
                         sessionOpts: "some-opts",
+                        cdpAvailable: false,
                         state: {},
                     });
                     const TestRunner = getTestRunner();
@@ -240,6 +241,7 @@ describe("worker/runner", () => {
                             sessionId: "100500",
                             sessionCaps: "some-caps",
                             sessionOpts: "some-opts",
+                            cdpAvailable: false,
                             state: {},
                         });
                     }

@@ -18,6 +18,9 @@ describe("NodejsEnvRunner", () => {
     let BrowserPool;
     let Runner;
     let SelectivityRunner;
+    let checkDockerParallelism;
+    let stopDockerRun;
+    let logger;
 
     const mkWorkers_ = () => {
         return {
@@ -87,19 +90,111 @@ describe("NodejsEnvRunner", () => {
 
         sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: () => {} });
         sandbox.stub(TestCollection.prototype);
+        TestCollection.prototype.getBrowsers.returns([]);
+        checkDockerParallelism = sandbox.stub().resolves();
+        stopDockerRun = sandbox.stub().resolves();
+        logger = { warn: sandbox.stub(), error: sandbox.stub() };
 
         sandbox.spy(BrowserRunner, "create");
         sandbox.stub(BrowserRunner.prototype, "addTestToRun").resolves();
         sandbox.stub(BrowserRunner.prototype, "waitTestsCompletion").resolves();
 
         Runner = proxyquire("src/runner", {
+            "../browser/docker": { checkDockerParallelism },
             "../browser-pool": BrowserPool,
             "../browser/cdp/selectivity/runner": { SelectivityRunner },
-            "../utils/logger": { warn: sandbox.stub() },
+            "../utils/logger": logger,
+            "../browser/docker-manager": { configureDockerRun: sandbox.stub(), stopDockerRun },
         }).MainRunner;
     });
 
     afterEach(() => sandbox.restore());
+
+    describe("Docker parallelism", () => {
+        const mkDockerConfig = (parallelLimit = Infinity) => {
+            const config = makeConfigStub({ browsers: ["chrome", "firefox", "remote"], sessionsPerBrowser: 10 });
+            config.system.parallelLimit = parallelLimit;
+            config.browsers.chrome.gridUrl = "docker";
+            config.browsers.firefox.gridUrl = "docker";
+            config.browsers.remote.gridUrl = "http://grid:4444/wd/hub";
+            TestCollection.prototype.getBrowsers.returns(["chrome", "firefox", "remote"]);
+            return config;
+        };
+
+        it("should check the sum of selected Docker session limits once before starting browsers", async () => {
+            await run_({ config: mkDockerConfig() });
+            assert.calledOnceWith(checkDockerParallelism, 20);
+            assert.callOrder(checkDockerParallelism, BrowserRunner.create);
+        });
+
+        it("should validate Docker before RUNNER_START", async () => {
+            const onStart = sandbox.stub();
+            const runner = new Runner(mkDockerConfig()).on(RunnerEvents.RUNNER_START, onStart);
+
+            await run_({ runner });
+
+            assert.callOrder(checkDockerParallelism, onStart);
+        });
+
+        it("should report missing Docker before cleanup without starting runner plugins", async () => {
+            const error = new Error("Cannot check Docker browser parallelism: spawn docker ENOENT");
+            checkDockerParallelism.rejects(error);
+            const onStart = sandbox.stub();
+            const onEnd = sandbox.stub();
+            const runner = new Runner(mkDockerConfig())
+                .on(RunnerEvents.RUNNER_START, onStart)
+                .on(RunnerEvents.RUNNER_END, onEnd);
+
+            const result = await run_({ runner }).catch(err => err);
+
+            assert.strictEqual(result, error);
+            assert.notCalled(onStart);
+            assert.notCalled(BrowserRunner.create);
+            assert.calledOnceWith(logger.error, error.stack);
+            assert.callOrder(logger.error, onEnd, WorkersRegistry.prototype.end, stopDockerRun);
+        });
+
+        it("should respect the global parallel limit", async () => {
+            await run_({ config: mkDockerConfig(5) });
+            assert.calledOnceWith(checkDockerParallelism, 5);
+        });
+
+        it("should stop before starting browsers when Docker parallelism validation fails", async () => {
+            checkDockerParallelism.rejects(new Error("Docker parallelism limit exceeded"));
+
+            await assert.isRejected(run_({ config: mkDockerConfig() }), "Docker parallelism limit exceeded");
+
+            assert.notCalled(BrowserRunner.create);
+            assert.calledOnce(WorkersRegistry.prototype.end);
+        });
+
+        it("should exclude Docker browsers not selected for this run", async () => {
+            const config = mkDockerConfig();
+            TestCollection.prototype.getBrowsers.returns(["chrome"]);
+            await run_({ config });
+            assert.calledOnceWith(checkDockerParallelism, 10);
+        });
+
+        it("should not check Docker when only remote browsers are selected", async () => {
+            const config = mkDockerConfig();
+            TestCollection.prototype.getBrowsers.returns(["remote"]);
+            await run_({ config });
+            assert.notCalled(checkDockerParallelism);
+        });
+
+        it("should not check Docker when --local is enabled", async () => {
+            RuntimeConfig.getInstance.returns({ local: true, extend: () => {} });
+            await run_({ config: mkDockerConfig() });
+            assert.notCalled(checkDockerParallelism);
+        });
+
+        it("should not check Docker for an empty selection", async () => {
+            const config = mkDockerConfig();
+            TestCollection.prototype.getBrowsers.returns([]);
+            await run_({ config });
+            assert.notCalled(checkDockerParallelism);
+        });
+    });
 
     describe("constructor", () => {
         it("should init temp with dir from config", () => {
@@ -617,6 +712,73 @@ describe("NodejsEnvRunner", () => {
 
                 return assert.isRejected(run_({ runner }), /run-error/);
             });
+        });
+    });
+
+    describe("cleanup after a runner error", () => {
+        it("should bound stalled hooks, workers and Docker cleanup and preserve the original error", async () => {
+            const clock = sandbox.useFakeTimers();
+            const error = new Error("runner failed");
+            const runner = new Runner(makeConfigStub())
+                .on(RunnerEvents.RUNNER_START, () => Promise.reject(error))
+                .on(RunnerEvents.RUNNER_END, () => new Promise(() => {}));
+            WorkersRegistry.prototype.end.returns(new Promise(() => {}));
+            stopDockerRun.returns(new Promise(() => {}));
+            let completed = false;
+            const result = run_({ runner }).catch(err => {
+                completed = true;
+                return err;
+            });
+
+            await clock.tickAsync(9999);
+            assert.isFalse(completed);
+            assert.notCalled(WorkersRegistry.prototype.end);
+            await clock.tickAsync(1);
+            assert.calledOnce(WorkersRegistry.prototype.end);
+            await clock.tickAsync(10000);
+            assert.calledOnce(stopDockerRun);
+            await clock.tickAsync(10000);
+
+            assert.strictEqual(await result, error);
+            assert.calledThrice(logger.warn);
+            assert.match(logger.warn.firstCall.args[0].message, /RUNNER_END handlers/);
+            assert.match(logger.warn.secondCall.args[0].message, /workers/);
+            assert.match(logger.warn.thirdCall.args[0].message, /Docker/);
+            assert.isEmpty(clock.timers);
+        });
+
+        it("should continue cleanup after synchronous errors and keep the original error", async () => {
+            const error = new Error("runner failed");
+            const runner = new Runner(makeConfigStub())
+                .on(RunnerEvents.RUNNER_START, () => Promise.reject(error))
+                .on(RunnerEvents.END, () => {
+                    throw new Error("END failed");
+                });
+            WorkersRegistry.prototype.end.throws(new Error("workers failed"));
+            stopDockerRun.rejects(new Error("Docker cleanup failed"));
+
+            assert.strictEqual(await run_({ runner }).catch(err => err), error);
+            assert.calledThrice(logger.warn);
+            assert.calledOnce(stopDockerRun);
+        });
+
+        it("should not limit RUNNER_END handlers after a successful run", async () => {
+            const clock = sandbox.useFakeTimers();
+            const onEndFinished = sandbox.spy();
+            const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_END, async () => {
+                await promiseDelay(20000);
+                onEndFinished();
+            });
+            const result = run_({ runner });
+
+            await clock.tickAsync(10000);
+            assert.notCalled(WorkersRegistry.prototype.end);
+            await clock.tickAsync(10000);
+            await result;
+
+            assert.callOrder(onEndFinished, WorkersRegistry.prototype.end);
+            assert.notCalled(logger.warn);
+            assert.isEmpty(clock.timers);
         });
     });
 

@@ -374,6 +374,26 @@ export interface BrowserDownloadMirrors {
 
 export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;
 
+/** Selenoid controller image and browser container settings. */
+export interface DockerConfig {
+    /** Required for Docker startup, either here or inherited from the top-level docker option. No default. */
+    selenoidImage?: string;
+    /** Browser image platform. Defaults to linux/amd64. */
+    platform?: string;
+    /** Selenoid controller platform, independent of the browser. Defaults to linux/amd64. */
+    selenoidPlatform?: string;
+    /** Absolute engine socket path on the daemon's Linux host. Defaults to /var/run/docker.sock. */
+    socketPath?: string;
+    image?: string;
+    path?: string;
+    port?: string;
+    shmSize?: number;
+    tmpfs?: Record<string, string>;
+    volumes?: string[];
+    hosts?: string[];
+    [option: string]: unknown;
+}
+
 export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver";
@@ -382,6 +402,7 @@ export interface CommonConfig {
         Record<"isW3C" | "isChrome" | "isMobile" | "isIOS" | "isAndroid" | "isSauce" | "isSeleniumStandalone", boolean>
     >;
     gridUrl: string;
+    docker: DockerConfig | null;
     baseUrl: string;
     sessionsPerBrowser: number;
     testsPerSession: number;

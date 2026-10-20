@@ -6,7 +6,7 @@ import type { Browser } from "../../../browser/types";
 import type { ProfilerRuntimeLike } from "../../../profiler/runtime/types";
 
 export interface WorkerTestRunnerRunOpts
-    extends Pick<WorkerRunTestOpts, "sessionId" | "sessionCaps" | "sessionOpts" | "state"> {}
+    extends Pick<WorkerRunTestOpts, "sessionId" | "sessionCaps" | "sessionOpts" | "cdpAvailable" | "state"> {}
 
 export interface WorkerTestRunnerCtorOpts {
     test: Test;

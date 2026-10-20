@@ -4,6 +4,7 @@ import BrowserPool from "./browser-pool";
 
 export type BrowserAgentBrowserOpts = {
     sessionId: string;
+    cdpAvailable?: boolean;
     sessionCaps: WdioBrowser["capabilities"];
     sessionOpts: WdioBrowser["options"];
     state: Record<string, unknown>;
@@ -35,6 +36,7 @@ export class BrowserAgent {
         sessionId,
         sessionCaps,
         sessionOpts,
+        cdpAvailable,
         state,
     }: BrowserAgentBrowserOpts): Promise<ExistingBrowser> {
         return this._pool.getBrowser({
@@ -43,6 +45,7 @@ export class BrowserAgent {
             sessionId,
             sessionCaps,
             sessionOpts,
+            cdpAvailable,
             state,
         });
     }

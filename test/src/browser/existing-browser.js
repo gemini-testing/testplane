@@ -7,6 +7,7 @@ const jsdom = require("jsdom-global");
 const { Calibrator } = require("src/browser/calibrator");
 const { Camera } = require("src/browser/camera");
 const history = require("src/browser/history");
+const RuntimeConfig = require("src/config/runtime-config");
 const {
     SAVE_HISTORY_MODE,
     WEBDRIVER_PROTOCOL,
@@ -27,6 +28,7 @@ describe("ExistingBrowser", () => {
         initCommandHistoryStub,
         runGroupStub,
         CDPStub,
+        CDPCreateStub,
         WSDriverRequestAgentStub,
         WSDriverRequestAgentCreateStub;
 
@@ -52,6 +54,7 @@ describe("ExistingBrowser", () => {
         runGroupStub = sandbox.stub();
         WSDriverRequestAgentStub = { request: sandbox.stub() };
         WSDriverRequestAgentCreateStub = sandbox.stub().returns(WSDriverRequestAgentStub);
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ local: false });
 
         CDPStub = {
             target: {
@@ -70,6 +73,8 @@ describe("ExistingBrowser", () => {
             },
             close: sandbox.stub(),
         };
+
+        CDPCreateStub = sandbox.stub().resolves(CDPStub);
 
         ExistingBrowser = proxyquire("src/browser/existing-browser", {
             "@testplane/webdriverio": {
@@ -94,7 +99,7 @@ describe("ExistingBrowser", () => {
             },
             "./cdp": {
                 CDP: {
-                    create: sandbox.stub().resolves(CDPStub),
+                    create: CDPCreateStub,
                 },
             },
             "./wsdriver": {
@@ -165,6 +170,13 @@ describe("ExistingBrowser", () => {
     });
 
     describe("init", () => {
+        it("should attach without connecting CDP when the Docker adapter is absent", async () => {
+            const browser = await initBrowser_(mkBrowser_({ gridUrl: "docker" }), { cdpAvailable: false });
+            assert.calledOnce(webdriverioAttachStub);
+            assert.notCalled(CDPCreateStub);
+            assert.isNull(browser.cdp);
+        });
+
         it("should attach to browser with detected session environment flags", async () => {
             const desiredCapabilities = { browserName: "yabro" };
             const detectedSessionEnvFlags = { isW3C: false, isMobile: false };
@@ -788,6 +800,49 @@ describe("ExistingBrowser", () => {
             await initBrowser_(browser, {}, calibrator);
 
             assert.calledOnceWith(clientBridgeBuildStub, session, "browser-utils", { needsCompatLib: true });
+        });
+    });
+
+    describe("Docker connections", () => {
+        const sessionCaps = {
+            browserName: "chrome",
+            browserVersion: "149.0",
+            "se:wsdriver": "ws://grid.url/session/test",
+            "se:wsdriverVersion": "1",
+        };
+
+        it("should retain WSDriver and perform CDP isolation for Docker browsers", async () => {
+            const browser = mkBrowser_({ gridUrl: "docker", useWsDriver: true, isolation: true });
+
+            await initBrowser_(browser, { sessionCaps });
+
+            assert.calledOnce(WSDriverRequestAgentCreateStub);
+            assert.calledOnceWith(CDPCreateStub, browser);
+            assert.strictEqual(webdriverioAttachStub.lastCall.args[0].customWdRequestAgent, WSDriverRequestAgentStub);
+            assert.strictEqual(browser.cdp, CDPStub);
+            assert.calledOnce(CDPStub.target.createBrowserContext);
+        });
+
+        it("should retain WSDriver and CDP when --local overrides Docker", async () => {
+            RuntimeConfig.getInstance.returns({ local: true });
+            const browser = mkBrowser_({ gridUrl: "docker", useWsDriver: true });
+
+            await initBrowser_(browser, { sessionCaps });
+
+            assert.calledOnce(WSDriverRequestAgentCreateStub);
+            assert.calledOnceWith(CDPCreateStub, browser);
+            assert.strictEqual(webdriverioAttachStub.lastCall.args[0].customWdRequestAgent, WSDriverRequestAgentStub);
+            assert.strictEqual(browser.cdp, CDPStub);
+        });
+
+        it("should retain WSDriver and CDP for a remote grid", async () => {
+            const browser = mkBrowser_({ gridUrl: "http://grid.url/wd/hub", useWsDriver: true });
+
+            await initBrowser_(browser, { sessionCaps });
+
+            assert.calledOnce(WSDriverRequestAgentCreateStub);
+            assert.calledOnceWith(CDPCreateStub, browser);
+            assert.strictEqual(browser.cdp, CDPStub);
         });
     });
 
