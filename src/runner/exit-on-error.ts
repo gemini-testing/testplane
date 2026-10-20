@@ -10,7 +10,7 @@ export class ExitOnError {
 
     constructor(config: ExitOnErrorConfig) {
         this.rules = config.enabled
-            ? Object.entries(config.filters).map(([name, { filter, limit }]) => ({
+            ? config.filters.map(({ name, filter, limit }) => ({
                   name,
                   // Do not mutate the user's RegExp (including its lastIndex).
                   filter: typeof filter === "function" ? filter : new RegExp(filter.source, filter.flags),

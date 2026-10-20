@@ -70,7 +70,7 @@ describe("runner/test-runner/insistant-test-runner", () => {
         it("should reach the error limit through retries of a single test", async () => {
             const checker = new ExitOnError({
                 enabled: true,
-                filters: { quota: { filter: /429/, limit: 3 } },
+                filters: [{ name: "quota", filter: /429/, limit: 3 }],
             });
             const runner = mkRunner_({
                 config: makeConfigStub({ retry: 5 }),

@@ -104,7 +104,7 @@ describe("NodejsEnvRunner", () => {
     describe("exitOnError", () => {
         it("should share counters across browsers and cancel all runners once before intercepted events", async () => {
             const config = makeConfigStub({
-                exitOnError: { enabled: true, filters: { quota: { filter: /429/, limit: 2 } } },
+                exitOnError: { enabled: true, filters: [{ name: "quota", filter: /429/, limit: 2 }] },
             });
             const interceptor = sandbox.stub().returns({ event: RunnerEvents.TEST_PASS });
             const runner = new Runner(config, [{ event: RunnerEvents.TEST_FAIL, handler: interceptor }]);
@@ -139,7 +139,7 @@ describe("NodejsEnvRunner", () => {
         it("should not invoke filters after cancellation", async () => {
             const filter = sandbox.spy(() => true);
             const config = makeConfigStub({
-                exitOnError: { enabled: true, filters: { quota: { filter, limit: 1 } } },
+                exitOnError: { enabled: true, filters: [{ name: "quota", filter, limit: 1 }] },
             });
             const runner = new Runner(config);
             runner.cancel(new Error("cancelled"));

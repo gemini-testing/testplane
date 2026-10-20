@@ -375,13 +375,15 @@ export interface BrowserDownloadMirrors {
 export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;
 
 export interface ExitOnErrorRule {
+    /** Unique, non-empty rule name used in error messages. */
+    name: string;
     filter: RegExp | ((errorText: string) => boolean);
     limit: number;
 }
 
 export interface ExitOnErrorConfig {
     enabled: boolean;
-    filters: Record<string, ExitOnErrorRule>;
+    filters: ExitOnErrorRule[];
 }
 
 export interface CommonConfig {
