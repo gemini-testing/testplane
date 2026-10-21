@@ -527,7 +527,20 @@ export async function startDockerController(
         await writeFile(configPath, JSON.stringify(browsers));
         // Set before creation to also clean up when the CLI times out after creating the network.
         networkCreated = true;
-        await timeDockerOperation(name, "create network", () => docker(["network", "create", "--ipv6", network]));
+        await timeDockerOperation(name, "create network", async () => {
+            try {
+                await docker(["network", "create", "--ipv6", network]);
+            } catch (error) {
+                try {
+                    await docker(["network", "inspect", network]);
+                    return;
+                } catch (inspectError) {
+                    if (!/no such network|network .+ not found/i.test(errorMessage(inspectError))) throw inspectError;
+                }
+                warn(`Cannot create a dual-stack Docker network; falling back to IPv4.\n${errorMessage(error)}`);
+                await docker(["network", "create", network]);
+            }
+        });
         await timeDockerOperation(name, "create Selenoid container", () =>
             docker([
                 "create",

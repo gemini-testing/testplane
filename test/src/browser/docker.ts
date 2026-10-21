@@ -444,6 +444,66 @@ describe("browser/docker", () => {
         assert.calledOnce(removeConfig);
     });
 
+    for (const missingNetwork of ["network does-not-exist not found", "no such network does-not-exist"]) {
+        it(`should warn and fall back to IPv4 when dual-stack creation fails and the network is missing (${missingNetwork})`, async () => {
+            const dualStack = command.withArgs(sinon.match.array.startsWith(["network", "create", "--ipv6"]));
+            dualStack.rejects(new Error("IPv6 is unavailable"));
+            const inspect = command.withArgs(sinon.match.array.startsWith(["network", "inspect"]));
+            inspect.rejects(new Error(missingNetwork));
+
+            const driver = await start("browser");
+            const network = dualStack.firstCall.args[0][3];
+            const ipv4 = command.withArgs(["network", "create", network]);
+            assert.calledOnce(ipv4);
+            assert.calledOnce(warnStub);
+            assert.calledWithMatch(warnStub, "falling back to IPv4.\nIPv6 is unavailable");
+            assert.callOrder(dualStack, inspect, warnStub, ipv4);
+            await driver.free();
+            assert.calledWith(command, ["network", "rm", network]);
+        });
+    }
+
+    it("should reuse the network if creation timed out after the engine created it", async () => {
+        const dualStack = command.withArgs(sinon.match.array.startsWith(["network", "create", "--ipv6"]));
+        dualStack.rejects(new Error("network creation timed out"));
+        const inspect = command.withArgs(sinon.match.array.startsWith(["network", "inspect"]));
+        inspect.resolves('[{"Name":"existing-network","EnableIPv6":true}]');
+
+        const driver = await start("browser");
+        const network = dualStack.firstCall.args[0][3];
+        assert.calledWith(inspect, ["network", "inspect", network]);
+        assert.equal(
+            command.getCalls().filter(call => call.args[0].slice(0, 2).join(" ") === "network create").length,
+            1,
+        );
+        assert.notCalled(warnStub);
+        await driver.free();
+    });
+
+    it("should stop if it cannot determine whether the network was created", async () => {
+        const dualStack = command.withArgs(sinon.match.array.startsWith(["network", "create", "--ipv6"]));
+        dualStack.rejects(new Error("network creation timed out"));
+        command
+            .withArgs(sinon.match.array.startsWith(["network", "inspect"]))
+            .rejects(new Error("network inspection permission denied"));
+
+        await assert.isRejected(start("browser"), "network inspection permission denied");
+        const network = dualStack.firstCall.args[0][3];
+        assert.neverCalledWith(command, ["network", "create", network]);
+        assert.isFalse(command.getCalls().some(call => call.args[0][0] === "create"));
+    });
+
+    it("should propagate an IPv4 fallback failure without starting Selenoid", async () => {
+        command.withArgs(sinon.match.array.startsWith(["network", "inspect"])).rejects(new Error("no such network"));
+        command.withArgs(sinon.match.array.startsWith(["network", "create"])).callsFake(async (args: string[]) => {
+            throw new Error(args.includes("--ipv6") ? "IPv6 is unavailable" : "IPv4 creation failed");
+        });
+
+        await assert.isRejected(start("browser"), "IPv4 creation failed");
+        assert.calledOnce(warnStub);
+        assert.isFalse(command.getCalls().some(call => call.args[0][0] === "create"));
+    });
+
     it("should rely on Podman host resolution without injecting host-gateway", async () => {
         command
             .withArgs(["version", "--format", "{{json .Server.Components}}"])
@@ -451,6 +511,7 @@ describe("browser/docker", () => {
         const driver = await start("browser");
         const config = JSON.parse(writeConfig.firstCall.args[1]);
         assert.deepEqual(config.chrome.versions["98.0"].hosts, []);
+        assert.calledWith(command, ["network", "create", "--ipv6", sinon.match.string]);
         await driver.free();
     });
 
