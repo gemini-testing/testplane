@@ -33,6 +33,7 @@ interface CollectRrwebEventsResult {
 type RrwebUploadStatus = Pick<CollectRrwebEventsResult, "isRrwebSupported" | "evalError">;
 
 const rrwebCodeUploads = new WeakMap<WebdriverIO.Browser, Promise<RrwebUploadStatus | null>>();
+const completedRrwebCodeUploads = new WeakMap<WebdriverIO.Browser, RrwebUploadStatus>();
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 export async function installRrwebAndCollectEvents(
@@ -56,8 +57,9 @@ export async function installRrwebAndCollectEvents(
             sessionsWithRrwebSent.add(session);
         }
 
+        const completedUpload = completedRrwebCodeUploads.get(session);
         let result = await (shouldSendRrwebCode
-            ? collectWithRrwebCode(session, generation)
+            ? collectWithRrwebCode(session, generation, completedUpload)
             : collectRrwebEvents(session, undefined));
 
         if (!result || getSessionGeneration(session) !== generation) {
@@ -85,7 +87,7 @@ export async function installRrwebAndCollectEvents(
 
         debug("collectRrwebEvents, rrweb was not installed, sending code again");
 
-        result = await collectWithRrwebCode(session, generation);
+        result = await collectWithRrwebCode(session, generation, completedUpload);
 
         if (!result || getSessionGeneration(session) !== generation) {
             dropCollectedRrwebEvents(result);
@@ -113,6 +115,7 @@ export async function cleanupRrweb(session: WebdriverIO.Browser, callstack: Call
     sessionGenerations.set(session, getSessionGeneration(session) + 1);
     sessionsWithRrwebSent.delete(session);
     rrwebCodeUploads.delete(session);
+    completedRrwebCodeUploads.delete(session);
     sessionsWithUnsupportedRrweb.delete(session);
 
     try {
@@ -180,6 +183,7 @@ function dropCollectedRrwebEvents(result: CollectRrwebEventsResult | null): null
 async function collectWithRrwebCode(
     session: WebdriverIO.Browser,
     generation: number,
+    completedUpload: RrwebUploadStatus | undefined,
 ): Promise<CollectRrwebEventsResult | null> {
     let result: CollectRrwebEventsResult | null = null;
 
@@ -189,11 +193,13 @@ async function collectWithRrwebCode(
         }
 
         const pending = rrwebCodeUploads.get(session);
+        const latestCompletedUpload = completedRrwebCodeUploads.get(session);
 
-        if (pending) {
-            debug("waiting for in-flight rrweb upload");
+        // A missing response can predate an upload that has already completed.
+        if (pending || latestCompletedUpload !== completedUpload) {
+            debug(pending ? "waiting for in-flight rrweb upload" : "rechecking stale rrweb probe");
 
-            const status = await pending;
+            const status = pending ? await pending : latestCompletedUpload;
 
             if (getSessionGeneration(session) !== generation) {
                 return null;
@@ -207,6 +213,7 @@ async function collectWithRrwebCode(
                 };
             }
 
+            completedUpload = completedRrwebCodeUploads.get(session);
             result = await collectRrwebEvents(session, undefined);
 
             if (getSessionGeneration(session) !== generation) {
@@ -221,10 +228,18 @@ async function collectWithRrwebCode(
 
             const request = collectRrwebEvents(session, rrwebCode);
             const settled = request.then(
-                ({ isRrwebSupported, evalError }) => ({
-                    isRrwebSupported,
-                    evalError,
-                }),
+                ({ isRrwebSupported, evalError }) => {
+                    const status = {
+                        isRrwebSupported,
+                        evalError,
+                    };
+
+                    if (getSessionGeneration(session) === generation) {
+                        completedRrwebCodeUploads.set(session, status);
+                    }
+
+                    return status;
+                },
                 () => null,
             );
 

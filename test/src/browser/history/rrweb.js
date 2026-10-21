@@ -172,6 +172,161 @@ describe("browser/history/rrweb", () => {
             assert.lengthOf(uploads(session), 1);
         });
 
+        for (const navigationAfterUpload of [false, true]) {
+            it(`should recheck a stale missing response after upload completes, navigation: ${navigationAfterUpload}`, async () => {
+                await prepareSession();
+
+                const lateProbe = deferred();
+                let probes = 0;
+                let uploadCount = 0;
+
+                session.execute.callsFake((_, code) => {
+                    if (code) {
+                        uploadCount += 1;
+
+                        return Promise.resolve(installed([`upload ${uploadCount}`]));
+                    }
+
+                    probes += 1;
+
+                    if (probes === 1 || (navigationAfterUpload && probes === 3)) {
+                        return Promise.resolve(missing());
+                    }
+
+                    if (probes === 2) {
+                        return lateProbe.promise;
+                    }
+
+                    return Promise.resolve(installed(["follower"]));
+                });
+
+                const first = installRrwebAndCollectEvents(session, {});
+                const second = installRrwebAndCollectEvents(session, {});
+
+                assert.deepEqual(await first, ["upload 1"]);
+                lateProbe.resolve(missing());
+
+                assert.deepEqual(await second, navigationAfterUpload ? ["upload 2"] : ["follower"]);
+                assert.lengthOf(uploads(session), navigationAfterUpload ? 2 : 1);
+            });
+        }
+
+        it("should recheck a stale follower probe after another upload completes", async () => {
+            const upload = deferred();
+            const lateProbe = deferred();
+            const probeStarted = deferred();
+            let probes = 0;
+            let uploadCount = 0;
+
+            session.execute.callsFake((_, code) => {
+                if (code) {
+                    uploadCount += 1;
+
+                    return uploadCount === 1 ? upload.promise : Promise.resolve(installed(["new document"]));
+                }
+
+                probes += 1;
+
+                if (probes === 1) {
+                    return Promise.resolve(missing());
+                }
+
+                if (probes === 2) {
+                    probeStarted.resolve();
+
+                    return lateProbe.promise;
+                }
+
+                return Promise.resolve(probes === 3 ? missing() : installed(["follower"]));
+            });
+
+            const first = installRrwebAndCollectEvents(session, {});
+            const follower = installRrwebAndCollectEvents(session, {});
+
+            upload.resolve(installed(["old document"]));
+            assert.deepEqual(await first, ["old document"]);
+            await probeStarted.promise;
+
+            assert.deepEqual(await installRrwebAndCollectEvents(session, {}), ["new document"]);
+            lateProbe.resolve(missing());
+
+            assert.deepEqual(await follower, ["follower"]);
+            assert.lengthOf(uploads(session), 2);
+        });
+
+        it("should not upload again after a delayed probe misses an unsupported installation", async () => {
+            await prepareSession();
+
+            const lateProbe = deferred();
+            let probes = 0;
+
+            session.execute.callsFake((_, code) => {
+                if (code) {
+                    return Promise.resolve(unsupported("unsupported syntax"));
+                }
+
+                probes += 1;
+
+                return probes === 1 ? Promise.resolve(missing()) : lateProbe.promise;
+            });
+
+            const first = installRrwebAndCollectEvents(session, {});
+            const second = installRrwebAndCollectEvents(session, {});
+
+            assert.deepEqual(await first, []);
+            lateProbe.resolve(missing());
+
+            assert.deepEqual(await second, []);
+            assert.lengthOf(uploads(session), 1);
+        });
+
+        it("should stop a stale collector when cleanup starts during its fresh probe", async () => {
+            await prepareSession();
+
+            const lateProbe = deferred();
+            const freshProbe = deferred();
+            const freshProbeStarted = deferred();
+            let probes = 0;
+
+            session.execute.callsFake((...args) => {
+                if (args.length === 1) {
+                    return Promise.resolve();
+                }
+
+                if (args[1]) {
+                    return Promise.resolve(installed(["upload"]));
+                }
+
+                probes += 1;
+
+                if (probes === 1) {
+                    return Promise.resolve(missing());
+                }
+
+                if (probes === 2) {
+                    return lateProbe.promise;
+                }
+
+                freshProbeStarted.resolve();
+
+                return freshProbe.promise;
+            });
+
+            const first = installRrwebAndCollectEvents(session, {});
+            const second = installRrwebAndCollectEvents(session, {});
+
+            assert.deepEqual(await first, ["upload"]);
+            lateProbe.resolve(missing());
+            await freshProbeStarted.promise;
+            await cleanupRrweb(session, {});
+            freshProbe.resolve(missing());
+
+            assert.deepEqual(await second, []);
+            assert.lengthOf(uploads(session), 1);
+            assert.deepEqual(await installRrwebAndCollectEvents(session, {}), ["upload"]);
+            assert.lengthOf(uploads(session), 2);
+        });
+
         it("should not serialize collections when rrweb is already installed", async () => {
             await prepareSession();
 
