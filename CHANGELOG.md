@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.47.8 (2026-10-21)
+
+
+### Bug Fixes
+
+* abort timed-out WebSocket connections safely ([#1349](https://github.com/gemini-testing/testplane/issues/1349)) ([9c088d9](https://github.com/gemini-testing/testplane/commit/9c088d90e50853072d501decfa4357c7424a6b47))
+
 ### 8.47.7 (2026-10-14)
 
 
