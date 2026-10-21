@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "fs/promises";
-import { tmpdir } from "os";
+import { arch, platform as hostPlatform, tmpdir } from "os";
 import path from "path";
 import lockfile from "proper-lockfile";
 import { warn } from "../utils/logger";
@@ -45,6 +45,11 @@ export async function prepareDockerBrowserImage(
     docker: Docker,
     platform = "linux/amd64",
 ): Promise<string> {
+    // The packed CDP adapter only needs repair under emulation on Apple Silicon.
+    if (hostPlatform() !== "darwin" || arch() !== "arm64") {
+        return source;
+    }
+
     const [metadata] = JSON.parse(await docker(["image", "inspect", source])) as {
         Id: string;
         Config: { User?: string };

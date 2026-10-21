@@ -15,9 +15,9 @@ describe("browser/docker-image", () => {
     let images: Set<string>;
     let recipes: string[];
 
-    const load = (): typeof Prepare =>
+    const load = (platform = "darwin", arch = "arm64"): typeof Prepare =>
         proxyquire("src/browser/docker-image", {
-            os: { tmpdir: () => directory },
+            os: { tmpdir: () => directory, platform: () => platform, arch: () => arch },
             "../utils/logger": { log: sandbox.stub(), warn: sandbox.stub() },
         }).prepareDockerBrowserImage;
 
@@ -47,6 +47,19 @@ describe("browser/docker-image", () => {
         sandbox.restore();
         await rm(directory, { recursive: true, force: true });
     });
+
+    for (const [platform, arch] of [
+        ["linux", "x64"],
+        ["linux", "arm64"],
+        ["darwin", "x64"],
+        ["win32", "arm64"],
+    ]) {
+        it(`should use the original image without preparing it on ${platform}/${arch}`, async () => {
+            assert.equal(await load(platform, arch)("chrome:latest", "session", docker), "chrome:latest");
+            assert.notCalled(docker);
+            assert.deepEqual(await readdir(directory), []);
+        });
+    }
 
     it("should build from the immutable source, unpack in place and preserve the image user and startup", async () => {
         const image = await prepare("chrome:latest", "session", docker);
