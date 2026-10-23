@@ -29,7 +29,8 @@ import {
     getElementCaptureRect,
     getExtRect,
     getPseudoElementCaptureRect,
-    getVerticalRadiusInsets
+    getVerticalRadiusInsets,
+    intersectWithIframeBounds
 } from "./utils/element-rect";
 import { getClipRect } from "./utils/clip-rect";
 import {
@@ -207,12 +208,12 @@ export function computeSafeArea(
     const startTime = performance.now();
 
     const viewportSize = computeViewportSize();
-    const viewportRect: Rect<"viewport", "css"> = {
+    const viewportRect = intersectWithIframeBounds({
         left: 0 as Coord<"viewport", "css", "x">,
         top: 0 as Coord<"viewport", "css", "y">,
         width: viewportSize.width as Length<"css", "x">,
         height: viewportSize.height as Length<"css", "y">
-    };
+    });
     const captureElements = targetsToCapture
         .map(target => lib.queryFirst(parseCaptureTarget(target).elementTarget))
         .filter((e): e is NonNullable<typeof e> => e !== null);
