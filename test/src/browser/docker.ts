@@ -26,6 +26,7 @@ describe("browser/docker", () => {
     let listLogs: SinonStub;
     let openLog: SinonStub;
     let spawnCommand: SinonStub;
+    let getPortStub: SinonStub;
     const selenoidImage = "registry.example.com/selenoid:1.11.3";
 
     const start = (
@@ -77,10 +78,12 @@ describe("browser/docker", () => {
             return child;
         });
         warnStub = sandbox.stub();
+        getPortStub = sandbox.stub().resolves(12346);
         prepareImage = sandbox.stub().callsFake(async (image: string) => image);
         const dockerModule = proxyquire("src/browser/docker", {
             "./docker-image": { prepareDockerBrowserImage: prepareImage },
             "../utils/logger": { warn: warnStub, log: sandbox.stub() },
+            "get-port": getPortStub,
             "fs/promises": {
                 mkdtemp: sandbox.stub().resolves("/tmp/testplane-selenoid-test"),
                 writeFile: writeConfig,
@@ -542,6 +545,175 @@ describe("browser/docker", () => {
         const config = JSON.parse(writeConfig.firstCall.args[1]);
         assert.deepEqual(config.chrome.versions["98.0"].hosts, hosts);
         await driver.free();
+    });
+
+    describe("native rootless Podman networking", () => {
+        let platformStub: SinonStub;
+
+        beforeEach(() => {
+            platformStub = sandbox.stub(process, "platform").value("linux");
+            command
+                .withArgs(["version", "--format", "{{json .Server.Components}}"])
+                .resolves('[{"Name":"Podman Engine"}]');
+            command.withArgs(["info", "--format", "{{json .SecurityOptions}}"]).resolves('["name=rootless"]');
+        });
+
+        it("should reach independent slirp browsers through host ports without preparing a bridge", async () => {
+            const driver = await start("browser", {}, { labels: { team: "tests" } });
+            const args = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+            const name = args[2];
+
+            assert.calledOnceWith(getPortStub, { host: "127.0.0.1" });
+            assert.equal(args[args.indexOf("--network") + 1], "host");
+            assert.equal(args[args.indexOf("-container-network") + 1], "slirp4netns:enable_ipv6=true");
+            assert.equal(args[args.indexOf("-listen") + 1], "127.0.0.1:12346");
+            assert.include(args, "/var/run/docker.sock:/var/run/docker.sock");
+            assert.notInclude(args, "--publish");
+            assert.isFalse(command.getCalls().some(call => call.args[0][0] === "network"));
+            assert.isFalse(command.getCalls().some(call => call.args[0].includes(`${name}:/.dockerenv`)));
+            assert.neverCalledWith(command, ["inspect", "--format", "{{json .NetworkSettings.Ports}}", name]);
+            assert.deepEqual(JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"].labels, {
+                team: "tests",
+                "testplane.controller": name,
+            });
+            assert.equal(driver.gridUrl, "http://127.0.0.1:12346/wd/hub");
+            assert.calledWith(fetchStub, "http://127.0.0.1:12346/status");
+            await driver.free();
+            assert.isFalse(command.getCalls().some(call => call.args[0][0] === "network"));
+        });
+
+        for (const platform of ["darwin", "win32"]) {
+            it(`should preserve bridge networking and VM port forwarding on ${platform}`, async () => {
+                platformStub.value(platform);
+                const driver = await start("browser");
+                const args = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+                const name = args[2];
+                assert.calledWith(command, ["network", "create", "--ipv6", `${name}-network`]);
+                assert.equal(args[args.indexOf("--network") + 1], `${name}-network`);
+                assert.include(args, "--publish");
+                assert.calledWith(command, ["cp", "/tmp/testplane-selenoid-test/.dockerenv", `${name}:/.dockerenv`]);
+                assert.equal(driver.gridUrl, "http://127.0.0.1:12345/wd/hub");
+                assert.notCalled(getPortStub);
+                await driver.free();
+            });
+        }
+
+        it("should preserve bridge networking for rootful Podman", async () => {
+            command.withArgs(["info", "--format", "{{json .SecurityOptions}}"]).resolves('["name=seccomp"]');
+            const driver = await start("browser");
+            assert.calledWith(command, ["network", "create", "--ipv6", sinon.match.string]);
+            assert.notCalled(getPortStub);
+            await driver.free();
+        });
+
+        it("should preserve bridge networking for rootless Docker", async () => {
+            command.withArgs(["version", "--format", "{{json .Server.Components}}"]).resolves('[{"Name":"Engine"}]');
+            const driver = await start("browser");
+            assert.calledWith(command, ["network", "create", "--ipv6", sinon.match.string]);
+            assert.notCalled(getPortStub);
+            await driver.free();
+        });
+
+        it("should remove only browsers owned by the controller after stopping it", async () => {
+            const driver = await start("browser");
+            const name = command.getCalls().find(call => call.args[0][0] === "create")!.args[0][2];
+            const children = command.withArgs([
+                "ps",
+                "--all",
+                "--quiet",
+                "--filter",
+                `label=testplane.controller=${name}`,
+            ]);
+            children.resolves("owned-browser");
+
+            await Promise.all([driver.free(), driver.kill()]);
+
+            assert.callOrder(
+                command.withArgs(["rm", "--force", name]),
+                children,
+                command.withArgs(["rm", "--force", "owned-browser"]),
+            );
+            assert.calledOnce(children);
+            assert.isFalse(command.getCalls().some(call => call.args[0][0] === "network"));
+        });
+
+        it("should keep synchronous exit cleanup scoped to the controller", async () => {
+            await start("browser");
+            const name = command.getCalls().find(call => call.args[0][0] === "create")!.args[0][2];
+            const children = ["ps", "--all", "--quiet", "--filter", `label=testplane.controller=${name}`];
+            syncCommand.withArgs("docker", children).returns("owned-browser");
+
+            exitHandlers[0]();
+
+            assert.calledWith(syncCommand, "docker", children);
+            assert.calledWith(syncCommand, "docker", ["rm", "--force", "owned-browser"]);
+            assert.isFalse(syncCommand.getCalls().some(call => call.args[1][0] === "network"));
+        });
+
+        it("should use controller and session labels for diagnostics, CDP lookup and session cleanup", async () => {
+            const controller = await start("browser");
+            const name = command.getCalls().find(call => call.args[0][0] === "create")!.args[0][2];
+            const session = controller.createSession("98.0", 1000);
+            const label = session.selenoidOptions!.labels["testplane.session"];
+            const filters = [
+                "--filter",
+                `label=testplane.controller=${name}`,
+                "--filter",
+                `label=testplane.session=${label}`,
+            ];
+            command.withArgs(["ps", "--all", "--quiet", ...filters]).resolves("owned-browser");
+            command.withArgs(["ps", "--quiet", ...filters]).resolves("owned-browser");
+            const file = { fd: 123, appendFile: sandbox.stub().resolves(), close: sandbox.stub().resolves() };
+            openLog.resolves(file);
+
+            assert.include(await session.getLogs!(), "Browser container log (owned-browser)");
+            await session.saveLogs!("session-id");
+            fetchStub.onCall(fetchStub.callCount).rejects(new Error("CDP starting"));
+            fetchStub.resolves({ ok: true, json: async () => ({ domains: [] }) });
+            await session.prepareCdp!("session-id");
+            session.setSessionId!("session-id");
+            await session.free();
+
+            assert.calledWith(command, ["ps", "--quiet", ...filters]);
+            assert.calledWith(command, ["exec", "--user", "0", "owned-browser", "/bin/sh", "-ec", sinon.match.string]);
+            assert.calledWith(command, ["rm", "--force", "owned-browser"]);
+            assert.calledWith(
+                fetchStub,
+                "http://127.0.0.1:12346/wd/hub/session/session-id",
+                sinon.match({ method: "DELETE" }),
+            );
+            const lookups = command.getCalls().filter(call => call.args[0][0] === "ps");
+            assert.isTrue(lookups.every(call => call.args[0].includes(`label=testplane.controller=${name}`)));
+            await controller.free();
+        });
+
+        it("should label browsers added later without mutating their configuration", async () => {
+            const controller = await start("browser");
+            const name = command.getCalls().find(call => call.args[0][0] === "create")!.args[0][2];
+            const labels = { team: "tests" };
+            fetchStub.resolves({ ok: true, json: async () => ({ browsers: { firefox: { added: {} } } }) });
+
+            await controller.addBrowser({
+                config: { image: "firefox", selenoidImage, labels },
+                browserName: "firefox",
+                browserVersion: "added",
+            });
+
+            assert.deepEqual(JSON.parse(writeConfig.lastCall.args[1]).firefox.versions.added.labels, {
+                team: "tests",
+                "testplane.controller": name,
+            });
+            assert.deepEqual(labels, { team: "tests" });
+            await controller.free();
+        });
+
+        it("should clean up startup failures without touching any shared networks", async () => {
+            command.withArgs(sinon.match.array.startsWith(["start"])).rejects(new Error("controller failed"));
+            await assert.isRejected(start("browser"), "controller failed");
+            assert.calledWith(command, ["rm", "--force", sinon.match(/^testplane-/)]);
+            assert.isFalse(command.getCalls().some(call => call.args[0][0] === "network"));
+            assert.calledOnce(removeConfig);
+        });
     });
 
     it("should use a custom Selenoid image without passing it to browsers.json", async () => {
