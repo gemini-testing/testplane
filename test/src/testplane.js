@@ -23,7 +23,7 @@ const { promiseDelay } = require("../../src/utils/promise");
 
 describe("testplane", () => {
     const sandbox = sinon.createSandbox();
-    let Testplane, initReporters, signalHandler, loggerWarnStub, loggerErrorStub;
+    let Testplane, initReporters, signalHandler, loggerWarnStub, loggerErrorStub, preloadWebdriverIO;
 
     const mkTestplane_ = async config => {
         Config.create.resolves(config || makeConfigStub());
@@ -51,6 +51,7 @@ describe("testplane", () => {
         sandbox.stub(fs, "outputJSON").resolves();
 
         initReporters = sandbox.stub().resolves();
+        preloadWebdriverIO = sandbox.stub().resolves();
         signalHandler = new AsyncEmitter();
 
         loggerWarnStub = sandbox.stub();
@@ -62,6 +63,7 @@ describe("testplane", () => {
 
         Testplane = proxyquire("src/testplane", {
             "./reporters": { initReporters },
+            "./utils/preload-utils": { preloadWebdriverIO },
             "./signal-handler": signalHandler,
             "./utils/logger": {
                 warn: loggerWarnStub,
@@ -423,6 +425,22 @@ describe("testplane", () => {
                 mkRunner_();
 
                 return runTestplane().then(() => assert.calledOnce(MainRunner.prototype.run));
+            });
+
+            it("should finish preloading WebdriverIO before running tests", async () => {
+                const runner = mkRunner_();
+                const preloadCompleted = sandbox.spy();
+                preloadWebdriverIO.callsFake(async () => {
+                    await new Promise(resolve => setImmediate(resolve));
+                    preloadCompleted();
+                });
+
+                await runTestplane();
+                await preloadWebdriverIO.firstCall.returnValue;
+
+                assert.calledOnce(preloadWebdriverIO);
+                assert.calledOnce(runner.run);
+                assert.callOrder(preloadCompleted, runner.run);
             });
 
             it("should use read tests", async () => {
