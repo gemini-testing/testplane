@@ -5,6 +5,7 @@ import { mkdtemp, writeFile, rm, mkdir, readdir, open, type FileHandle } from "f
 import { rmSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
+import getPort from "get-port";
 import type { WdProcess } from "../browser-pool/webdriver-pool";
 import type { DockerConfig } from "../config/types";
 import { log, warn } from "../utils/logger";
@@ -340,7 +341,11 @@ export async function startDockerController(
     // Podman supplies host.docker.internal itself; host-gateway may be unavailable in podman machine.
     const isPodman = serverComponents?.some(component => component.Name === "Podman Engine") ?? false;
     const defaultHosts = isPodman ? [] : ["host.docker.internal:host-gateway"];
-    const network = `${name}-network`;
+    // Native rootless Podman can avoid the bridge helper namespace entirely. VMs still
+    // need a published controller port forwarded to the client by Docker/Podman machine.
+    const useSlirp = isPodman && securityOptions?.includes("name=rootless") && process.platform === "linux";
+    const network = useSlirp ? "slirp4netns:enable_ipv6=true" : `${name}-network`;
+    const containerFilter = useSlirp ? `label=testplane.controller=${name}` : `network=${network}`;
     const configDir = await mkdtemp(path.join(tmpdir(), "testplane-selenoid-"));
     const configPath = path.join(configDir, "browsers.json");
     let networkCreated = false;
@@ -359,15 +364,15 @@ export async function startDockerController(
             }
         };
         run(["rm", "--force", name]);
-        if (networkCreated) {
-            const containers = run(["ps", "--all", "--quiet", "--filter", `network=${network}`])
+        if (useSlirp || networkCreated) {
+            const containers = run(["ps", "--all", "--quiet", "--filter", containerFilter])
                 .split(/\s+/)
                 .filter(Boolean);
             if (containers.length) {
                 run(["rm", "--force", ...containers]);
             }
-            run(["network", "rm", network]);
         }
+        if (networkCreated) run(["network", "rm", network]);
         try {
             rmSync(configDir, { recursive: true, force: true });
         } catch {
@@ -381,11 +386,13 @@ export async function startDockerController(
                 throw error;
             }
         });
-        if (networkCreated) {
-            const containers = (await docker(["ps", "--all", "--quiet", "--filter", `network=${network}`]))
+        if (useSlirp || networkCreated) {
+            const containers = (await docker(["ps", "--all", "--quiet", "--filter", containerFilter]))
                 .split(/\s+/)
                 .filter(Boolean);
             await removeContainers(containers);
+        }
+        if (networkCreated) {
             await docker(["network", "rm", network]).catch(error => {
                 if (!/not found|no such network/i.test(errorMessage(error))) {
                     throw error;
@@ -406,14 +413,14 @@ export async function startDockerController(
     const getLogs = async (label?: string): Promise<string> => {
         const controllerLogs = await docker(["logs", "--tail", "100", name], { includeStderr: true }).catch(() => "");
         const driverLogs: string[] = [];
-        if (networkCreated) {
+        if (useSlirp || networkCreated) {
             // Selenoid may not save driver logs until the service becomes ready.
             const containers = await docker([
                 "ps",
                 "--all",
                 "--quiet",
                 "--filter",
-                `network=${network}`,
+                containerFilter,
                 "--filter",
                 label ? `label=testplane.session=${label}` : `ancestor=${preparedImage}`,
             ]).catch(() => "");
@@ -473,7 +480,7 @@ export async function startDockerController(
                     "--all",
                     "--quiet",
                     "--filter",
-                    `network=${network}`,
+                    containerFilter,
                     "--filter",
                     label ? `label=testplane.session=${label}` : `ancestor=${preparedImage}`,
                 ])
@@ -505,6 +512,12 @@ export async function startDockerController(
             ...browserConfig,
             image,
         };
+        if (useSlirp) {
+            browsers[entry.browserName].versions[entry.browserVersion].labels = {
+                ...(browserConfig.labels as Record<string, string> | null),
+                "testplane.controller": name,
+            };
+        }
     };
     prepared.forEach(entry => addEntry(entry, entry.image));
 
@@ -525,22 +538,28 @@ export async function startDockerController(
 
     try {
         await writeFile(configPath, JSON.stringify(browsers));
-        // Set before creation to also clean up when the CLI times out after creating the network.
-        networkCreated = true;
-        await timeDockerOperation(name, "create network", async () => {
-            try {
-                await docker(["network", "create", "--ipv6", network]);
-            } catch (error) {
+        let port: string | null = null;
+        if (useSlirp) {
+            port = String(await getPort({ host: "127.0.0.1" }));
+        } else {
+            // Set before creation to also clean up when the CLI times out after creating the network.
+            networkCreated = true;
+            await timeDockerOperation(name, "create network", async () => {
                 try {
-                    await docker(["network", "inspect", network]);
-                    return;
-                } catch (inspectError) {
-                    if (!/no such network|network .+ not found/i.test(errorMessage(inspectError))) throw inspectError;
+                    await docker(["network", "create", "--ipv6", network]);
+                } catch (error) {
+                    try {
+                        await docker(["network", "inspect", network]);
+                        return;
+                    } catch (inspectError) {
+                        if (!/no such network|network .+ not found/i.test(errorMessage(inspectError)))
+                            throw inspectError;
+                    }
+                    warn(`Cannot create a dual-stack Docker network; falling back to IPv4.\n${errorMessage(error)}`);
+                    await docker(["network", "create", network]);
                 }
-                warn(`Cannot create a dual-stack Docker network; falling back to IPv4.\n${errorMessage(error)}`);
-                await docker(["network", "create", network]);
-            }
-        });
+            });
+        }
         await timeDockerOperation(name, "create Selenoid container", () =>
             docker([
                 "create",
@@ -550,10 +569,7 @@ export async function startDockerController(
                 selenoidPlatform,
                 "--pull",
                 "never",
-                "--publish",
-                "127.0.0.1::4444",
-                "--network",
-                network,
+                ...(useSlirp ? ["--network", "host"] : ["--publish", "127.0.0.1::4444", "--network", network]),
                 // This is the socket path on the daemon's Linux host, including Docker Desktop/Colima.
                 "--volume",
                 `${socketPath}:/var/run/docker.sock`,
@@ -561,6 +577,7 @@ export async function startDockerController(
                 selenoidImage,
                 "-conf",
                 "/browsers.json",
+                ...(useSlirp ? ["-listen", `127.0.0.1:${port}`] : []),
                 "-container-network",
                 network,
                 "-limit",
@@ -579,7 +596,7 @@ export async function startDockerController(
         await timeDockerOperation(name, "copy Selenoid config", () =>
             docker(["cp", configPath, `${name}:/browsers.json`]),
         );
-        if (isPodman) {
+        if (isPodman && !useSlirp) {
             // Selenoid detects container execution using this Docker marker. Without it,
             // it connects to published ports on its own loopback instead of the browser's network IP.
             await timeDockerOperation(name, "enable Selenoid container detection", async () => {
@@ -590,10 +607,14 @@ export async function startDockerController(
         }
         await timeDockerOperation(name, "start Selenoid container", () => docker(["start", name]));
 
-        const ports = JSON.parse(
-            await docker(["inspect", "--format", "{{json .NetworkSettings.Ports}}", name]),
-        ) as Record<string, { HostIp: string; HostPort: string }[] | null>;
-        const port = ports["4444/tcp"]?.find(binding => binding.HostIp === "127.0.0.1")?.HostPort;
+        // With host networking, Selenoid uses published browser ports on its own
+        // loopback. Leave /.dockerenv absent so it does not choose private browser IPs.
+        if (!useSlirp) {
+            const ports = JSON.parse(
+                await docker(["inspect", "--format", "{{json .NetworkSettings.Ports}}", name]),
+            ) as Record<string, { HostIp: string; HostPort: string }[] | null>;
+            port = ports["4444/tcp"]?.find(binding => binding.HostIp === "127.0.0.1")?.HostPort ?? null;
+        }
         if (!port || !/^\d+$/.test(port)) {
             throw new Error("Docker did not publish WebDriver port 4444 on 127.0.0.1.");
         }
@@ -622,7 +643,7 @@ export async function startDockerController(
                     "ps",
                     "--quiet",
                     "--filter",
-                    `network=${network}`,
+                    containerFilter,
                     "--filter",
                     label ? `label=testplane.session=${label}` : `ancestor=${preparedImage}`,
                 ])
@@ -729,7 +750,7 @@ export async function startDockerController(
                                 "--all",
                                 "--quiet",
                                 "--filter",
-                                `network=${network}`,
+                                containerFilter,
                                 "--filter",
                                 `label=testplane.session=${label}`,
                             ])
