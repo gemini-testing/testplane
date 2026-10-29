@@ -13,8 +13,6 @@ import {
 } from "../events";
 import { RunnableEmitter } from "./types";
 import RuntimeConfig from "../config/runtime-config";
-import { configureDockerRun, stopDockerRun } from "../browser/docker-manager";
-import { DOCKER_GRID_URL } from "../constants/config";
 import WorkersRegistry from "../utils/workers-registry";
 import PromiseGroup from "./promise-group";
 import { TestCollection } from "../test-collection";
@@ -122,7 +120,7 @@ export class MainRunner extends RunnableEmitter {
 
         let failed = false;
         try {
-            await this._configureDocker(testCollection);
+            await this.browserPool?.prepare(testCollection.getBrowsers());
             await this.emitAndWait(MasterEvents.RUNNER_START, this);
             this.emit(MasterEvents.BEGIN);
             await this._runTests(testCollection, opts);
@@ -132,6 +130,12 @@ export class MainRunner extends RunnableEmitter {
             logger.error(error instanceof Error ? error.stack || error.message : error);
             throw error;
         } finally {
+            const disposePool = async (): Promise<void> => {
+                // --keep-browser deliberately transfers the live sessions to the caller.
+                if (failed || !RuntimeConfig.getInstance().keepBrowserMode?.enabled) {
+                    await this.browserPool?.[Symbol.asyncDispose]();
+                }
+            };
             const finish = async (): Promise<void> => {
                 this.emit(MasterEvents.END);
                 await this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn);
@@ -140,13 +144,13 @@ export class MainRunner extends RunnableEmitter {
                 // A stalled cleanup must not hide the original error or block the CLI exit.
                 await this._cleanupAfterFailure("RUNNER_END handlers", finish);
                 await this._cleanupAfterFailure("workers", () => this.workersRegistry.end());
-                await this._cleanupAfterFailure("Docker", () => stopDockerRun(this.config));
+                await this._cleanupAfterFailure("browser pool", disposePool);
             } else {
                 try {
                     await finish();
                     await this.workersRegistry.end();
                 } finally {
-                    await stopDockerRun(this.config);
+                    await disposePool();
                 }
             }
         }
@@ -178,25 +182,6 @@ export class MainRunner extends RunnableEmitter {
         this.running.add(this._waitBrowserRunnerTestsCompletion(browserRunner));
 
         return true;
-    }
-
-    private async _configureDocker(testCollection: TestCollection): Promise<void> {
-        if (!RuntimeConfig.getInstance().local) {
-            const dockerSessions = testCollection.getBrowsers().reduce((total, browserId) => {
-                const browser = this.config.forBrowser(browserId);
-                return total + (browser.gridUrl === DOCKER_GRID_URL ? browser.sessionsPerBrowser : 0);
-            }, 0);
-            if (dockerSessions > 0) {
-                const { checkDockerParallelism } = await import("../browser/docker");
-                const limit = Math.min(dockerSessions, this.config.system.parallelLimit);
-                await checkDockerParallelism(limit);
-                configureDockerRun(
-                    this.config,
-                    testCollection.getBrowsers().filter(id => this.config.forBrowser(id).gridUrl === DOCKER_GRID_URL),
-                    limit,
-                );
-            }
-        }
     }
 
     protected async _runTests(testCollection: TestCollection, opts?: RunnerRunOptions): Promise<void> {

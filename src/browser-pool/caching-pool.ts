@@ -6,6 +6,7 @@ import { BasicPool } from "./basic-pool";
 import { Config } from "../config";
 import { Pool, PoolObserver } from "./types";
 import { NewBrowser } from "../browser/new-browser";
+import { CancelledError } from "./cancelled-error";
 
 export type FreeBrowserOpts = { hasFreeSlots?: boolean; force?: boolean; compositeIdForNextRequest?: string };
 
@@ -13,6 +14,8 @@ export class CachingPool implements Pool {
     private _caches: Record<string, LimitedUseSet<NewBrowser>>;
     private _config: Config;
     private _observer?: PoolObserver;
+    private _closed = false;
+    private _cancelError: Error | null = null;
     underlyingPool: BasicPool;
     log: debug.Debugger;
 
@@ -38,6 +41,7 @@ export class CachingPool implements Pool {
     }
 
     async getBrowser(id: string, opts: { version?: string } = {}): Promise<NewBrowser> {
+        if (this._closed) throw this._cancelError ?? new CancelledError();
         const { version } = opts;
         const cache = this._getCacheFor(id, version);
         const browser = cache.pop();
@@ -55,6 +59,7 @@ export class CachingPool implements Pool {
 
         try {
             await browser.reset();
+            if (this._closed) throw this._cancelError ?? new CancelledError();
             resetOperation?.end();
             return browser;
         } catch (error) {
@@ -100,7 +105,7 @@ export class CachingPool implements Pool {
 
             return !hasFreeSlots && !hasCacheForNextRequest;
         };
-        const force = options.force || shouldFreeForNextRequest();
+        const force = this._closed || options.force || shouldFreeForNextRequest();
 
         this.log(`free ${browser.fullId} force=${force}`);
 
@@ -117,7 +122,21 @@ export class CachingPool implements Pool {
 
     cancel(err?: Error): void {
         this.log("cancel");
+        this._closed = true;
+        this._cancelError = err ?? new CancelledError();
+        this._caches = {};
         this.underlyingPool.cancel(err);
+    }
+
+    prepare(browserIds: string[]): Promise<void> {
+        return this.underlyingPool.prepare(browserIds);
+    }
+
+    [Symbol.asyncDispose](): Promise<void> {
+        this._closed = true;
+        // Cached sessions remain owned by BasicPool until they are actually closed.
+        this._caches = {};
+        return this.underlyingPool[Symbol.asyncDispose]();
     }
 }
 

@@ -9,6 +9,7 @@ const AssertViewResults = require("../../browser/commands/assert-view/assert-vie
 const RuntimeConfig = require("../../config/runtime-config");
 const { noopProfilerRuntime } = require("../../profiler/runtime/noop");
 const { ProfilerSanitizer } = require("../../profiler/sanitize");
+const { getTestContext, withTestContext } = require("../../utils/test-context");
 
 module.exports = class RegularTestRunner extends RunnableEmitter {
     constructor(test, browserAgent, profiler) {
@@ -24,8 +25,10 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
     }
 
     async run(workers, retriesPerformed) {
+        const testContext = { testXReqId: crypto.randomUUID(), traceparent: this._getTraceparent() };
+
         if (!this._profiler.isEnabled(2)) {
-            return this._run(workers, retriesPerformed);
+            return withTestContext(testContext, () => this._run(workers, retriesPerformed));
         }
 
         const attemptId = crypto.randomUUID();
@@ -50,12 +53,13 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
                         attempt: retriesPerformed,
                     },
                 },
-                () => this._run(workers, retriesPerformed, attemptId),
+                () => withTestContext(testContext, () => this._run(workers, retriesPerformed, attemptId)),
             ),
         );
     }
 
     async _run(workers, retriesPerformed, attemptId) {
+        const testContext = getTestContext();
         let freeBrowserPromise;
 
         try {
@@ -67,7 +71,9 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
             if (browser) {
                 workers.once(`worker.${browser.sessionId}.freeBrowser`, browserState => {
-                    freeBrowserPromise = this._freeBrowser(browserState);
+                    freeBrowserPromise = testContext
+                        ? withTestContext(testContext, () => this._freeBrowser(browserState))
+                        : this._freeBrowser(browserState);
                 });
             }
 
@@ -125,6 +131,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
                 ...(this._browser.cdpAvailable === false && { cdpAvailable: false }),
                 sessionOpts: this._browser.publicAPI.options,
                 file: this._test.file,
+                testContext: getTestContext(),
                 state: this._browser.state,
                 attempt,
                 ...(attemptId && { attemptId }),
@@ -205,20 +212,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
         });
 
         try {
-            const state = {
-                testXReqId: crypto.randomUUID(),
-                traceparent: this._getTraceparent(),
-            };
-
-            this._browser = await Promise.race([this._browserAgent.getBrowser({ state }), cancelPromise]);
-
-            // TODO: move logic to caching pool (in order to use correct state for cached browsers)
-            if (
-                this._browser.state.testXReqId !== state.testXReqId ||
-                this._browser.state.traceparent !== state.traceparent
-            ) {
-                this._browser.applyState(state);
-            }
+            this._browser = await Promise.race([this._browserAgent.getBrowser(), cancelPromise]);
 
             this._test.sessionId = this._browser.sessionId;
 

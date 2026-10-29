@@ -11,7 +11,7 @@ export class PerBrowserLimitedPool implements Pool {
     log: debug.Debugger;
     private _browserPools: Record<string, LimitedPool>;
 
-    constructor(underlyingPool: Pool, config: Config, observer?: PoolObserver) {
+    constructor(private readonly underlyingPool: Pool, config: Config, observer?: PoolObserver) {
         this.log = debug("testplane:pool:per-browser-limited");
 
         const ids = config.getBrowserIds();
@@ -41,5 +41,16 @@ export class PerBrowserLimitedPool implements Pool {
     cancel(error: Error = new CancelledError()): void {
         this.log("cancel");
         forEach(this._browserPools, pool => pool.cancel(error));
+    }
+
+    prepare(browserIds: string[]): Promise<void> {
+        return this.underlyingPool.prepare(browserIds);
+    }
+
+    async [Symbol.asyncDispose](): Promise<void> {
+        await Promise.all([
+            ...Object.values(this._browserPools).map(pool => pool[Symbol.asyncDispose]()),
+            this.underlyingPool[Symbol.asyncDispose](),
+        ]);
     }
 }

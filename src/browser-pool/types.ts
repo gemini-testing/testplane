@@ -1,6 +1,8 @@
 import { Browser } from "../browser/browser";
 
-export interface Pool<T extends Browser = Browser> {
+export interface Pool<T extends Browser = Browser> extends AsyncDisposable {
+    [Symbol.asyncDispose](): Promise<void>;
+    prepare(browserIds: string[]): Promise<void>;
     getBrowser(id: string, opts?: object): Promise<T>;
     freeBrowser(browser: T, opts?: object): Promise<void>;
     cancel(error?: Error): void;

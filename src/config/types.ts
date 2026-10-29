@@ -7,6 +7,7 @@ import type { Config } from "./index";
 import type { SelectivityCompressionType } from "../browser/cdp/selectivity/types";
 import type { CropMargins } from "../browser/camera";
 import { DisableHoverMode } from "../browser/isomorphic/types";
+import {RequestLibOptions} from "@testplane/wdio-types/build/Options";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;
@@ -445,7 +446,7 @@ export interface CommonConfig {
     resetCursor: boolean;
     headers: Record<string, string> | null;
 
-    transformRequest: (req: RequestOptions) => RequestOptions;
+    transformRequest: (req: RequestLibOptions) => RequestLibOptions;
     transformResponse: (res: Response, req: RequestOptions) => Response;
 
     strictSSL: boolean | null;

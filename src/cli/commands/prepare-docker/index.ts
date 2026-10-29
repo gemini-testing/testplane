@@ -1,6 +1,6 @@
 import type { Command } from "@gemini-testing/commander";
 import type { Testplane } from "../../../testplane";
-import { prepareDockerImages } from "../../../browser/docker";
+import { prepareDockerImages } from "../../../browser-backend/docker/docker";
 import { collectCliValues } from "../../../utils/cli";
 import * as logger from "../../../utils/logger";
 import { resolveExitCode } from "../../../utils/exit-code";

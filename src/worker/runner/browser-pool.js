@@ -40,16 +40,18 @@ module.exports = class BrowserPool {
                 throw error;
             }
 
-            browser.markAsBroken({ stubBrowserCommands: true });
-            this.freeBrowser(browser);
+            browser.markAsBroken({ stubBrowserCommands: Boolean(browser.publicAPI) });
+            await this.freeBrowser(browser);
 
             throw Object.assign(error, { meta: browser.meta });
         }
     }
 
-    freeBrowser(browser) {
-        ipc.emit(`worker.${browser.sessionId}.freeBrowser`, browser.state);
-
-        browser.quit();
+    async freeBrowser(browser) {
+        try {
+            await browser[Symbol.asyncDispose]();
+        } finally {
+            if (browser.publicAPI) ipc.emit(`worker.${browser.sessionId}.freeBrowser`, browser.state);
+        }
     }
 };

@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "fs/promises";
 import { arch, platform as hostPlatform, tmpdir } from "os";
 import path from "path";
 import lockfile from "proper-lockfile";
-import { warn } from "../utils/logger";
+import { warn } from "../../utils/logger";
 import { debugDocker, timeDockerOperation } from "./docker-timing";
 
 const BUILD_TIMEOUT = 10 * 60_000;

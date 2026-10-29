@@ -152,7 +152,7 @@ module.exports = class TestRunner {
             this._browser.state.isLastTestFailed = true;
         }
 
-        this._browserAgent.freeBrowser(this._browser);
+        await this._browserAgent.freeBrowser(this._browser);
 
         if (error) {
             filterExtraStackFrames(error);

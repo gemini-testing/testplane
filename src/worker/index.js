@@ -2,6 +2,7 @@
 
 const TestplaneFacade = require("./testplane-facade");
 const ipc = require("../utils/ipc");
+const { withTestContext } = require("../utils/test-context");
 const {
     MASTER_PROFILER_FLUSH,
     WORKER_PROFILER_BATCH,
@@ -54,7 +55,8 @@ ipc.on(MASTER_PROFILER_FLUSH, ({ requestId }) => {
 });
 
 exports.runTest = (fullTitle, options) => {
-    return testplaneFacade.runTest(fullTitle, options);
+    const execute = () => testplaneFacade.runTest(fullTitle, options);
+    return options.testContext ? withTestContext(options.testContext, execute) : execute();
 };
 
 exports.cancel = () => {

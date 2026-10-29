@@ -1,24 +1,19 @@
 import type { ChildProcess } from "child_process";
-import { getNormalizedBrowserName } from "../utils/browser";
-import type { SupportedBrowser } from "../browser-installer";
-import type { BrowserDownloadMirrors } from "../config/types";
+import { once } from "events";
+import { getNormalizedBrowserName } from "../../utils/browser";
+import type { SupportedBrowser } from "../../browser-installer";
+import type { BrowserDownloadMirrors } from "../../config/types";
 
 type BrowserVersion = string;
 type Port = string;
 type ChildProcessWithStatus = { process: ChildProcess; gridUrl: string; isBusy: boolean };
-export type WdProcess = {
+export interface WdProcess extends AsyncDisposable {
     gridUrl: string;
     free: () => void | Promise<void>;
-    kill: () => void | Promise<void>;
     getPid: () => number | undefined;
-    setSessionId?: (sessionId: string | undefined) => void;
-    selenoidOptions?: { version: string; labels: Record<string, string>; logName: string };
-    getLogs?: () => Promise<string>;
-    saveLogs?: (sessionId: string) => Promise<string>;
-    prepareCdp?: (sessionId: string) => Promise<boolean | void>;
-};
+}
 
-export class WebdriverPool {
+export class WebdriverPool implements AsyncDisposable {
     private driverProcess: Map<SupportedBrowser, Map<BrowserVersion, Record<Port, ChildProcessWithStatus>>>;
     private portToDriverProcess: Map<Port, ChildProcessWithStatus>;
 
@@ -46,7 +41,7 @@ export class WebdriverPool {
             );
         }
 
-        const { resolveBrowserVersion } = await import("../browser-installer");
+        const { resolveBrowserVersion } = await import("../../browser-installer");
         const browserVersionNormalized =
             browserVersion || (await resolveBrowserVersion(browserNameNormalized, { browserDownloadMirrors }));
 
@@ -59,7 +54,8 @@ export class WebdriverPool {
                 return {
                     gridUrl: wdProcesses[port].gridUrl,
                     free: () => this.freeWebdriver(port),
-                    kill: () => this.killWebdriver(browserNameNormalized, browserVersionNormalized, port),
+                    [Symbol.asyncDispose]: () =>
+                        this.killWebdriver(browserNameNormalized, browserVersionNormalized, port),
                     getPid: () => wdProcesses[port].process.pid,
                 };
             }
@@ -79,14 +75,14 @@ export class WebdriverPool {
         }
     }
 
-    private killWebdriver(browserName: SupportedBrowser, browserVersion: string, port: Port): void {
+    private async killWebdriver(browserName: SupportedBrowser, browserVersion: string, port: Port): Promise<void> {
         const wdProcess = this.portToDriverProcess.get(port);
         const nodes = this.driverProcess.get(browserName)?.get(browserVersion);
 
         if (wdProcess && nodes) {
-            wdProcess.process.kill();
             this.portToDriverProcess.delete(port);
             delete nodes[port];
+            await stopProcess(wdProcess.process);
         }
     }
 
@@ -98,7 +94,7 @@ export class WebdriverPool {
             browserDownloadMirrors,
         }: { debug?: boolean; browserDownloadMirrors?: BrowserDownloadMirrors } = {},
     ): Promise<WdProcess> {
-        const { runBrowserDriver } = await import("../browser-installer");
+        const { runBrowserDriver } = await import("../../browser-installer");
         const driver = await runBrowserDriver(browserName, browserVersion, {
             debug,
             browserDownloadMirrors,
@@ -118,12 +114,37 @@ export class WebdriverPool {
         nodes[driver.port] = node;
 
         this.portToDriverProcess.set(String(driver.port), node);
+        driver.process.once("exit", () => {
+            if (this.portToDriverProcess.get(String(driver.port)) === node) {
+                this.portToDriverProcess.delete(String(driver.port));
+                delete nodes[driver.port];
+            }
+        });
 
         return {
             gridUrl: driver.gridUrl,
             free: () => this.freeWebdriver(String(driver.port)),
-            kill: () => this.killWebdriver(browserName, browserVersion, String(driver.port)),
+            [Symbol.asyncDispose]: () => this.killWebdriver(browserName, browserVersion, String(driver.port)),
             getPid: () => driver.process.pid,
         };
+    }
+
+    async [Symbol.asyncDispose](): Promise<void> {
+        const processes = [...this.portToDriverProcess.values()];
+        this.portToDriverProcess.clear();
+        this.driverProcess.clear();
+        await Promise.all(processes.map(({ process }) => stopProcess(process)));
+    }
+}
+
+async function stopProcess(process: ChildProcess): Promise<void> {
+    if (process.exitCode !== null || process.signalCode !== null) return;
+    const exited = once(process, "exit");
+    const timeout = setTimeout(() => process.kill("SIGKILL"), 5_000);
+    try {
+        process.kill();
+        await exited;
+    } finally {
+        clearTimeout(timeout);
     }
 }

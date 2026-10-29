@@ -1,489 +1,84 @@
-import { URLSearchParams } from "url";
-import { timeDockerOperation } from "./docker-timing";
-import URI from "urijs";
-import { isBoolean, assign, isEmpty, set } from "lodash";
-import { remote } from "@testplane/webdriverio";
-import type { Capabilities } from "@testplane/wdio-types";
+import { Browser, type BrowserOpts } from "./browser";
+import type { Config } from "../config";
+import type { BrowserBackendClient, BrowserSession } from "../browser-backend";
+import { AsyncCleanupStack } from "../utils/async-cleanup-stack";
+import { warn } from "../utils/logger";
 
-import { Browser, BrowserOpts } from "./browser";
-import signalHandler from "../signal-handler";
-import { log, warn } from "../utils/logger";
-import { getNormalizedBrowserName } from "../utils/browser";
-import { getInstance } from "../config/runtime-config";
-import { LOCAL_GRID_URL, DOCKER_GRID_URL, W3C_CAPABILITIES, VENDOR_CAPABILITIES } from "../constants/config";
-import { Config } from "../config";
-import { BrowserConfig } from "../config/browser-config";
-import { BrowserName, type W3CBrowserName } from "./types";
+export class NewBrowser extends Browser implements AsyncDisposable {
+    private _cleanup = new AsyncCleanupStack();
+    private _closing: Promise<void> | null = null;
 
-export type VendorSpecificCapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
-export type HeadlessBrowserOptions = Partial<
-    Record<
-        W3CBrowserName,
-        {
-            capabilityName: VendorSpecificCapabilityName;
-            getArgs: (headlessMode: BrowserConfig["headless"]) => string[];
-        }
-    >
->;
-const DEFAULT_PORT = 4444;
-const INTERNET_EXPLORER_BROWSER_NAME = "internet explorer";
-const WEBDRIVER_CLASSIC_CAPABILITY = "wdio:enforceWebDriverClassic";
-
-const headlessBrowserOptions: HeadlessBrowserOptions = {
-    [BrowserName.CHROME]: {
-        capabilityName: "goog:chromeOptions",
-        getArgs: (headlessMode: BrowserConfig["headless"]): string[] => {
-            const headlessValue = isBoolean(headlessMode) ? "headless" : `headless=${headlessMode}`;
-
-            return [headlessValue, "disable-gpu"];
-        },
-    },
-    [BrowserName.CHROMEHEADLESSSHELL]: {
-        capabilityName: "goog:chromeOptions",
-        getArgs: (headlessMode: BrowserConfig["headless"]): string[] => {
-            const headlessValue = isBoolean(headlessMode) ? "headless" : `headless=${headlessMode}`;
-
-            return [headlessValue, "disable-gpu"];
-        },
-    },
-    [BrowserName.FIREFOX]: {
-        capabilityName: "moz:firefoxOptions",
-        getArgs: (): string[] => ["-headless"],
-    },
-    [BrowserName.EDGE]: {
-        capabilityName: "ms:edgeOptions",
-        getArgs: (): string[] => ["--headless"],
-    },
-};
-
-export class NewBrowser extends Browser {
-    cdpAvailable?: boolean;
-    private _rootConfig: Config;
-    private _onExit: (err?: Error) => Promise<void> = async () => {};
-    private _initPromise: Promise<this> | null = null;
-    private _quitPromise: Promise<void> | null = null;
-    private _cleanupPromise: Promise<void> | null = null;
-    private _shouldKillWebdriver = false;
-    private _sessionIdForLogs?: string;
-    private _saveLogsPromise?: Promise<void>;
-
-    constructor(config: Config, opts: BrowserOpts) {
+    private constructor(
+        config: Config,
+        opts: BrowserOpts,
+        private readonly _backend: BrowserBackendClient,
+        private readonly _ownedSession: BrowserSession,
+    ) {
         super(config, opts);
-
-        this._rootConfig = config;
-        this._onExit = async (err?: Error): Promise<void> => await this.quit(err);
-        signalHandler.on("exit", this._onExit);
+        this._session = _ownedSession.browser;
     }
 
-    init(): Promise<this> {
-        this._initPromise ??= this._init();
+    static async create(config: Config, backend: BrowserBackendClient, opts: BrowserOpts): Promise<NewBrowser> {
+        await using cleanup = new AsyncCleanupStack();
 
-        return this._initPromise;
+        let force = true;
+        const session = cleanup.adopt(
+            await backend.createSession(config.forBrowser(opts.id), {
+                browserVersionOverride: opts.version ?? null,
+            }),
+            session => backend.deleteSession(session, { force }),
+        );
+        const browser = new NewBrowser(config, opts, backend, session);
+
+        browser._addCommands();
+        browser.restoreHttpTimeout();
+        await browser._setPageLoadTimeout();
+
+        force = false;
+        browser._cleanup = cleanup.move();
+
+        return browser;
     }
 
-    private async _init(): Promise<this> {
-        try {
-            this._session = await this._createSession();
+    get cdpAvailable(): boolean | null {
+        return this._ownedSession.cdpAvailable;
+    }
 
-            this._addCommands();
-            this.restoreHttpTimeout();
-            await this._setPageLoadTimeout();
-
-            return this;
-        } catch (error) {
-            if (this._config.gridUrl === DOCKER_GRID_URL && !this._isLocalGridUrl()) {
-                const logs = await this._wdProcess?.getLogs?.().catch(() => "");
-                if (logs && error instanceof Error) {
-                    const details = `\nSelenoid logs (${this._config.docker?.image}):\n${logs}`;
-                    const originalStack = error.stack;
-                    error.message += details;
-                    error.stack = originalStack ? originalStack + details : `${error.name}: ${error.message}`;
-                }
-            }
-            await this.kill();
-
-            throw error;
-        }
+    getDriverPid(): number | null {
+        return this._ownedSession.driverPid;
     }
 
     reset(): Promise<void> {
         return Promise.resolve();
     }
 
-    quit(err?: Error): Promise<void> {
-        if (this._quitPromise) {
-            return this._quitPromise;
-        }
-
-        this._exitError = err;
-        signalHandler.off("exit", this._onExit);
-        this._quitPromise = this._quit();
-
-        return this._quitPromise;
+    quit(error: Error | null = null): Promise<void> {
+        if (error) this._exitError ??= error;
+        this._closing ??= this._cleanup.disposeAsync();
+        return this._closing;
     }
 
-    private async _quit(): Promise<void> {
-        try {
-            await this._initPromise;
-        } catch {
-            return;
-        }
-
-        await this._cleanup({ canReuseWebdriver: true });
+    async kill(): Promise<void> {
+        await using cleanup = new AsyncCleanupStack();
+        cleanup.defer(() => this.quit());
+        await this._backend.deleteSession(this._ownedSession, { force: true });
     }
 
-    kill(): Promise<void> {
-        return this._cleanup({ canReuseWebdriver: false });
+    [Symbol.asyncDispose](): Promise<void> {
+        return this.quit();
     }
 
-    private _cleanup({ canReuseWebdriver }: { canReuseWebdriver: boolean }): Promise<void> {
-        if (!canReuseWebdriver) {
-            this._shouldKillWebdriver = true;
-        }
-
-        this._cleanupPromise ??= this._performCleanup(canReuseWebdriver);
-
-        return this._cleanupPromise;
-    }
-
-    private async _performCleanup(canReuseWebdriver: boolean): Promise<void> {
-        signalHandler.off("exit", this._onExit);
-
-        try {
-            if (this._wdProcess?.saveLogs) {
-                await this._saveDockerLogs();
-            }
-            if (this._session) {
-                if (canReuseWebdriver) {
-                    this.setHttpTimeout(this._config.sessionQuitTimeout);
-                }
-
-                await timeDockerOperation(
-                    this._config.gridUrl === DOCKER_GRID_URL && !this._isLocalGridUrl()
-                        ? this._session.sessionId
-                        : undefined,
-                    "delete WebDriver session",
-                    () => this._session!.deleteSession(),
-                );
-                this._wdProcess?.setSessionId?.(undefined);
-            }
-        } catch (error) {
-            this._shouldKillWebdriver = true;
-            const warningSubject = canReuseWebdriver ? "close session" : "kill WebDriver process";
-
-            warn(`WARNING: Can not ${warningSubject}: ${(error as Error)?.message ?? String(error)}`);
-        } finally {
-            try {
-                if (canReuseWebdriver && this._session && !this._shouldKillWebdriver) {
-                    try {
-                        await this._wdProcess?.free();
-                    } catch (error) {
-                        this._shouldKillWebdriver = true;
-                        warn(`WARNING: Can not free WebDriver process: ${(error as Error)?.message ?? String(error)}`);
-                        await this._wdProcess?.kill();
-                    }
-                } else {
-                    await this._wdProcess?.kill();
-                }
-            } catch (error) {
-                const subject =
-                    this._config.gridUrl === DOCKER_GRID_URL ? "remove Docker container" : "kill WebDriver process";
-                warn(`WARNING: Can not ${subject}: ${(error as Error)?.message ?? String(error)}`);
-            } finally {
-                // Pool cleanup still reads session metadata after cancellation.
-                this._wdProcess = null;
-            }
-        }
-    }
-
-    getDriverPid(): number | undefined {
-        if (this._wdProcess) {
-            return this._wdProcess.getPid();
-        }
-
-        return;
-    }
-
-    private _saveDockerLogs(): Promise<void> {
-        if (!this._sessionIdForLogs || !this._wdProcess?.saveLogs) return Promise.resolve();
-
-        this._saveLogsPromise ??= timeDockerOperation(this._sessionIdForLogs, "save Docker logs", () =>
-            this._wdProcess!.saveLogs!(this._sessionIdForLogs!),
-        ).then(
-            file => log(`Docker session log: ${file}`),
-            error => warn(`WARNING: Cannot save Docker session log: ${(error as Error).message}`),
-        );
-        return this._saveLogsPromise;
-    }
-
-    protected async _createSession(): Promise<WebdriverIO.Browser> {
-        const dockerScope = this._config.gridUrl === DOCKER_GRID_URL && !this._isLocalGridUrl() ? this.id : undefined;
-        const sessionOpts = await timeDockerOperation(
-            dockerScope,
-            "prepare session options and Docker environment",
-            () => this._getSessionOpts(),
-        );
-
-        const session = await timeDockerOperation(
-            dockerScope ? `${dockerScope} ${this._wdProcess?.gridUrl}` : undefined,
-            "create WebDriver session (launch browser)",
-            () => remote(sessionOpts),
-        );
-        // Keep the session reachable by cleanup even when CDP initialization fails.
-        this._session = session;
-        this._sessionIdForLogs = session.sessionId;
-        this._wdProcess?.setSessionId?.(session.sessionId);
-        const debuggerAddress = session.capabilities["goog:chromeOptions"]?.debuggerAddress;
-        if (debuggerAddress && !("browserWSEndpoint" in this._config && this._config.browserWSEndpoint)) {
-            const available = await timeDockerOperation(
-                dockerScope ? session.sessionId : undefined,
-                "prepare CDP (total)",
-                () => this._wdProcess?.prepareCdp?.(session.sessionId),
-            );
-            if (available === false) this.cdpAvailable = false;
-        }
-        return session;
-    }
-
-    protected async _setPageLoadTimeout(): Promise<void> {
-        if (!this._config.pageLoadTimeout) {
-            return;
-        }
-
+    private async _setPageLoadTimeout(): Promise<void> {
+        if (!this._config.pageLoadTimeout) return;
         try {
             await this._session!.setTimeout({ pageLoad: this._config.pageLoadTimeout });
-        } catch (e) {
-            // edge with w3c does not support setting page load timeout
-            if (
-                this._session!.isW3C &&
-                (this._session!.capabilities as { browserName: string }).browserName === "MicrosoftEdge"
-            ) {
-                warn(`WARNING: Can not set page load timeout: ${(e as Error).message}`);
+        } catch (error) {
+            // Edge with W3C does not support setting the page load timeout.
+            if (this._session!.isW3C && this.capabilities.browserName === "MicrosoftEdge") {
+                warn(`WARNING: Can not set page load timeout: ${(error as Error).message}`);
             } else {
-                throw e;
+                throw error;
             }
         }
-    }
-
-    protected _isLocalGridUrl(): boolean {
-        return this._config.gridUrl === LOCAL_GRID_URL || getInstance().local;
-    }
-
-    protected async _getSessionOpts(): Promise<Capabilities.WebdriverIOConfig> {
-        const config = this._config;
-
-        let gridUrl = config.gridUrl;
-
-        if (this._isLocalGridUrl()) {
-            gridUrl = await this._getLocalWebdriverGridUrl();
-        } else if (gridUrl === DOCKER_GRID_URL) {
-            const { runDockerBrowser } = await import("./docker-manager");
-            this._wdProcess = await runDockerBrowser(
-                config.docker,
-                {
-                    // Selenoid uses the Appium device name when browserName is absent.
-                    browserName:
-                        config.desiredCapabilities?.browserName ||
-                        config.desiredCapabilities?.["appium:deviceName"] ||
-                        (config.desiredCapabilities as { deviceName?: string } | null)?.deviceName,
-                    browserVersion:
-                        this.version ||
-                        config.desiredCapabilities?.browserVersion ||
-                        (config.desiredCapabilities as { version?: string } | null)?.version,
-                    timeout: config.sessionRequestTimeout || config.httpTimeout,
-                },
-                this._rootConfig,
-                this.id,
-                () => this.quit(),
-            );
-            gridUrl = this._wdProcess.gridUrl;
-        }
-
-        const gridUri = new URI(gridUrl);
-
-        let capabilities = await this._extendCapabilities(config);
-        const selenoidOptions = this._wdProcess?.selenoidOptions;
-        if (selenoidOptions) {
-            const original = capabilities["selenoid:options"];
-            capabilities = {
-                ...capabilities,
-                "selenoid:options": {
-                    ...original,
-                    ...selenoidOptions,
-                    labels: {
-                        ...(original?.labels instanceof Map ? Object.fromEntries(original.labels) : original?.labels),
-                        ...selenoidOptions.labels,
-                    },
-                } as unknown as WebdriverIO.Capabilities["selenoid:options"],
-            };
-        }
-
-        const options = {
-            protocol: gridUri.protocol(),
-            hostname: this._getGridHost(gridUri),
-            port: gridUri.port() ? parseInt(gridUri.port(), 10) : DEFAULT_PORT,
-            path: gridUri.path(),
-            queryParams: this._getQueryParams(gridUri.query()),
-            capabilities,
-            automationProtocol: config.automationProtocol,
-            connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
-            connectionRetryCount: selenoidOptions ? 0 : 3,
-            baseUrl: config.baseUrl,
-            waitforTimeout: config.waitTimeout,
-            waitforInterval: config.waitInterval,
-            ...this._getSessionOptsFromConfig(),
-        };
-
-        return options as Capabilities.WebdriverIOConfig;
-    }
-
-    protected _extendCapabilities(config: BrowserConfig): Promise<WebdriverIO.Capabilities> {
-        const capabilitiesExtendedByVersion = this.version
-            ? this._extendCapabilitiesByVersion()
-            : config.desiredCapabilities;
-        const capabilitiesExtendedByProtocol = this._addWebDriverClassicCapability(capabilitiesExtendedByVersion!);
-        const capabilitiesWithAddedHeadless = this._addHeadlessCapability(
-            config.headless,
-            capabilitiesExtendedByProtocol!,
-        );
-
-        return this._isLocalGridUrl()
-            ? this._applyLocalBrowserCapabilities(config, capabilitiesWithAddedHeadless)
-            : Promise.resolve(capabilitiesWithAddedHeadless);
-    }
-
-    protected _addHeadlessCapability(
-        headless: BrowserConfig["headless"],
-        capabilities: WebdriverIO.Capabilities,
-    ): WebdriverIO.Capabilities {
-        if (!headless) {
-            return capabilities;
-        }
-        const browserNameW3C = getNormalizedBrowserName(capabilities.browserName);
-
-        if (!browserNameW3C) {
-            return capabilities;
-        }
-
-        const capabilitySettings = headlessBrowserOptions[browserNameW3C];
-        if (!capabilitySettings) {
-            warn(`WARNING: Headless setting is not supported for ${capabilities.browserName} browserName`);
-            return capabilities;
-        }
-        const browserCapabilities = (capabilities[capabilitySettings.capabilityName as VendorSpecificCapabilityName] ??
-            {}) as WebdriverIO.Capabilities[VendorSpecificCapabilityName];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (capabilities as any)[capabilitySettings.capabilityName] = {
-            ...browserCapabilities,
-            args: [...(browserCapabilities!.args ?? []), ...capabilitySettings.getArgs(headless)],
-        };
-        return capabilities;
-    }
-
-    protected _addWebDriverClassicCapability(capabilities: WebdriverIO.Capabilities): WebdriverIO.Capabilities {
-        if (
-            capabilities.browserName?.toLowerCase() === INTERNET_EXPLORER_BROWSER_NAME ||
-            capabilities?.webSocketUrl ||
-            WEBDRIVER_CLASSIC_CAPABILITY in capabilities
-        ) {
-            return capabilities;
-        }
-
-        return assign({}, capabilities, { [WEBDRIVER_CLASSIC_CAPABILITY]: true });
-    }
-
-    protected _extendCapabilitiesByVersion(): WebdriverIO.Capabilities {
-        const { desiredCapabilities, sessionEnvFlags } = this._config;
-        const versionKeyName =
-            desiredCapabilities!.browserVersion || sessionEnvFlags.isW3C ? "browserVersion" : "version";
-
-        return assign({}, desiredCapabilities, { [versionKeyName]: this.version });
-    }
-
-    protected async _getLocalWebdriverGridUrl(): Promise<string> {
-        if (!this._wdPool) {
-            throw new Error("webdriver pool is not defined");
-        }
-
-        if (this._wdProcess) {
-            return this._wdProcess.gridUrl;
-        }
-
-        this._wdProcess = await this._wdPool.getWebdriver(
-            this._config.desiredCapabilities?.browserName,
-            this._config.desiredCapabilities?.browserVersion,
-            {
-                debug: this._rootConfig.system.debug,
-                browserDownloadMirrors: this._rootConfig.browserDownloadMirrors,
-            },
-        );
-
-        return this._wdProcess.gridUrl;
-    }
-
-    protected async _applyLocalBrowserCapabilities(
-        config: BrowserConfig,
-        capabilities: WebdriverIO.Capabilities,
-    ): Promise<WebdriverIO.Capabilities> {
-        const { installBrowser } = await import("../browser-installer");
-        const browserNameW3C = getNormalizedBrowserName(config.desiredCapabilities?.browserName);
-
-        if (!browserNameW3C) {
-            throw new Error(
-                [
-                    `Running auto local "${config.desiredCapabilities?.browserName}" is unsupported`,
-                    `Supported browsers: "chrome", "firefox", "safari", "edge"`,
-                ].join("\n"),
-            );
-        }
-
-        const executablePath = await installBrowser(browserNameW3C, config.desiredCapabilities?.browserVersion, {
-            shouldInstallWebDriver: false,
-            shouldInstallUbuntuPackages: true,
-            browserDownloadMirrors: this._rootConfig.browserDownloadMirrors,
-        });
-
-        if (executablePath) {
-            const capabilitySettings = headlessBrowserOptions[browserNameW3C];
-
-            if (!capabilitySettings) {
-                return capabilities;
-            }
-
-            capabilities[capabilitySettings.capabilityName] ||= {};
-            capabilities[capabilitySettings.capabilityName]!.binary ||= executablePath;
-        }
-
-        const filteredCapabilities: WebdriverIO.Capabilities = Object.keys(capabilities)
-            .filter(capabilityName => {
-                const isW3CCapability = W3C_CAPABILITIES.includes(capabilityName);
-                const isVendorSpecificCapability = VENDOR_CAPABILITIES[browserNameW3C].includes(capabilityName);
-
-                return isW3CCapability || isVendorSpecificCapability;
-            })
-            .reduce((acc, capabilityName) => {
-                return set(acc, [capabilityName], capabilities[capabilityName as keyof WebdriverIO.Capabilities]);
-            }, {});
-
-        return filteredCapabilities;
-    }
-
-    protected _getGridHost(url: URI): string {
-        return new URI({
-            username: url.username(),
-            password: url.password(),
-            hostname: url.hostname(),
-        })
-            .toString()
-            .slice(2); // URIjs leaves `//` prefix, removing it
-    }
-
-    protected _getQueryParams(query: string): Record<string, string> {
-        if (isEmpty(query)) {
-            return {};
-        }
-
-        const urlParams = new URLSearchParams(query);
-        return Object.fromEntries(urlParams);
     }
 }

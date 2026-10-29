@@ -32,6 +32,7 @@ export class LimitedPool implements Pool {
     private _highPriorityRequestQueue: yallist<QueueItem>;
     private _isSpecificBrowserLimiter: boolean;
     private _observer?: PoolObserver;
+    private _cancelError: Error | null = null;
     log: debug.Debugger;
     underlyingPool: Pool;
 
@@ -55,6 +56,7 @@ export class LimitedPool implements Pool {
     }
 
     async getBrowser(id: string, opts: BrowserOpts = {}): Promise<Browser> {
+        if (this._cancelError) throw this._cancelError;
         const optsToPrint = JSON.stringify(opts);
         this.log(`get browser ${id} with opts:${optsToPrint} (launched ${this._launched}, limit ${this._limit})`);
 
@@ -88,7 +90,12 @@ export class LimitedPool implements Pool {
 
     cancel(error: Error = new CancelledError()): void {
         this.log("cancel");
+        this._rejectRequests(error);
+        this.underlyingPool.cancel(error);
+    }
 
+    private _rejectRequests(error: Error): void {
+        this._cancelError ??= error;
         const reject_ = (entry: QueueItem): void => entry.reject(error);
         const interrupt_ = (entry: QueueItem): void => entry.waitOperation?.end("interrupted");
         this._highPriorityRequestQueue.forEach(interrupt_);
@@ -98,8 +105,15 @@ export class LimitedPool implements Pool {
 
         this._highPriorityRequestQueue = yallist.create();
         this._requestQueue = yallist.create();
+    }
 
-        this.underlyingPool.cancel(error);
+    prepare(browserIds: string[]): Promise<void> {
+        return this.underlyingPool.prepare(browserIds);
+    }
+
+    [Symbol.asyncDispose](): Promise<void> {
+        this._rejectRequests(new CancelledError());
+        return this.underlyingPool[Symbol.asyncDispose]();
     }
 
     private async _getBrowser(id: string, opts: BrowserOpts = {}): Promise<Browser> {

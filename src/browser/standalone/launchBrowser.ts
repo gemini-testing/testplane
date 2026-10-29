@@ -6,16 +6,18 @@ import { AsyncEmitter, MasterEvents } from "../../events";
 import { BrowserName, type W3CBrowserName } from "./../types";
 import { getNormalizedBrowserName } from "../../utils/browser";
 import { LOCAL_GRID_URL } from "../../constants/config";
-import { WebdriverPool } from "../../browser-pool/webdriver-pool";
+import { acquireStandaloneBackend } from "../../browser-backend/standalone";
+import { AsyncCleanupStack } from "../../utils/async-cleanup-stack";
+import signalHandler from "../../signal-handler";
 import type { StandaloneBrowserOptionsInput } from "./types";
 import fs from "fs-extra";
 import { hasGlobalFilesToRemove } from "../../globalFilesToRemove";
 
-const webdriverPool = new WebdriverPool();
-
 export async function launchBrowser(
     options: StandaloneBrowserOptionsInput = {},
-): Promise<WebdriverIO.Browser & { getDriverPid?: () => number | undefined }> {
+): Promise<WebdriverIO.Browser & AsyncDisposable & { getDriverPid?: () => number | null }> {
+    await using startup = new AsyncCleanupStack();
+    let cleanup = startup;
     const desiredCapabilities = options.desiredCapabilities || {};
 
     const browserName = desiredCapabilities.browserName || BrowserName.CHROME;
@@ -55,6 +57,11 @@ export async function launchBrowser(
     };
 
     const filesToRemove: string[] = [];
+    startup.defer(async () => {
+        if (filesToRemove.length > 0 && !hasGlobalFilesToRemove()) {
+            await Promise.all(filesToRemove.map(path => fs.remove(path)));
+        }
+    });
 
     const config = new Config({
         browserDownloadMirrors: options.browserDownloadMirrors,
@@ -73,21 +80,23 @@ export async function launchBrowser(
         filesToRemove.push(path);
     });
 
-    const newBrowser = new NewBrowser(config, {
-        id: browserName,
-        version: desiredCapabilities.browserVersion,
-        emitter,
-        wdPool: webdriverPool,
-    });
+    const { backend } = startup.use(await acquireStandaloneBackend(config, browserName));
+    const newBrowser = startup.use(
+        await NewBrowser.create(config, backend, {
+            id: browserName,
+            version: desiredCapabilities.browserVersion,
+            emitter,
+        }),
+    );
 
-    await newBrowser.init();
-
-    const existingBrowser = new ExistingBrowser(config, {
-        id: browserName,
-        version: desiredCapabilities.browserVersion,
-        emitter,
-        state: {},
-    });
+    const existingBrowser = startup.use(
+        new ExistingBrowser(config, {
+            id: browserName,
+            version: desiredCapabilities.browserVersion,
+            emitter,
+            state: {},
+        }),
+    );
 
     const calibrator = new Calibrator();
 
@@ -106,16 +115,16 @@ export async function launchBrowser(
         calibrator,
     );
 
-    existingBrowser.publicAPI.overwriteCommand("deleteSession", async function () {
-        await existingBrowser.quit();
-        await newBrowser.kill();
-
-        if (filesToRemove.length > 0 && !hasGlobalFilesToRemove()) {
-            await Promise.all(filesToRemove.map(path => fs.remove(path)));
-        }
+    let closing: Promise<void> | null = null;
+    const close = (): Promise<void> => (closing ??= cleanup.disposeAsync());
+    signalHandler.on(MasterEvents.EXIT, close);
+    startup.defer(() => {
+        signalHandler.off(MasterEvents.EXIT, close);
     });
-
+    existingBrowser.publicAPI.overwriteCommand("deleteSession", close);
+    Object.defineProperty(existingBrowser.publicAPI, Symbol.asyncDispose, { value: close });
     existingBrowser.publicAPI.addCommand("getDriverPid", () => newBrowser.getDriverPid());
 
-    return existingBrowser.publicAPI;
+    cleanup = startup.move();
+    return existingBrowser.publicAPI as WebdriverIO.Browser & AsyncDisposable;
 }
