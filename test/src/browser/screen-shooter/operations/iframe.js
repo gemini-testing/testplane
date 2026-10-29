@@ -31,6 +31,15 @@ describe("runInEachDisplayedIframe", () => {
 
     afterEach(() => sandbox.restore());
 
+    it("should load the visibility script exported by the installed WDIO package", async () => {
+        loadEsm.callsFake(require("src/utils/preload-utils").loadEsm);
+
+        await runInEachDisplayedIframe(session, callback);
+
+        assert.isFunction(session.execute.firstCall.args[0]);
+        assert.calledTwice(callback);
+    });
+
     it("should check visibility without creating a selectorless WDIO element", async () => {
         await runInEachDisplayedIframe(session, callback);
 
