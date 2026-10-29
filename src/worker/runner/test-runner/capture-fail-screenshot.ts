@@ -27,7 +27,7 @@ export async function captureFailScreenshot(browser: ExistingBrowser): Promise<F
 
         return result;
     } catch (e) {
-        // Таймаут ожидания не отменяет захват: поздние команды не должны попасть в следующий тест.
+        // Timing out does not stop capture; its late commands must not affect the next test.
         if (screenshotPending) {
             browser.markAsBroken({ stubBrowserCommands: true });
         }

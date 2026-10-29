@@ -46,8 +46,8 @@ describe("worker/runner/test-runner/capture-fail-screenshot", () => {
     afterEach(() => sandbox.restore());
 
     for (const reject of [false, true]) {
-        it(`не переиспользует сессию и блокирует поздние команды после таймаута (${
-            reject ? "ошибка" : "успех"
+        it(`should mark browser as broken and block late commands after timeout (${
+            reject ? "rejection" : "resolution"
         })`, async () => {
             let finish;
             const pending = new Promise(resolve => {
@@ -56,7 +56,7 @@ describe("worker/runner/test-runner/capture-fail-screenshot", () => {
             capture.callsFake(async () => {
                 await pending;
                 await browser.publicAPI.execute("cleanupScrolls");
-                if (reject) throw new Error("Поздняя ошибка снимка");
+                if (reject) throw new Error("Late screenshot error");
                 return image;
             });
 
@@ -74,7 +74,7 @@ describe("worker/runner/test-runner/capture-fail-screenshot", () => {
         });
     }
 
-    it("сохраняет сессию после успешного снимка", async () => {
+    it("should keep browser usable after successful capture", async () => {
         const result = await captureFailScreenshot(browser);
 
         assert.deepEqual(result, { base64: Buffer.from("image").toString("base64"), size: { width: 1, height: 1 } });
@@ -84,8 +84,8 @@ describe("worker/runner/test-runner/capture-fail-screenshot", () => {
         assert.calledOnce(execute);
     });
 
-    it("сохраняет сессию после завершившейся ошибки снимка", async () => {
-        capture.rejects(new Error("Ошибка сборки изображения"));
+    it("should keep browser usable after settled capture error", async () => {
+        capture.rejects(new Error("Image composition error"));
 
         assert.isNull(await captureFailScreenshot(browser));
         assert.isNotTrue(browser.state.isBroken);
