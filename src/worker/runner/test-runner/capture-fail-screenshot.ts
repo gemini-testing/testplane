@@ -14,16 +14,24 @@ export async function captureFailScreenshot(browser: ExistingBrowser): Promise<F
     const timeout = config.takeScreenshotOnFailsTimeout || config.httpTimeout;
 
     browser.setHttpTimeout(timeout);
+    let screenshotPending = true;
 
     try {
         const result = await promiseTimeout(
-            captureScreenshot(browser, config),
+            captureScreenshot(browser, config).finally(() => {
+                screenshotPending = false;
+            }),
             timeout,
             `timed out after ${timeout} ms`,
         );
 
         return result;
     } catch (e) {
+        // Timing out does not stop capture; its late commands must not affect the next test.
+        if (screenshotPending) {
+            browser.markAsBroken({ stubBrowserCommands: true });
+        }
+
         logger.warn(`WARN: Failed to take screenshot on test fail: ${e}`);
 
         return null;
