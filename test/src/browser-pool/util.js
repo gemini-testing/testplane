@@ -9,6 +9,7 @@ exports.stubBrowser = function (
     return {
         id,
         config,
+        state: {},
         sessionId: process.hrtime().join("_"), // must be unique
         init: sinon.stub().resolves(),
         reset: sinon.stub().resolves(),

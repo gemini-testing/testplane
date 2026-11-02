@@ -709,6 +709,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     });
 
                     assert.notCalled(BrowserAgent.prototype.freeBrowser);
+                    assert.isTrue(browser.state.isRetained);
                 });
 
                 it("should not release browser when --keep-browser-on-fail is enabled and test fails", async () => {
@@ -728,6 +729,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     await run_({ workers });
 
                     assert.notCalled(BrowserAgent.prototype.freeBrowser);
+                    assert.isTrue(browser.state.isRetained);
                 });
 
                 it("should release browser when --keep-browser-on-fail is enabled and test passes", async () => {
@@ -745,6 +747,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     });
 
                     assert.calledOnce(BrowserAgent.prototype.freeBrowser);
+                    assert.isNotTrue(browser.state.isRetained);
                 });
 
                 it("should release browser when keep-browser mode is disabled", async () => {

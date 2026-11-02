@@ -11,6 +11,7 @@ import getPort from "get-port";
 import { uniqBy } from "lodash";
 import type { BrowserConfig } from "../../config/browser-config";
 import type { DockerConfig } from "../../config/types";
+import { getInstance } from "../../config/runtime-config";
 import { AsyncCleanupStack } from "../../utils/async-cleanup-stack";
 import { log, warn } from "../../utils/logger";
 import {
@@ -580,6 +581,12 @@ export class SelenoidDockerController implements AsyncDisposable {
     }
 
     private readonly _removeOnExit = (): void => {
+        // Normal pool disposal already removed controllers without retained sessions.
+        // Keep the remaining ones alive when the CLI exits, but retry failed disposal.
+        if (getInstance().keepBrowserMode?.enabled && !this._disposal) {
+            return;
+        }
+
         const run = (args: string[]): string => {
             try {
                 return execFileSync("docker", args, {

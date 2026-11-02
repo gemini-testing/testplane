@@ -237,6 +237,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
             const shouldKeep = keepBrowserMode.onFail ? hasError : true;
 
             if (shouldKeep) {
+                this._browser.applyState({ isRetained: true });
                 this._logKeepBrowserInfo();
                 return;
             }

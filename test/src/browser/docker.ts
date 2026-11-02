@@ -4,6 +4,7 @@ import type { prepareDockerImages as PrepareDockerImages } from "src/browser-bac
 import type { SelenoidDockerController as Controller } from "src/browser-backend/docker/controller";
 import type { BrowserConfig } from "src/config/browser-config";
 import type { DockerConfig } from "src/config/types";
+import RuntimeConfig from "src/config/runtime-config";
 import { EventEmitter } from "events";
 import { Readable, Writable } from "stream";
 import { tmpdir } from "os";
@@ -791,6 +792,18 @@ describe("browser-backend/docker/controller", () => {
         assert.calledWith(syncCommand, "docker", ["rm", "--force", sinon.match(/^testplane-/)]);
     });
 
+    for (const onFail of [false, true]) {
+        it(`should preserve a retained controller on CLI exit (onFail=${onFail})`, async () => {
+            sandbox.stub(RuntimeConfig, "getInstance").returns({ keepBrowserMode: { enabled: true, onFail } });
+            await start("browser");
+
+            exitHandlers[0]();
+
+            assert.notCalled(syncCommand);
+            assert.notCalled(removeConfig);
+        });
+    }
+
     it("should use distinct names for independently owned controllers", async () => {
         const drivers = await Promise.all([start("browser"), start("browser")]);
         const runs = command.getCalls().filter(call => call.args[0][0] === "create");
@@ -1051,6 +1064,7 @@ describe("browser-backend/docker/controller", () => {
     });
 
     it("should retain synchronous exit cleanup after a removal failure", async () => {
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ keepBrowserMode: { enabled: true, onFail: false } });
         const driver = await start("browser");
         const rm = command.withArgs(sinon.match.array.startsWith(["rm"]));
         rm.onFirstCall().rejects(new Error("daemon unavailable"));

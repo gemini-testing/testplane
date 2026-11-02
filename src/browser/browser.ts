@@ -22,6 +22,7 @@ export type BrowserOpts = {
 export type BrowserState = {
     isBroken?: boolean;
     isLastTestFailed?: boolean;
+    isRetained?: boolean;
 };
 
 export type CustomCommand = { name: string; elementScope: boolean };

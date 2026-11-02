@@ -27,7 +27,7 @@ describe("browser-pool/basic-pool", () => {
 
     beforeEach(() => {
         pools = [];
-        sandbox.stub(NewBrowser, "create").callsFake(async config => stubBrowser(config.id));
+        sandbox.stub(NewBrowser, "create").callsFake(async config => stubBrowser(config.id, undefined, {}, config));
     });
 
     afterEach(async () => {
@@ -188,6 +188,68 @@ describe("browser-pool/basic-pool", () => {
             await Promise.all([mkPool_().prewarm([config]), mkPool_().prewarm([config])]);
 
             assert.calledTwice(SelenoidDockerController.create);
+        });
+
+        it("should preserve the controller for retained sessions while closing other sessions", async () => {
+            const pool = mkPool_();
+            const retained = await pool.getBrowser(dockerConfig("retained"));
+            const other = await pool.getBrowser(dockerConfig("other"));
+            retained.state.isRetained = true;
+
+            await pool[Symbol.asyncDispose]();
+
+            assert.notCalled(retained.quit);
+            assert.calledOnce(other.quit);
+            assert.notCalled(controller[Symbol.asyncDispose]);
+        });
+    });
+
+    describe("retained sessions", () => {
+        it("should preserve their backend and close unrelated sessions and backends", async () => {
+            const disposeLocal = sandbox.stub(LocalBrowserBackend.prototype, Symbol.asyncDispose).resolves();
+            const disposeRemote = sandbox.stub(RemoteBrowserBackend.prototype, Symbol.asyncDispose).resolves();
+            const onSessionEnd = sandbox.stub();
+            const pool = mkPool_({ emitter: new AsyncEmitter().on(Events.SESSION_END, onSessionEnd) });
+            const retained = await pool.getBrowser(mkBrowserConfig_("retained", { gridUrl: "local" }));
+            const other = await pool.getBrowser(mkBrowserConfig_("other"));
+            retained.state.isRetained = true;
+
+            await pool[Symbol.asyncDispose]();
+
+            assert.notCalled(retained.quit);
+            assert.notCalled(disposeLocal);
+            assert.calledOnce(other.quit);
+            assert.calledOnce(disposeRemote);
+            assert.calledOnceWith(onSessionEnd, other.publicAPI, {
+                browserId: other.id,
+                sessionId: other.sessionId,
+            });
+        });
+
+        it("should dispose the backend when no sessions were retained", async () => {
+            const dispose = sandbox.stub(LocalBrowserBackend.prototype, Symbol.asyncDispose).resolves();
+            const pool = mkPool_();
+            const browser = await pool.getBrowser(mkBrowserConfig_("local", { gridUrl: "local" }));
+
+            await pool[Symbol.asyncDispose]();
+
+            assert.calledOnce(browser.quit);
+            assert.calledOnce(dispose);
+            assert.callOrder(browser.quit, dispose);
+        });
+
+        it("should still close retained sessions and their backend on cancellation", async () => {
+            const dispose = sandbox.stub(LocalBrowserBackend.prototype, Symbol.asyncDispose).resolves();
+            const pool = mkPool_();
+            const browser = await pool.getBrowser(mkBrowserConfig_("local", { gridUrl: "local" }));
+            browser.state.isRetained = true;
+
+            pool.cancel();
+            await pool[Symbol.asyncDispose]();
+
+            assert.calledOnce(browser.quit);
+            assert.calledOnce(dispose);
+            assert.callOrder(browser.quit, dispose);
         });
     });
 

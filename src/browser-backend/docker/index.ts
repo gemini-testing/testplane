@@ -89,16 +89,24 @@ export class DockerBrowserBackend implements BrowserBackend {
             this._assertRunning();
 
             const debuggerAddress = session.capabilities["goog:chromeOptions"]?.debuggerAddress;
-            const cdpAvailable =
-                debuggerAddress && !("browserWSEndpoint" in config && config.browserWSEndpoint)
-                    ? await timeDockerOperation(session.sessionId, "prepare CDP (total)", () =>
-                          this._controller.prepareCdp(
-                              session.sessionId,
-                              label,
-                              config.sessionRequestTimeout || config.httpTimeout,
-                          ),
-                      )
-                    : true;
+            let cdpAvailable = true;
+            if (debuggerAddress && !("browserWSEndpoint" in config && config.browserWSEndpoint)) {
+                cdpAvailable = await timeDockerOperation(session.sessionId, "prepare CDP (total)", () =>
+                    this._controller.prepareCdp(
+                        session.sessionId,
+                        label,
+                        config.sessionRequestTimeout || config.httpTimeout,
+                    ),
+                );
+                if (cdpAvailable && !session.capabilities["se:cdp"]) {
+                    const endpoint = new URL(
+                        `/devtools/${encodeURIComponent(session.sessionId)}/`,
+                        this._controller.gridUrl,
+                    );
+                    endpoint.protocol = endpoint.protocol === "https:" ? "wss:" : "ws:";
+                    session.capabilities["se:cdp"] = endpoint.href;
+                }
+            }
             this._assertRunning();
 
             this._sessions.set(session, { cleanup: cleanup.move(), cdpAvailable, closing: null });

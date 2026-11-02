@@ -146,7 +146,15 @@ export class BasicPool implements Pool, AsyncDisposable {
             backend = new RemoteBrowserBackend(browserConfig.gridUrl);
         }
 
-        this._cleanup.defer(async () => backend[Symbol.asyncDispose]());
+        this._cleanup.defer(async () => {
+            // Retained sessions still need their driver or shared Docker controller.
+            const retained = Object.values(this._activeSessions).some(
+                browser => browser.state.isRetained && getBackendKey(browser.config) === backendKey,
+            );
+            if (!retained) {
+                await backend[Symbol.asyncDispose]();
+            }
+        });
         this._backends.set(backendKey, backend);
 
         return backend;
@@ -292,7 +300,9 @@ export class BasicPool implements Pool, AsyncDisposable {
         await Promise.allSettled(this._pendingOperations);
 
         for (const browser of Object.values(this._activeSessions)) {
-            freeBrowserOperations.add(this.freeBrowser(browser));
+            if (!browser.state.isRetained) {
+                freeBrowserOperations.add(this.freeBrowser(browser));
+            }
         }
         const freeBrowserResults = await Promise.allSettled(freeBrowserOperations);
 

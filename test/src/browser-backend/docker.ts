@@ -2,6 +2,8 @@ import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import type { BrowserConfig } from "src/config/browser-config";
 import type { DockerBrowserBackend } from "src/browser-backend/docker";
+import { getWsEndpoint } from "src/browser/cdp/ws-endpoint";
+import type { Browser } from "src/browser/types";
 import { createBrowserConfig_, mkSessionStub_ } from "../browser/utils";
 
 describe("browser-backend/docker", () => {
@@ -105,6 +107,34 @@ describe("browser-backend/docker", () => {
 
         assert.calledOnceWith(controller.prepareCdp, session.sessionId, sinon.match.string, 60000);
         assert.isTrue(backend.isCdpAvailable(session));
+        assert.equal(session.capabilities["se:cdp"], `ws://127.0.0.1:23456/devtools/${session.sessionId}/`);
+    });
+
+    it("should let attachments resolve CDP without fetching the container-local debugger address", async () => {
+        session.capabilities = { "goog:chromeOptions": { debuggerAddress: "localhost:9222" } };
+        const config = makeConfig();
+        const backend = await startBackend([config]);
+        const fetch = sandbox.stub(globalThis, "fetch").rejects(new Error("container address is unreachable"));
+        await backend.startSession(config);
+        const attachment = {
+            config,
+            publicAPI: { sessionId: session.sessionId, capabilities: { ...session.capabilities } },
+        } as Browser;
+
+        assert.equal(await getWsEndpoint(attachment), `ws://127.0.0.1:23456/devtools/${session.sessionId}/`);
+        assert.notCalled(fetch);
+    });
+
+    it("should preserve an existing CDP endpoint", async () => {
+        session.capabilities = {
+            "goog:chromeOptions": { debuggerAddress: "localhost:9222" },
+            "se:cdp": "ws://grid:4444/devtools/existing/",
+        };
+        const backend = await startBackend();
+
+        await backend.startSession(makeConfig());
+
+        assert.equal(session.capabilities["se:cdp"], "ws://grid:4444/devtools/existing/");
     });
 
     it("should mark CDP unavailable when the browser image has no adapter", async () => {
@@ -115,6 +145,7 @@ describe("browser-backend/docker", () => {
         await backend.startSession(makeConfig());
 
         assert.isFalse(backend.isCdpAvailable(session));
+        assert.notProperty(session.capabilities, "se:cdp");
     });
 
     it("should skip adapter preparation when a browser websocket endpoint is configured", async () => {
@@ -124,6 +155,7 @@ describe("browser-backend/docker", () => {
         await backend.startSession(Object.assign(makeConfig(), { browserWSEndpoint: "ws://browser:9222" }));
 
         assert.notCalled(controller.prepareCdp);
+        assert.notProperty(session.capabilities, "se:cdp");
     });
 
     it("should skip adapter preparation without a Chrome debugger address", async () => {
@@ -132,6 +164,7 @@ describe("browser-backend/docker", () => {
         await backend.startSession(makeConfig());
 
         assert.notCalled(controller.prepareCdp);
+        assert.notProperty(session.capabilities, "se:cdp");
     });
 
     it("should delete a session before saving its logs and only do so once", async () => {
