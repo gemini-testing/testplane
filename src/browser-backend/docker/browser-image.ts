@@ -3,8 +3,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "fs/promises";
 import { arch, platform as hostPlatform, tmpdir } from "os";
 import path from "path";
 import lockfile from "proper-lockfile";
-import { warn } from "../utils/logger";
-import { debugDocker, timeDockerOperation } from "./docker-timing";
+import { warn } from "../../utils/logger";
+import { debugDocker, timeDockerOperation } from "./timing";
 
 const BUILD_TIMEOUT = 10 * 60_000;
 // Runs only while building the image. The original entrypoint starts devtools normally afterwards.
@@ -30,10 +30,13 @@ type Docker = (args: string[], options?: { timeout: number }) => Promise<string>
 async function imageExists(image: string, docker: Docker): Promise<boolean> {
     try {
         await docker(["image", "inspect", "--format", "{{.Id}}", image]);
+
         return true;
     } catch (error) {
         const failure = error as Error & { stderr?: string };
-        if (/no such (image|object)/i.test(failure.stderr || failure.message)) return false;
+        if (/no such (image|object)/i.test(failure.stderr || failure.message)) {
+            return false;
+        }
         throw error;
     }
 }
@@ -63,6 +66,7 @@ export async function prepareDockerBrowserImage(
     const image = `testplane-browser:${key}`;
     if (await imageExists(image, docker)) {
         debugDocker(`[Docker timing][${scope}] prepared browser image: ${image}`);
+
         return image;
     }
 
@@ -85,9 +89,12 @@ export async function prepareDockerBrowserImage(
     );
     if (adapter.trim() === "absent") {
         debugDocker(`[Docker timing][${scope}] no CDP adapter in ${source}; using the original image`);
+
         return source;
     }
-    if (adapter.trim() !== "present") throw new Error(`Cannot check CDP adapter in Docker image "${source}"`);
+    if (adapter.trim() !== "present") {
+        throw new Error(`Cannot check CDP adapter in Docker image "${source}"`);
+    }
 
     // Only lock files live on the host. proper-lockfile removes the lock when released.
     const locks = path.join(tmpdir(), "testplane-docker-image-locks");
@@ -102,7 +109,9 @@ export async function prepareDockerBrowserImage(
     );
     try {
         // Another worker may have finished the build while we were waiting.
-        if (await imageExists(image, docker)) return image;
+        if (await imageExists(image, docker)) {
+            return image;
+        }
         const directory = await mkdtemp(path.join(tmpdir(), "testplane-docker-image-"));
         const base = `testplane-browser-base:${key}`;
         try {
@@ -114,6 +123,7 @@ export async function prepareDockerBrowserImage(
                     timeout: BUILD_TIMEOUT,
                 }),
             );
+
             return image;
         } catch (error) {
             const failure = error as Error & { stdout?: string; stderr?: string };

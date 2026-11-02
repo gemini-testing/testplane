@@ -1,16 +1,19 @@
 import { Config } from "../../config";
-import { ExistingBrowser } from "./../existing-browser";
-import { Calibrator } from "./../calibrator";
+import { ExistingBrowser } from "../existing-browser";
+import { Calibrator } from "../calibrator";
 import { AsyncEmitter, MasterEvents } from "../../events";
-import { BrowserName, type W3CBrowserName, type SessionOptions } from "./../types";
+import { BrowserName, type W3CBrowserName, type SessionOptions } from "../types";
 import { getNormalizedBrowserName } from "../../utils/browser";
 import fs from "fs-extra";
 import { hasGlobalFilesToRemove } from "../../globalFilesToRemove";
 import { initImage } from "../../image";
+import { AsyncCleanupStack } from "../../utils/async-cleanup-stack";
 
 export async function attachToBrowser(session: SessionOptions): Promise<WebdriverIO.Browser> {
     await initImage();
 
+    await using startup = new AsyncCleanupStack();
+    let cleanup = startup;
     const browserName = session.sessionCaps?.browserName || BrowserName.CHROME;
     const normalizedBrowserName = getNormalizedBrowserName(browserName) as W3CBrowserName;
 
@@ -30,6 +33,11 @@ export async function attachToBrowser(session: SessionOptions): Promise<Webdrive
     };
 
     const filesToRemove: string[] = [];
+    startup.defer(async () => {
+        if (filesToRemove.length > 0 && !hasGlobalFilesToRemove()) {
+            await Promise.all(filesToRemove.map(path => fs.remove(path)));
+        }
+    });
 
     const config = new Config({
         browsers: {
@@ -47,29 +55,32 @@ export async function attachToBrowser(session: SessionOptions): Promise<Webdrive
         filesToRemove.push(path);
     });
 
-    const existingBrowser = new ExistingBrowser(config, {
-        id: browserName,
-        version: session.sessionCaps?.browserVersion,
-        emitter,
-        state: {},
-    });
+    const existingBrowser = startup.use(
+        new ExistingBrowser(config.forBrowser(browserName), {
+            id: browserName,
+            version: session.sessionCaps?.browserVersion,
+            emitter,
+            state: {},
+        }),
+    );
 
     const calibrator = new Calibrator();
 
     await existingBrowser.init(session, calibrator);
 
     existingBrowser.publicAPI.overwriteCommand("deleteSession", async originalCommand => {
-        await originalCommand({ shutdownDriver: true });
-
-        // force kill driver process by pid, because { shutdownDriver: true } in prev command doesn't work :(
-        if (session.driverPid) {
-            process.kill(session.driverPid, 9);
-        }
-
-        if (filesToRemove.length > 0 && !hasGlobalFilesToRemove()) {
-            await Promise.all(filesToRemove.map(path => fs.remove(path)));
+        try {
+            await originalCommand({ shutdownDriver: true });
+        } finally {
+            await cleanup.disposeAsync();
         }
     });
+    // The explicit standalone delete operation owns driver shutdown; attachment failure does not.
+    if (session.driverPid)
+        startup.defer(() => {
+            process.kill(session.driverPid!, 9);
+        });
 
+    cleanup = startup.move();
     return existingBrowser.publicAPI;
 }

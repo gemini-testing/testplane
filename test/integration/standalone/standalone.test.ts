@@ -22,7 +22,7 @@ describe("Standalone Browser E2E Tests", function () {
         process.exit(1);
     }, 180000).unref();
 
-    let browser: WebdriverIO.Browser & { getDriverPid?: () => number | undefined };
+    let browser: Awaited<ReturnType<typeof launchBrowser>>;
 
     it("should launch browser and access a website", async function () {
         browser = await launchBrowser(BROWSER_CONFIG);

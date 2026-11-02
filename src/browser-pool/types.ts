@@ -1,7 +1,10 @@
 import { Browser } from "../browser/browser";
+import { BrowserConfig } from "../config/browser-config";
 
-export interface Pool<T extends Browser = Browser> {
-    getBrowser(id: string, opts?: object): Promise<T>;
+export interface Pool<T extends Browser = Browser> extends AsyncDisposable {
+    [Symbol.asyncDispose](): Promise<void>;
+    prewarm(browserConfigs: BrowserConfig[]): Promise<void>;
+    getBrowser(browserConfig: BrowserConfig, opts?: object): Promise<T>;
     freeBrowser(browser: T, opts?: object): Promise<void>;
     cancel(error?: Error): void;
 }

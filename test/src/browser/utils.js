@@ -2,7 +2,6 @@
 
 const _ = require("lodash");
 const EventEmitter = require("events");
-const { NewBrowser } = require("src/browser/new-browser");
 const { ExistingBrowser } = require("src/browser/existing-browser");
 const { WEBDRIVER_PROTOCOL } = require("src/constants/config");
 
@@ -48,34 +47,8 @@ exports.createBrowserConfig_ = function createBrowserConfig_(opts = {}) {
         baseUrl: "http://main_url",
         gridUrl: "http://main_host:4444/wd/hub",
         system: { debug: true },
-        forBrowser: () => browser,
+        forBrowser: () => /** @type {import("src/config/browser-config").BrowserConfig} */ (browser),
     };
-};
-
-exports.mkWdPool_ = function mkWdPool_({ gridUrl = "http://localhost:12345/wd/local" } = {}) {
-    return {
-        getWebdriver: sinon
-            .stub()
-            .named("getWebdriver")
-            .resolves({
-                gridUrl,
-                free: sinon.stub().named("free"),
-                kill: sinon.stub().named("kill"),
-            }),
-    };
-};
-
-exports.mkNewBrowser_ = function mkNewBrowser_(
-    configOpts,
-    opts = {
-        id: "browser",
-        version: "1.0",
-        state: {},
-        wdPool: exports.mkWdPool_(),
-    },
-    BrowserClass = NewBrowser,
-) {
-    return BrowserClass.create(exports.createBrowserConfig_(configOpts), opts);
 };
 
 exports.mkExistingBrowser_ = function mkExistingBrowser_(
@@ -83,7 +56,7 @@ exports.mkExistingBrowser_ = function mkExistingBrowser_(
     opts = { id: "browser", version: "1.0", state: {}, emitter: "emitter" },
     BrowserClass = ExistingBrowser,
 ) {
-    return BrowserClass.create(exports.createBrowserConfig_(configOpts), opts);
+    return BrowserClass.create(exports.createBrowserConfig_(configOpts).forBrowser(), opts);
 };
 
 exports.mkMockStub_ = function mkMockStub_() {
@@ -188,5 +161,5 @@ exports.mkSessionStub_ = function mkSessionStub_() {
         sinon.spy(target, name);
     });
 
-    return session;
+    return /** @type {typeof session & WebdriverIO.Browser} */ (session);
 };

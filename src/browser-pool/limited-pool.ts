@@ -6,6 +6,7 @@ import { BrowserOpts, Pool, PoolObserver, PoolObserverOperation } from "./types"
 import { CancelledError } from "./cancelled-error";
 import { buildCompositeBrowserId } from "./utils";
 import { Browser } from "../browser/browser";
+import { BrowserConfig } from "../config/browser-config";
 
 export interface LimitedPoolOpts {
     limit: number;
@@ -14,7 +15,7 @@ export interface LimitedPoolOpts {
 }
 
 interface QueueItem {
-    id: string;
+    browserConfig: BrowserConfig;
     opts: {
         force?: boolean;
         version?: string;
@@ -32,6 +33,7 @@ export class LimitedPool implements Pool {
     private _highPriorityRequestQueue: yallist<QueueItem>;
     private _isSpecificBrowserLimiter: boolean;
     private _observer?: PoolObserver;
+    private _cancelError: Error | null = null;
     log: debug.Debugger;
     underlyingPool: Pool;
 
@@ -54,14 +56,16 @@ export class LimitedPool implements Pool {
         this._observer = opts.observer;
     }
 
-    async getBrowser(id: string, opts: BrowserOpts = {}): Promise<Browser> {
+    async getBrowser(browserConfig: BrowserConfig, opts: BrowserOpts = {}): Promise<Browser> {
+        if (this._cancelError) throw this._cancelError;
+        const { id } = browserConfig;
         const optsToPrint = JSON.stringify(opts);
         this.log(`get browser ${id} with opts:${optsToPrint} (launched ${this._launched}, limit ${this._limit})`);
 
         ++this._requests;
         this._sampleState(id);
         try {
-            return await this._getBrowser(id, opts);
+            return await this._getBrowser(browserConfig, opts);
         } catch (e) {
             --this._requests;
             this._sampleState(id);
@@ -75,7 +79,7 @@ export class LimitedPool implements Pool {
 
         const nextRequest = this._lookAtNextRequest();
         const compositeIdForNextRequest =
-            nextRequest && buildCompositeBrowserId(nextRequest.id, nextRequest.opts.version);
+            nextRequest && buildCompositeBrowserId(nextRequest.browserConfig.id, nextRequest.opts.version);
         const hasFreeSlots = this._launched < this._limit;
         const shouldFreeUnusedResource = this._isSpecificBrowserLimiter && this._launched > this._requests;
         const force = opts.force || shouldFreeUnusedResource;
@@ -83,12 +87,19 @@ export class LimitedPool implements Pool {
 
         this.log(`free browser ${browser.fullId} with opts:${JSON.stringify(optsForFree)}`);
 
-        return this.underlyingPool.freeBrowser(browser, optsForFree).finally(() => this._launchNextBrowser(browser.id));
+        return this.underlyingPool
+            .freeBrowser(browser, optsForFree)
+            .finally(() => this._launchNextBrowser(browser.config));
     }
 
     cancel(error: Error = new CancelledError()): void {
         this.log("cancel");
+        this._rejectRequests(error);
+        this.underlyingPool.cancel(error);
+    }
 
+    private _rejectRequests(error: Error): void {
+        this._cancelError ??= error;
         const reject_ = (entry: QueueItem): void => entry.reject(error);
         const interrupt_ = (entry: QueueItem): void => entry.waitOperation?.end("interrupted");
         this._highPriorityRequestQueue.forEach(interrupt_);
@@ -98,16 +109,24 @@ export class LimitedPool implements Pool {
 
         this._highPriorityRequestQueue = yallist.create();
         this._requestQueue = yallist.create();
-
-        this.underlyingPool.cancel(error);
     }
 
-    private async _getBrowser(id: string, opts: BrowserOpts = {}): Promise<Browser> {
+    prewarm(browserConfigs: BrowserConfig[]): Promise<void> {
+        return this.underlyingPool.prewarm(browserConfigs);
+    }
+
+    [Symbol.asyncDispose](): Promise<void> {
+        this._rejectRequests(new CancelledError());
+        return this.underlyingPool[Symbol.asyncDispose]();
+    }
+
+    private async _getBrowser(browserConfig: BrowserConfig, opts: BrowserOpts = {}): Promise<Browser> {
+        const { id } = browserConfig;
         if (this._launched < this._limit) {
             this.log("can launch one more");
             this._launched++;
             this._sampleState(id);
-            return this._newBrowser(id, opts);
+            return this._newBrowser(browserConfig, opts);
         }
 
         this.log("queuing the request");
@@ -123,7 +142,7 @@ export class LimitedPool implements Pool {
 
         return new Promise((resolve, reject) => {
             queue.push({
-                id,
+                browserConfig,
                 opts,
                 resolve: resolve as QueueItem["resolve"],
                 reject: reject as QueueItem["resolve"],
@@ -133,11 +152,11 @@ export class LimitedPool implements Pool {
         });
     }
 
-    private async _newBrowser(id: string, opts: object): Promise<Browser> {
-        this.log(`launching new browser ${id} with opts:${JSON.stringify(opts)}`);
+    private async _newBrowser(browserConfig: BrowserConfig, opts: object): Promise<Browser> {
+        this.log(`launching new browser ${browserConfig.id} with opts:${JSON.stringify(opts)}`);
 
-        return this.underlyingPool.getBrowser(id, opts).catch(e => {
-            this._launchNextBrowser(id);
+        return this.underlyingPool.getBrowser(browserConfig, opts).catch(e => {
+            this._launchNextBrowser(browserConfig);
             return Promise.reject(e);
         });
     }
@@ -146,22 +165,22 @@ export class LimitedPool implements Pool {
         return this._highPriorityRequestQueue.get(0) || this._requestQueue.get(0);
     }
 
-    private _launchNextBrowser(browserId: string): void {
+    private _launchNextBrowser(browserConfig: BrowserConfig): void {
         const queued = this._highPriorityRequestQueue.shift() || this._requestQueue.shift();
 
         if (queued) {
-            const compositeId = buildCompositeBrowserId(queued.id, queued.opts.version);
+            const compositeId = buildCompositeBrowserId(queued.browserConfig.id, queued.opts.version);
 
             this.log(`has queued requests for ${compositeId}`);
             this.log(`remaining queue length: ${this._requestQueue.length}`);
 
             queued.waitOperation?.end();
-            this._sampleState(queued.id);
+            this._sampleState(queued.browserConfig.id);
 
-            this._newBrowser(queued.id, queued.opts).then(queued.resolve, queued.reject);
+            this._newBrowser(queued.browserConfig, queued.opts).then(queued.resolve, queued.reject);
         } else {
             this._launched--;
-            this._sampleState(browserId);
+            this._sampleState(browserConfig.id);
         }
     }
 

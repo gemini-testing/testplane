@@ -5,15 +5,17 @@ import { BaseTestplane } from "../base-testplane";
 import { RefImageInfo, WdioBrowser, WorkerEventHandler } from "../types";
 import { ConfigInput } from "../config/types";
 import type { ProfilerFragment } from "../profiler/runtime/types";
+import type { TestContext } from "../utils/test-context";
 
 export interface WorkerRunTestOpts {
     browserId: string;
     browserVersion: string;
     file: string;
     sessionId: string;
-    cdpAvailable?: boolean;
+    cdpAvailable?: boolean | null;
     sessionCaps: WdioBrowser["capabilities"];
     sessionOpts: WdioBrowser["options"] & { capabilities: WdioBrowser["capabilities"] };
+    testContext: TestContext | null;
     state: Record<string, unknown>;
     attempt: number;
     attemptId?: string;

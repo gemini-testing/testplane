@@ -8,6 +8,7 @@ const { Calibrator } = require("src/browser/calibrator");
 const { Camera } = require("src/browser/camera");
 const history = require("src/browser/history");
 const RuntimeConfig = require("src/config/runtime-config");
+const { withTestContext } = require("src/utils/test-context");
 const {
     SAVE_HISTORY_MODE,
     WEBDRIVER_PROTOCOL,
@@ -141,7 +142,7 @@ describe("ExistingBrowser", () => {
             });
 
             it('should extend meta-info with "testXReqId" field', () => {
-                const browser = mkBrowser_({}, { state: { testXReqId: "12345" } });
+                const browser = withTestContext({ testXReqId: "12345", traceparent: "" }, () => mkBrowser_());
 
                 assert.propertyVal(browser.meta, "testXReqId", "12345");
             });
@@ -276,13 +277,12 @@ describe("ExistingBrowser", () => {
 
             it('should add "X-Request-ID" header', async () => {
                 crypto.randomUUID.returns("67890");
-                const state = { testXReqId: "12345" };
                 const request = { headers: {} };
 
-                await initBrowser_(mkBrowser_({}, { state }));
+                await initBrowser_();
 
                 const { transformRequest } = webdriverioAttachStub.lastCall.args[0];
-                transformRequest(request);
+                withTestContext({ testXReqId: "12345", traceparent: "" }, () => transformRequest(request));
 
                 assert.equal(request.headers["X-Request-ID"], `12345${X_REQUEST_ID_DELIMITER}67890`);
             });
@@ -1104,7 +1104,7 @@ describe("ExistingBrowser", () => {
             const browser = await initBrowser_();
             const pid = browser.meta.pid;
 
-            browser.quit();
+            await browser.quit();
 
             assert.equal(browser.meta.pid, pid);
         });
@@ -1112,7 +1112,7 @@ describe("ExistingBrowser", () => {
         it("should close opened CDP connection", async () => {
             const browser = await initBrowser_();
 
-            browser.quit();
+            await browser.quit();
 
             assert.calledOnceWith(CDPStub.close);
         });

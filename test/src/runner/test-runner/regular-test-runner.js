@@ -3,7 +3,7 @@
 const crypto = require("crypto");
 const _ = require("lodash");
 
-const BrowserAgent = require("src/runner/browser-agent");
+const { BrowserAgent } = require("src/runner/browser-agent");
 const WorkersRegistry = require("src/utils/workers-registry");
 const { MasterEvents: Events } = require("src/events");
 const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
@@ -12,6 +12,7 @@ const { promiseDelay } = require("../../../../src/utils/promise");
 const { EventEmitter } = require("events");
 const proxyquire = require("proxyquire");
 const RuntimeConfig = require("src/config/runtime-config");
+const { getTestContext } = require("src/utils/test-context");
 
 describe("runner/test-runner/regular-test-runner", () => {
     const sandbox = sinon.createSandbox();
@@ -34,7 +35,7 @@ describe("runner/test-runner/regular-test-runner", () => {
 
     const mkRunner_ = (opts = {}) => {
         const test = opts.test || new Test({ title: "defaultTest" });
-        const browserAgent = opts.browserAgent || BrowserAgent.create({});
+        const browserAgent = opts.browserAgent || BrowserAgent.create({ browserConfig: { id: "default-id" } });
 
         return RegularTestRunner.create(test, browserAgent);
     };
@@ -110,7 +111,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                 traceparent: "00-11111111111111111111111111111111-0011111111111111-01",
             };
             crypto.randomUUID.returns(state.testXReqId);
-            BrowserAgent.prototype.getBrowser.withArgs({ state }).resolves(
+            BrowserAgent.prototype.getBrowser.resolves(
                 stubBrowser_({
                     id: "bro",
                     version: "1.0",
@@ -120,7 +121,6 @@ describe("runner/test-runner/regular-test-runner", () => {
                     publicAPI: {
                         options: { foo: "bar" },
                     },
-                    state,
                 }),
             );
             const workers = mkWorkers_();
@@ -137,41 +137,50 @@ describe("runner/test-runner/regular-test-runner", () => {
                     cdpAvailable: false,
                     sessionCaps: { browserName: "bro" },
                     sessionOpts: { foo: "bar" },
-                    state,
+                    testContext: state,
+                    state: { isBroken: false },
                 }),
             );
         });
 
-        it("should modify state if 'testXReqId' is not actual", async () => {
-            const state = {
+        it("should expose request IDs while acquiring and releasing a browser", async () => {
+            const context = {
                 testXReqId: "12345",
-            };
-            crypto.randomUUID.returns(state.testXReqId);
-            const browser = stubBrowser_({
-                state: { testXReqId: "67890", traceparent: "00-11111111111111111111111111111111-0011111111111111-01" },
-            });
-            BrowserAgent.prototype.getBrowser.withArgs({ state }).resolves(browser);
-            const workers = mkWorkers_();
-
-            await run_({ workers });
-
-            assert.calledWith(applyStateSpy, sinon.match(state));
-        });
-
-        it("should modify state if 'traceparent' is not actual", async () => {
-            const state = {
                 traceparent: "00-11111111111111111111111111111111-0011111111111111-01",
             };
-            crypto.randomUUID.returns(state.testXReqId);
-            const browser = stubBrowser_({
-                state: { traceparent: "00-22222222222222222222222222222222-0022222222222222-01" },
+            crypto.randomUUID.returns(context.testXReqId);
+            BrowserAgent.prototype.getBrowser.callsFake(async () => {
+                assert.deepEqual(getTestContext(), context);
+                return stubBrowser_();
             });
-            BrowserAgent.prototype.getBrowser.withArgs({ state }).resolves(browser);
+            BrowserAgent.prototype.freeBrowser.callsFake(async () => {
+                assert.deepEqual(getTestContext(), context);
+            });
+
+            await run_();
+
+            assert.calledOnce(BrowserAgent.prototype.getBrowser);
+            assert.calledOnce(BrowserAgent.prototype.freeBrowser);
+            assert.isNull(getTestContext());
+        });
+
+        it("should refresh request context between tests using the same browser", async () => {
+            const browser = stubBrowser_();
+            BrowserAgent.prototype.getBrowser.resolves(browser);
             const workers = mkWorkers_();
+            crypto.randomUUID.onFirstCall().returns("first").onSecondCall().returns("second");
+            crypto.randomBytes.onCall(2).returns(Buffer.from("22".repeat(16), "hex"));
 
             await run_({ workers });
+            await run_({ workers });
 
-            assert.calledWith(applyStateSpy, sinon.match(state));
+            const firstContext = workers.runTest.firstCall.args[1].testContext;
+            const secondContext = workers.runTest.secondCall.args[1].testContext;
+            assert.equal(firstContext.testXReqId, "first");
+            assert.equal(secondContext.testXReqId, "second");
+            assert.notEqual(firstContext.traceparent, secondContext.traceparent);
+            assert.notProperty(browser.state, "testXReqId");
+            assert.notProperty(browser.state, "traceparent");
         });
 
         it("should run test in workers", async () => {

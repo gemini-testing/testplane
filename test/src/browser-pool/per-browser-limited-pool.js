@@ -18,7 +18,7 @@ describe("browser-pool/per-browser-limited-pool", () => {
     const mkConfigStub_ = browsers => {
         return {
             getBrowserIds: () => _.keys(browsers),
-            forBrowser: id => browsers[id],
+            forBrowser: id => ({ id, ...browsers[id] }),
         };
     };
 
@@ -56,7 +56,7 @@ describe("browser-pool/per-browser-limited-pool", () => {
 
             const perBrowserLimitedPool = makePool_({ config });
 
-            perBrowserLimitedPool.getBrowser("bro1");
+            perBrowserLimitedPool.getBrowser(config.forBrowser("bro1"));
 
             assert.called(bro1Pool.getBrowser);
             assert.notCalled(bro2Pool.getBrowser);
@@ -71,9 +71,9 @@ describe("browser-pool/per-browser-limited-pool", () => {
             });
             const perBrowserLimitedPool = makePool_({ config });
 
-            perBrowserLimitedPool.getBrowser("bro", { some: "opt" });
+            perBrowserLimitedPool.getBrowser(config.forBrowser("bro"), { some: "opt" });
 
-            assert.calledOnceWith(pool.getBrowser, "bro", { some: "opt" });
+            assert.calledOnceWith(pool.getBrowser, config.forBrowser("bro"), { some: "opt" });
         });
     });
 

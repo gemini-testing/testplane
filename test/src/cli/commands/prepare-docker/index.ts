@@ -54,7 +54,7 @@ describe("cli/commands/prepare-docker", () => {
             });
         });
         const { registerCmd } = proxyquire("src/cli/commands/prepare-docker", {
-            "../../../browser/docker": { prepareDockerImages: prepare },
+            "../../../browser-backend/docker/engine": { prepareDockerImages: prepare },
             "../../../utils/logger": logger,
         });
         cli = new Command("testplane");

@@ -1,8 +1,9 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
-import type { WebdriverPool as WdPoolType } from "../../../src/browser-pool/webdriver-pool";
+import { EventEmitter } from "events";
+import type { WebdriverPool as WdPoolType } from "src/browser-backend/local/webdriver-pool";
 
-describe("browser-pool/webdriver-pool", () => {
+describe("browser-backend/local/webdriver-pool", () => {
     const sandbox = sinon.createSandbox();
     const browserDownloadMirrors = {
         chrome: "https://mirror.example/chrome",
@@ -13,23 +14,31 @@ describe("browser-pool/webdriver-pool", () => {
 
     let wdPool: WdPoolType;
 
-    let getDriverNameForBrowserNameStub: SinonStub;
     let resolveBrowserVersionStub: SinonStub;
     let runBrowserDriverStub: SinonStub;
 
+    const makeProcess = (): EventEmitter => {
+        const child = Object.assign(new EventEmitter(), {
+            exitCode: null,
+            signalCode: null,
+            kill: sandbox.stub(),
+        });
+        child.kill.callsFake(() => child.emit("exit", 0, null));
+
+        return child;
+    };
+
     beforeEach(() => {
-        getDriverNameForBrowserNameStub = sandbox.stub().returns("edgedriver");
         resolveBrowserVersionStub = sandbox.stub();
         runBrowserDriverStub = sandbox.stub().resolves({
             gridUrl: "http://localhost:12345",
-            process: { kill: sandbox.stub() },
+            process: makeProcess(),
             port: 12345,
         });
 
-        const { WebdriverPool } = proxyquire("../../../src/browser-pool/webdriver-pool", {
-            "../browser-installer": {
+        const { WebdriverPool } = proxyquire("src/browser-backend/local/webdriver-pool", {
+            "../../browser-installer": {
                 runBrowserDriver: runBrowserDriverStub,
-                getDriverNameForBrowserName: getDriverNameForBrowserNameStub,
                 resolveBrowserVersion: resolveBrowserVersionStub,
             },
         });
@@ -37,13 +46,18 @@ describe("browser-pool/webdriver-pool", () => {
         wdPool = new WebdriverPool();
     });
 
-    afterEach(() => sandbox.restore());
+    afterEach(async () => {
+        try {
+            await wdPool[Symbol.asyncDispose]();
+        } finally {
+            sandbox.restore();
+        }
+    });
 
     it("should run browser driver", async () => {
-        getDriverNameForBrowserNameStub.returns("edgedriver");
         runBrowserDriverStub.resolves({
             gridUrl: "http://localhost:100500",
-            process: sandbox.stub(),
+            process: makeProcess(),
             port: 100500,
         });
 
@@ -57,10 +71,10 @@ describe("browser-pool/webdriver-pool", () => {
     });
 
     it("should run browser driver with debug mode", async () => {
-        await wdPool.getWebdriver("MicrosoftEdge", "135.0");
+        await wdPool.getWebdriver("MicrosoftEdge", "135.0", { debug: true });
 
         assert.calledOnceWith(runBrowserDriverStub, sinon.match.string, sinon.match.string, {
-            debug: false,
+            debug: true,
             browserDownloadMirrors: undefined,
         });
     });
@@ -118,7 +132,7 @@ describe("browser-pool/webdriver-pool", () => {
     it("should run extra drivers if driver is dead", async () => {
         const driver = await wdPool.getWebdriver("MicrosoftEdge", "135.0");
 
-        driver.kill();
+        await driver[Symbol.asyncDispose]();
 
         await wdPool.getWebdriver("MicrosoftEdge", "135.0");
 

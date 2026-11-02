@@ -1,20 +1,19 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
-import type {
-    startDockerController as StartDockerController,
-    prepareDockerImages as PrepareDockerImages,
-    checkDockerParallelism as CheckDockerParallelism,
-} from "src/browser/docker";
+import type { prepareDockerImages as PrepareDockerImages } from "src/browser-backend/docker/engine";
+import type { SelenoidDockerController as Controller } from "src/browser-backend/docker/controller";
+import type { BrowserConfig } from "src/config/browser-config";
 import type { DockerConfig } from "src/config/types";
 import { EventEmitter } from "events";
+import { Readable, Writable } from "stream";
 import { tmpdir } from "os";
 import path from "path";
 
-describe("browser/docker", () => {
+describe("browser-backend/docker/controller", () => {
     const sandbox = sinon.createSandbox();
     let prepareDockerImages: typeof PrepareDockerImages;
-    let startDockerController: typeof StartDockerController;
-    let checkDockerParallelism: typeof CheckDockerParallelism;
+    let SelenoidDockerController: typeof Controller;
+    let controllers: Controller[];
     let warnStub: SinonStub;
     let prepareImage: SinonStub;
     let command: SinonStub;
@@ -23,24 +22,36 @@ describe("browser/docker", () => {
     let exitHandlers: (() => void)[];
     let writeConfig: SinonStub;
     let removeConfig: SinonStub;
-    let listLogs: SinonStub;
     let openLog: SinonStub;
     let spawnCommand: SinonStub;
     let getPortStub: SinonStub;
+    let writeStream: SinonStub;
+    let logChunks: Buffer[];
     const selenoidImage = "registry.example.com/selenoid:1.11.3";
 
-    const start = (
-        image: string | null,
-        options = {},
+    const makeConfig = (
+        id: string,
+        docker: DockerConfig,
+        desiredCapabilities = { browserName: "chrome", browserVersion: "98.0" },
+    ): BrowserConfig => ({ id, docker, desiredCapabilities }) as BrowserConfig;
+
+    const start = async (
+        image: string,
+        options: { browserName?: string; browserVersion?: string; timeout?: number } = {},
         container: DockerConfig = {},
-    ): ReturnType<typeof startDockerController> =>
-        startDockerController(image === null ? null : { image, selenoidImage, ...container }, {
-            browserName: "chrome",
-            browserVersion: "98.0",
-            ...options,
-        });
+    ): Promise<Controller> => {
+        const capabilities = { browserName: "chrome", browserVersion: "98.0", ...options };
+        const controller = await SelenoidDockerController.create(
+            [makeConfig(capabilities.browserName ?? "appium", { image, selenoidImage, ...container }, capabilities)],
+            { timeout: options.timeout },
+        );
+        controllers.push(controller);
+
+        return controller;
+    };
 
     beforeEach(() => {
+        controllers = [];
         command = sandbox
             .stub()
             .callsFake(async (args: string[]) => (args[0] === "image" && args[1] === "inspect" ? "linux/amd64" : ""));
@@ -70,8 +81,11 @@ describe("browser/docker", () => {
 
         writeConfig = sandbox.stub().resolves();
         removeConfig = sandbox.stub().resolves();
-        listLogs = sandbox.stub().resolves([]);
-        openLog = sandbox.stub();
+        openLog = sandbox.stub().callsFake(async () => ({
+            fd: 123,
+            appendFile: sandbox.stub().resolves(),
+            [Symbol.asyncDispose]: sandbox.stub().resolves(),
+        }));
         spawnCommand = sandbox.stub().callsFake(() => {
             const child = new EventEmitter();
             queueMicrotask(() => child.emit("close", 0, null));
@@ -79,20 +93,20 @@ describe("browser/docker", () => {
         });
         warnStub = sandbox.stub();
         getPortStub = sandbox.stub().resolves(12346);
+        logChunks = [];
+        writeStream = sandbox.stub().callsFake(
+            () =>
+                new Writable({
+                    write(chunk, _encoding, done): void {
+                        logChunks.push(chunk);
+                        done();
+                    },
+                }),
+        );
         prepareImage = sandbox.stub().callsFake(async (image: string) => image);
-        const dockerModule = proxyquire("src/browser/docker", {
-            "./docker-image": { prepareDockerBrowserImage: prepareImage },
-            "../utils/logger": { warn: warnStub, log: sandbox.stub() },
-            "get-port": getPortStub,
-            "fs/promises": {
-                mkdtemp: sandbox.stub().resolves("/tmp/testplane-selenoid-test"),
-                writeFile: writeConfig,
-                rm: removeConfig,
-                mkdir: sandbox.stub().resolves(),
-                readdir: listLogs,
-                open: openLog,
-            },
-            fs: { rmSync: sandbox.stub() },
+        const engine = proxyquire("src/browser-backend/docker/engine", {
+            "./browser-image": { prepareDockerBrowserImage: prepareImage },
+            "../../utils/logger": { log: sandbox.stub() },
             // eslint-disable-next-line camelcase
             child_process: {
                 spawn: spawnCommand,
@@ -102,15 +116,34 @@ describe("browser/docker", () => {
                         (error: Error) => callback(error, "", error.message),
                     );
                 },
-                execFileSync: syncCommand,
             },
         });
-        prepareDockerImages = dockerModule.prepareDockerImages;
-        startDockerController = dockerModule.startDockerController;
-        checkDockerParallelism = dockerModule.checkDockerParallelism;
+        prepareDockerImages = engine.prepareDockerImages;
+        ({ SelenoidDockerController } = proxyquire("src/browser-backend/docker/controller", {
+            "./engine": engine,
+            "../../utils/logger": { warn: warnStub, log: sandbox.stub() },
+            "get-port": getPortStub,
+            "fs/promises": {
+                mkdtemp: sandbox.stub().resolves("/tmp/testplane-selenoid-test"),
+                writeFile: writeConfig,
+                rm: removeConfig,
+                mkdir: sandbox.stub().resolves(),
+                open: openLog,
+            },
+            fs: { rmSync: sandbox.stub(), createWriteStream: writeStream },
+            // eslint-disable-next-line camelcase
+            child_process: { execFileSync: syncCommand },
+        }));
     });
 
-    afterEach(() => sandbox.restore());
+    afterEach(async () => {
+        try {
+            // A failed disposal keeps its synchronous fallback; each test checks that failure itself.
+            await Promise.allSettled(controllers.map(controller => controller[Symbol.asyncDispose]()));
+        } finally {
+            sandbox.restore();
+        }
+    });
 
     describe("image preparation without sessions", () => {
         it("should pull missing browser and controller images and prepare CDP without starting containers", async () => {
@@ -178,7 +211,7 @@ describe("browser/docker", () => {
             const entry = JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"];
             assert.notProperty(entry, "platform");
             assert.notProperty(entry, "selenoidPlatform");
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should pull and start an ARM controller independently of the browser platform", async () => {
@@ -194,7 +227,7 @@ describe("browser/docker", () => {
             const create = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
             assert.equal(create[create.indexOf("--platform") + 1], "linux/arm64");
             assert.notProperty(JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"], "selenoidPlatform");
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should validate an explicitly requested image variant", async () => {
@@ -227,12 +260,9 @@ describe("browser/docker", () => {
 
         it("should reject conflicting controller platforms before preparing images", async () => {
             await assert.isRejected(
-                startDockerController({ image: "browser", selenoidImage }, {}, [
-                    {
-                        config: { image: "browser", selenoidImage, selenoidPlatform: "linux/arm64" },
-                        browserName: "chrome",
-                        browserVersion: "one",
-                    },
+                SelenoidDockerController.create([
+                    makeConfig("first", { image: "browser", selenoidImage }),
+                    makeConfig("second", { image: "browser", selenoidImage, selenoidPlatform: "linux/arm64" }),
                 ]),
                 "same docker.selenoidPlatform",
             );
@@ -243,15 +273,13 @@ describe("browser/docker", () => {
             const driver = await start("browser");
             command.resetHistory();
             await assert.isRejected(
-                driver.addBrowser({
-                    config: { image: "browser", selenoidImage, selenoidPlatform: "linux/arm64" },
-                    browserName: "chrome",
-                    browserVersion: "two",
-                }),
+                driver.ensureBrowser(
+                    makeConfig("second", { image: "browser", selenoidImage, selenoidPlatform: "linux/arm64" }),
+                ),
                 "same docker.selenoidPlatform",
             );
             assert.notCalled(command);
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
     });
 
@@ -262,7 +290,7 @@ describe("browser/docker", () => {
             const args = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
             assert.equal(args[args.indexOf("--volume") + 1], `${socketPath}:/var/run/docker.sock`);
             assert.notProperty(JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"], "socketPath");
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
 
         for (const socketPath of [
@@ -283,12 +311,9 @@ describe("browser/docker", () => {
 
         it("should reject conflicting socket paths before preparing images", async () => {
             await assert.isRejected(
-                startDockerController({ image: "browser", selenoidImage }, {}, [
-                    {
-                        config: { image: "browser", selenoidImage, socketPath: "/run/podman/podman.sock" },
-                        browserName: "chrome",
-                        browserVersion: "one",
-                    },
+                SelenoidDockerController.create([
+                    makeConfig("first", { image: "browser", selenoidImage }),
+                    makeConfig("second", { image: "browser", selenoidImage, socketPath: "/run/podman/podman.sock" }),
                 ]),
                 "same docker.socketPath",
             );
@@ -296,71 +321,24 @@ describe("browser/docker", () => {
         });
 
         it("should accept an explicit default socket path in a shared controller", async () => {
-            const driver = await startDockerController({ image: "browser", selenoidImage }, {}, [
-                {
-                    config: { image: "browser", selenoidImage, socketPath: "/var/run/docker.sock" },
-                    browserName: "chrome",
-                    browserVersion: "one",
-                },
+            const driver = await SelenoidDockerController.create([
+                makeConfig("first", { image: "browser", selenoidImage }),
+                makeConfig("second", { image: "browser", selenoidImage, socketPath: "/var/run/docker.sock" }),
             ]);
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should reject a conflicting socket when adding a standalone browser", async () => {
             const driver = await start("browser");
             command.resetHistory();
             await assert.isRejected(
-                driver.addBrowser({
-                    config: { image: "browser", selenoidImage, socketPath: "/run/podman/podman.sock" },
-                    browserName: "chrome",
-                    browserVersion: "two",
-                }),
+                driver.ensureBrowser(
+                    makeConfig("second", { image: "browser", selenoidImage, socketPath: "/run/podman/podman.sock" }),
+                ),
                 "same docker.socketPath",
             );
             assert.notCalled(command);
-            await driver.free();
-        });
-    });
-
-    describe("parallelism validation", () => {
-        beforeEach(() => {
-            command.withArgs(["info", "--format", "{{.NCPU}}"]).resolves("8");
-        });
-
-        it("should reject 20 browsers on 8 Docker CPUs", async () => {
-            await assert.isRejected(
-                checkDockerParallelism(20),
-                "Docker browser parallelism is 20, but Docker has 8 CPUs. The maximum allowed is 10",
-            );
-            assert.notCalled(warnStub);
-        });
-
-        it("should allow parallelism at or below the limit", async () => {
-            await checkDockerParallelism(10);
-            await checkDockerParallelism(5);
-            assert.notCalled(warnStub);
-        });
-
-        it("should scale the limit with Docker CPUs and round down", async () => {
-            command.withArgs(["info", "--format", "{{.NCPU}}"]).resolves("6");
-            await checkDockerParallelism(7);
-            assert.notCalled(warnStub);
-            await assert.isRejected(checkDockerParallelism(8), "maximum allowed is 7");
-        });
-
-        it("should reject if Docker CPU detection fails", async () => {
-            command.withArgs(["info", "--format", "{{.NCPU}}"]).rejects(new Error("daemon unavailable"));
-            await assert.isRejected(
-                checkDockerParallelism(20),
-                "Cannot check Docker browser parallelism: daemon unavailable",
-            );
-        });
-
-        ["", "0", "unknown"].forEach(value => {
-            it(`should report an invalid Docker CPU count: ${JSON.stringify(value)}`, async () => {
-                command.withArgs(["info", "--format", "{{.NCPU}}"]).resolves(value);
-                await assert.isRejected(checkDockerParallelism(20), "Invalid Docker CPU count");
-            });
+            await driver[Symbol.asyncDispose]();
         });
     });
 
@@ -376,7 +354,7 @@ describe("browser/docker", () => {
         assert.isBelow(position, args.indexOf(selenoidImage));
         assert.notInclude(args, "--privileged");
         assert.notProperty(JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"], "securityOpt");
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     for (const options of ['["name=seccomp"]', "[]", "null"]) {
@@ -385,7 +363,7 @@ describe("browser/docker", () => {
             const driver = await start("browser");
             const args = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
             assert.notInclude(args, "--security-opt");
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
     }
 
@@ -414,10 +392,12 @@ describe("browser/docker", () => {
             "-container-network",
             `${name}-network`,
             "-limit",
-            "1",
+            "2147483647",
             "-retry-count",
             "1",
-            "-capture-driver-logs",
+            "-log-output-dir",
+            "/opt/selenoid/logs",
+            "-save-all-logs",
             "-disable-privileged",
             "-service-startup-timeout",
             "30000ms",
@@ -434,6 +414,7 @@ describe("browser/docker", () => {
                         path: "/",
                         shmSize: 2147483648,
                         hosts: ["host.docker.internal:host-gateway"],
+                        labels: { "testplane.controller": name },
                     },
                 },
             },
@@ -441,9 +422,8 @@ describe("browser/docker", () => {
         assert.calledWith(command, ["cp", "/tmp/testplane-selenoid-test/browsers.json", `${name}:/browsers.json`]);
         assert.calledWith(command, ["start", name]);
         assert.equal(driver.gridUrl, "http://127.0.0.1:12345/wd/hub");
-        assert.isUndefined(driver.getPid());
         assert.calledWith(fetchStub, "http://127.0.0.1:12345/status");
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
         assert.calledOnce(removeConfig);
     });
 
@@ -461,7 +441,7 @@ describe("browser/docker", () => {
             assert.calledOnce(warnStub);
             assert.calledWithMatch(warnStub, "falling back to IPv4.\nIPv6 is unavailable");
             assert.callOrder(dualStack, inspect, warnStub, ipv4);
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
             assert.calledWith(command, ["network", "rm", network]);
         });
     }
@@ -480,7 +460,7 @@ describe("browser/docker", () => {
             1,
         );
         assert.notCalled(warnStub);
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should stop if it cannot determine whether the network was created", async () => {
@@ -515,7 +495,7 @@ describe("browser/docker", () => {
         const config = JSON.parse(writeConfig.firstCall.args[1]);
         assert.deepEqual(config.chrome.versions["98.0"].hosts, []);
         assert.calledWith(command, ["network", "create", "--ipv6", sinon.match.string]);
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should mark Selenoid as containerized before starting it on Podman", async () => {
@@ -527,7 +507,7 @@ describe("browser/docker", () => {
         const copy = command.withArgs(["cp", marker, `${name}:/.dockerenv`]);
         assert.calledOnce(copy);
         assert.callOrder(writeConfig.withArgs(marker), copy, command.withArgs(["start", name]));
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should use Docker's own container marker on Docker", async () => {
@@ -535,7 +515,7 @@ describe("browser/docker", () => {
         assert.isFalse(
             command.getCalls().some(call => call.args[0].some((arg: string) => arg.endsWith("/.dockerenv"))),
         );
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should preserve explicit host mappings on Podman", async () => {
@@ -544,7 +524,7 @@ describe("browser/docker", () => {
         const driver = await start("browser", {}, { hosts });
         const config = JSON.parse(writeConfig.firstCall.args[1]);
         assert.deepEqual(config.chrome.versions["98.0"].hosts, hosts);
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     describe("native rootless Podman networking", () => {
@@ -578,7 +558,7 @@ describe("browser/docker", () => {
             });
             assert.equal(driver.gridUrl, "http://127.0.0.1:12346/wd/hub");
             assert.calledWith(fetchStub, "http://127.0.0.1:12346/status");
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
             assert.isFalse(command.getCalls().some(call => call.args[0][0] === "network"));
         });
 
@@ -594,7 +574,7 @@ describe("browser/docker", () => {
                 assert.calledWith(command, ["cp", "/tmp/testplane-selenoid-test/.dockerenv", `${name}:/.dockerenv`]);
                 assert.equal(driver.gridUrl, "http://127.0.0.1:12345/wd/hub");
                 assert.notCalled(getPortStub);
-                await driver.free();
+                await driver[Symbol.asyncDispose]();
             });
         }
 
@@ -603,7 +583,7 @@ describe("browser/docker", () => {
             const driver = await start("browser");
             assert.calledWith(command, ["network", "create", "--ipv6", sinon.match.string]);
             assert.notCalled(getPortStub);
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should preserve bridge networking for rootless Docker", async () => {
@@ -611,7 +591,7 @@ describe("browser/docker", () => {
             const driver = await start("browser");
             assert.calledWith(command, ["network", "create", "--ipv6", sinon.match.string]);
             assert.notCalled(getPortStub);
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should remove only browsers owned by the controller after stopping it", async () => {
@@ -626,7 +606,7 @@ describe("browser/docker", () => {
             ]);
             children.resolves("owned-browser");
 
-            await Promise.all([driver.free(), driver.kill()]);
+            await Promise.all([driver[Symbol.asyncDispose](), driver[Symbol.asyncDispose]()]);
 
             assert.callOrder(
                 command.withArgs(["rm", "--force", name]),
@@ -650,61 +630,26 @@ describe("browser/docker", () => {
             assert.isFalse(syncCommand.getCalls().some(call => call.args[1][0] === "network"));
         });
 
-        it("should use controller and session labels for diagnostics, CDP lookup and session cleanup", async () => {
-            const controller = await start("browser");
-            const name = command.getCalls().find(call => call.args[0][0] === "create")!.args[0][2];
-            const session = controller.createSession("98.0", 1000);
-            const label = session.selenoidOptions!.labels["testplane.session"];
-            const filters = [
-                "--filter",
-                `label=testplane.controller=${name}`,
-                "--filter",
-                `label=testplane.session=${label}`,
-            ];
-            command.withArgs(["ps", "--all", "--quiet", ...filters]).resolves("owned-browser");
-            command.withArgs(["ps", "--quiet", ...filters]).resolves("owned-browser");
-            const file = { fd: 123, appendFile: sandbox.stub().resolves(), close: sandbox.stub().resolves() };
-            openLog.resolves(file);
-
-            assert.include(await session.getLogs!(), "Browser container log (owned-browser)");
-            await session.saveLogs!("session-id");
-            fetchStub.onCall(fetchStub.callCount).rejects(new Error("CDP starting"));
-            fetchStub.resolves({ ok: true, json: async () => ({ domains: [] }) });
-            await session.prepareCdp!("session-id");
-            session.setSessionId!("session-id");
-            await session.free();
-
-            assert.calledWith(command, ["ps", "--quiet", ...filters]);
-            assert.calledWith(command, ["exec", "--user", "0", "owned-browser", "/bin/sh", "-ec", sinon.match.string]);
-            assert.calledWith(command, ["rm", "--force", "owned-browser"]);
-            assert.calledWith(
-                fetchStub,
-                "http://127.0.0.1:12346/wd/hub/session/session-id",
-                sinon.match({ method: "DELETE" }),
-            );
-            const lookups = command.getCalls().filter(call => call.args[0][0] === "ps");
-            assert.isTrue(lookups.every(call => call.args[0].includes(`label=testplane.controller=${name}`)));
-            await controller.free();
-        });
-
         it("should label browsers added later without mutating their configuration", async () => {
             const controller = await start("browser");
             const name = command.getCalls().find(call => call.args[0][0] === "create")!.args[0][2];
             const labels = { team: "tests" };
             fetchStub.resolves({ ok: true, json: async () => ({ browsers: { firefox: { added: {} } } }) });
 
-            await controller.addBrowser({
-                config: { image: "firefox", selenoidImage, labels },
-                browserName: "firefox",
-                browserVersion: "added",
-            });
+            await controller.ensureBrowser(
+                makeConfig(
+                    "firefox",
+                    { image: "firefox", selenoidImage, labels },
+                    { browserName: "firefox", browserVersion: "added" },
+                ),
+            );
 
             assert.deepEqual(JSON.parse(writeConfig.lastCall.args[1]).firefox.versions.added.labels, {
                 team: "tests",
                 "testplane.controller": name,
             });
             assert.deepEqual(labels, { team: "tests" });
-            await controller.free();
+            await controller[Symbol.asyncDispose]();
         });
 
         it("should clean up startup failures without touching any shared networks", async () => {
@@ -739,25 +684,7 @@ describe("browser/docker", () => {
         const config = JSON.parse(writeConfig.firstCall.args[1]);
         assert.equal(config.chrome.versions["98.0"].image, "browser:1");
         assert.notProperty(config.chrome.versions["98.0"], "selenoidImage");
-        await driver.free();
-    });
-
-    it("should require an explicitly configured Selenoid image before calling Docker", async () => {
-        await assert.isRejected(
-            startDockerController({ image: "browser:1" }, { browserName: "chrome" }),
-            '"docker.selenoidImage" must be a non-empty string when "gridUrl" is "docker"',
-        );
-        assert.notCalled(command);
-    });
-
-    [null, "", "  ", 123, "--privileged", "image extra"].forEach(value => {
-        it(`should reject invalid selenoidImage before starting Docker: ${JSON.stringify(value)}`, async () => {
-            await assert.isRejected(
-                start("browser", {}, { selenoidImage: value } as DockerConfig),
-                "docker.selenoidImage",
-            );
-            assert.notCalled(command);
-        });
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should route Firefox sessions through /wd/hub inside the browser container", async () => {
@@ -777,36 +704,22 @@ describe("browser/docker", () => {
             assert.deepEqual(config.firefox.versions["148.0"].tmpfs, { "/tmp": "size=512m" });
             assert.equal(driver.gridUrl, "http://127.0.0.1:12345/wd/hub");
         } finally {
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         }
-    });
-
-    [null, "", "  "].forEach(image => {
-        it(`should reject missing or empty image: ${JSON.stringify(image)}`, async () => {
-            await assert.isRejected(start(image), '"docker.image" must be a non-empty string');
-            assert.notCalled(command);
-        });
-    });
-
-    ["--privileged", "image extra"].forEach(image => {
-        it(`should reject invalid image: ${image}`, async () => {
-            await assert.isRejected(start(image), "Invalid docker.image");
-            assert.notCalled(command);
-        });
     });
 
     it("should explain how to fix a missing Docker executable", async () => {
         command
             .withArgs(sinon.match.array.startsWith(["info"]))
             .rejects(Object.assign(new Error("spawn docker ENOENT"), { code: "ENOENT" }));
-        await assert.isRejected(start("browser"), "Docker is not installed or is not on PATH");
+        await assert.isRejected(start("browser"), "spawn docker ENOENT");
     });
 
     it("should distinguish an unavailable daemon from a missing image", async () => {
         command
             .withArgs(sinon.match.array.startsWith(["info"]))
             .rejects(new Error("Cannot connect to the Docker daemon"));
-        await assert.isRejected(start("browser"), "Docker daemon is unavailable");
+        await assert.isRejected(start("browser"), "Cannot connect to the Docker daemon");
     });
 
     it("should pull a missing image for amd64 and then start it", async () => {
@@ -817,13 +730,13 @@ describe("browser/docker", () => {
         const driver = await start("browser");
         assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", "browser"]);
         assert.equal(command.getCalls().filter(call => call.args[0][0] === "image").length, 3);
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should not pull an image already available locally", async () => {
         const driver = await start("browser");
         assert.isFalse(command.getCalls().some(call => call.args[0][0] === "pull"));
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should share the pull between parallel sessions", async () => {
@@ -833,7 +746,7 @@ describe("browser/docker", () => {
             .rejects(new Error("No such image: browser"));
         const drivers = await Promise.all([start("browser"), start("browser")]);
         assert.equal(command.getCalls().filter(call => call.args[0][0] === "pull").length, 1);
-        await Promise.all(drivers.map(driver => driver.free()));
+        await Promise.all(drivers.map(driver => driver[Symbol.asyncDispose]()));
     });
 
     it("should report registry errors and allow retrying a failed pull", async () => {
@@ -842,10 +755,10 @@ describe("browser/docker", () => {
             .onFirstCall()
             .rejects(new Error("No such image: browser"));
         command.withArgs(sinon.match.array.startsWith(["pull"])).rejects(new Error("pull access denied"));
-        await assert.isRejected(start("browser"), 'Cannot pull Docker image "browser" for linux/amd64');
+        await assert.isRejected(start("browser"), "pull access denied");
         assert.isFalse(command.getCalls().some(call => call.args[0][0] === "create"));
         const driver = await start("browser");
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should verify the platform after pulling", async () => {
@@ -857,7 +770,7 @@ describe("browser/docker", () => {
 
     it("should preserve unexpected image inspection errors", async () => {
         command.withArgs(sinon.match.array.startsWith(["image", "inspect"])).rejects(new Error("permission denied"));
-        await assert.isRejected(start("browser"), 'Cannot inspect Docker image "browser".\npermission denied');
+        await assert.isRejected(start("browser"), "permission denied");
     });
 
     it("should reject images for a different architecture", async () => {
@@ -865,9 +778,9 @@ describe("browser/docker", () => {
         await assert.isRejected(start("browser"), 'targets "linux/arm64"; expected "linux/amd64"');
     });
 
-    it("should remove the container only once when free and kill race", async () => {
+    it("should remove the container only once on concurrent disposal", async () => {
         const driver = await start("browser");
-        await Promise.all([driver.free(), driver.kill()]);
+        await Promise.all([driver[Symbol.asyncDispose](), driver[Symbol.asyncDispose]()]);
         assert.equal(command.getCalls().filter(call => call.args[0][0] === "rm").length, 1);
         assert.calledWith(process.off as SinonStub, "exit", exitHandlers[0]);
     });
@@ -882,7 +795,7 @@ describe("browser/docker", () => {
         const drivers = await Promise.all([start("browser"), start("browser")]);
         const runs = command.getCalls().filter(call => call.args[0][0] === "create");
         assert.notEqual(runs[0].args[0][2], runs[1].args[0][2]);
-        await Promise.all(drivers.map(driver => driver.free()));
+        await Promise.all(drivers.map(driver => driver[Symbol.asyncDispose]()));
     });
 
     it("should remove a container and include logs when startup fails", async () => {
@@ -908,71 +821,79 @@ describe("browser/docker", () => {
         fetchStub.onSecondCall().resolves({ ok: true, json: async () => ({ value: { ready: false } }) });
         const driver = await start("browser");
         assert.calledThrice(fetchStub);
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should remove leftover browser containers before removing the isolated network", async () => {
         const driver = await start("browser");
         command.withArgs(sinon.match.array.startsWith(["ps"])).resolves("child-one\nchild-two");
-        await driver.kill();
+        await driver[Symbol.asyncDispose]();
         assert.calledWith(command, ["rm", "--force", "child-one", "child-two"]);
         assert.calledWith(command, ["network", "rm", sinon.match(/^testplane-.*-network$/)]);
     });
 
     it("should expose controller logs before cleanup when session creation fails", async () => {
         const driver = await start("browser");
-        assert.equal(await driver.getLogs!(), "stderr logs");
-        await driver.kill();
+        assert.equal(await driver.getLogs(), "stderr logs");
+        await driver[Symbol.asyncDispose]();
     });
 
-    it("should read container logs before the browser service becomes ready", async () => {
-        const driver = await start("browser");
-        const network = command.getCalls().find(call => call.args[0][0] === "create")!.args[0][2] + "-network";
-        command
-            .withArgs(["ps", "--all", "--quiet", "--filter", `network=${network}`, "--filter", "ancestor=browser"])
-            .resolves("android-container");
-        command.withArgs(["logs", "--tail", "100", "android-container"]).resolves("Emulator failed to boot\n");
-        listLogs.rejects(new Error("Selenoid has not saved logs yet"));
-
-        try {
-            assert.include(
-                await driver.getLogs!(),
-                "Browser container log (android-container):\nEmulator failed to boot",
-            );
-        } finally {
-            await driver.free();
-        }
-    });
-
-    it("should preserve saved logs when listing browser containers fails", async () => {
-        const driver = await start("browser");
-        command.withArgs(sinon.match.array.startsWith(["ps"])).rejects(new Error("Docker unavailable"));
-        assert.equal(await driver.getLogs!(), "stderr logs");
-        command.withArgs(sinon.match.array.startsWith(["ps"])).resolves("");
-        await driver.free();
-    });
-
-    it("should include saved browser logs and close the log file", async () => {
-        const driver = await start("browser");
-        const contents = Buffer.from("Chrome: No usable sandbox!");
-        const close = sandbox.stub().resolves();
-        listLogs.resolves([{ name: "session.log", isFile: (): boolean => true }]);
-        openLog.resolves({
-            stat: async () => ({ size: contents.length }),
-            read: async (buffer: Buffer) => ({ bytesRead: contents.copy(buffer) }),
-            close,
+    describe("session logs", () => {
+        const logResponse = (): { ok: boolean; body: ReturnType<typeof Readable.toWeb> } => ({
+            ok: true,
+            body: Readable.toWeb(Readable.from([Buffer.from("browser output")])),
         });
 
-        assert.include(await driver.getLogs!(), "Browser log (session.log):\nChrome: No usable sandbox!");
-        assert.calledOnce(close);
-        await driver.kill();
-    });
+        it("should stream Selenoid logs to a session file outside the temporary config directory", async () => {
+            const controller = await start("browser");
+            fetchStub.resolves(logResponse());
 
-    it("should preserve controller logs if browser logs cannot be read", async () => {
-        const driver = await start("browser");
-        listLogs.rejects(new Error("logs unavailable"));
-        assert.equal(await driver.getLogs!(), "stderr logs");
-        await driver.kill();
+            const file = await controller.saveSessionLogs("session/id");
+
+            assert.equal(file, path.join(tmpdir(), "testplane-logs", "session%2Fid.log"));
+            assert.calledWith(fetchStub, "http://127.0.0.1:12345/logs/session%2Fid.log");
+            assert.calledOnceWith(writeStream, file, { mode: 0o600 });
+            assert.equal(Buffer.concat(logChunks).toString(), "browser output");
+            await controller[Symbol.asyncDispose]();
+            assert.calledOnceWith(removeConfig, "/tmp/testplane-selenoid-test", { recursive: true, force: true });
+        });
+
+        it("should request a custom Selenoid log name but save it under the session ID", async () => {
+            const controller = await start("browser");
+            fetchStub.resolves(logResponse());
+
+            const file = await controller.saveSessionLogs("session-id", "custom name.log");
+
+            assert.calledWith(fetchStub, "http://127.0.0.1:12345/logs/custom%20name.log");
+            assert.equal(file, path.join(tmpdir(), "testplane-logs", "session-id.log"));
+        });
+
+        it("should retry while Selenoid is finishing the session log", async () => {
+            const controller = await start("browser");
+            fetchStub.resetHistory();
+            const cancel = sandbox.stub().resolves();
+            fetchStub.onFirstCall().resolves({ ok: false, status: 404, body: { cancel } });
+            fetchStub.onSecondCall().resolves(logResponse());
+
+            await controller.saveSessionLogs("session-id");
+
+            assert.calledTwice(fetchStub);
+            assert.calledOnce(cancel);
+            assert.equal(Buffer.concat(logChunks).toString(), "browser output");
+        });
+
+        it("should propagate non-404 errors and release the response body", async () => {
+            const controller = await start("browser");
+            fetchStub.resetHistory();
+            const cancel = sandbox.stub().resolves();
+            fetchStub.resolves({ ok: false, status: 500, body: { cancel } });
+
+            await assert.isRejected(controller.saveSessionLogs("session-id"), "HTTP 500");
+
+            assert.calledOnce(fetchStub);
+            assert.calledOnce(cancel);
+            assert.notCalled(writeStream);
+        });
     });
 
     it("should use the configured image as the default when no version is specified", async () => {
@@ -980,7 +901,7 @@ describe("browser/docker", () => {
         const config = JSON.parse(writeConfig.firstCall.args[1]);
         assert.equal(config.chrome.default, "default");
         assert.equal(config.chrome.versions.default.image, "browser");
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
     it("should allow a missing browser name for Appium images", async () => {
@@ -995,65 +916,25 @@ describe("browser/docker", () => {
         const driver = await start("browser", { browserName: undefined }, container);
         try {
             const config = JSON.parse(writeConfig.firstCall.args[1]);
-            assert.deepEqual(config[""].versions["98.0"], { image: "browser", ...container });
+            assert.match(config.appium.versions["98.0"], {
+                image: "browser",
+                ...container,
+                labels: { "testplane.controller": sinon.match.string },
+            });
             assert.equal(driver.gridUrl, "http://127.0.0.1:12345/wd/hub");
         } finally {
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         }
     });
 
-    describe("session logs", () => {
-        it("should stream full logs to a session file outside the directory removed on cleanup", async () => {
-            const driver = await start("browser");
-            const file = { fd: 123, appendFile: sandbox.stub().resolves(), close: sandbox.stub().resolves() };
-            openLog.resolves(file);
-            command.withArgs(sinon.match.array.startsWith(["ps", "--all"])).resolves("browser-id");
-
-            const filePath = await driver.saveLogs!("session/id");
-
-            assert.equal(filePath, path.join(tmpdir(), "testplane-logs", "session%2Fid.log"));
-            assert.calledWith(openLog, filePath, "w", 0o600);
-            assert.calledWith(file.appendFile, sinon.match("Session: session/id"));
-            assert.calledWith(
-                spawnCommand,
-                "docker",
-                ["logs", "--timestamps", "browser-id"],
-                sinon.match({ stdio: ["ignore", 123, 123] }),
-            );
-            assert.isFalse(spawnCommand.getCalls().some(call => call.args[1].includes("--tail")));
-            assert.calledOnce(file.close);
-            await driver.free();
-            assert.calledOnceWith(removeConfig, "/tmp/testplane-selenoid-test", { recursive: true, force: true });
-        });
-
-        it("should record unavailable output and still close the log file", async () => {
-            const driver = await start("browser");
-            const file = { fd: 123, appendFile: sandbox.stub().resolves(), close: sandbox.stub().resolves() };
-            openLog.resolves(file);
-            spawnCommand.callsFake(() => {
-                const child = new EventEmitter();
-                queueMicrotask(() => child.emit("error", new Error("daemon unavailable")));
-                return child;
-            });
-            await driver.saveLogs!("session-id");
-            assert.calledWith(file.appendFile, sinon.match("Log collection failed: daemon unavailable"));
-            assert.calledOnce(file.close);
-            await driver.free();
-        });
-    });
-
     for (const browserName of ["chrome", "yandex", "Chrome", "Yandex"]) {
-        it(`should give Selenoid the prepared image for "${browserName}" and use it to locate containers`, async () => {
+        it(`should give Selenoid the prepared image for "${browserName}"`, async () => {
             prepareImage.resolves("testplane-browser:prepared");
             const driver = await start("browser", { browserName });
             const config = JSON.parse(writeConfig.firstCall.args[1]);
             assert.calledOnce(prepareImage);
             assert.equal(config[browserName].versions["98.0"].image, "testplane-browser:prepared");
-            await driver.getLogs!();
-            assert.isTrue(
-                command.getCalls().some(call => call.args[0].includes("ancestor=testplane-browser:prepared")),
-            );
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
     }
 
@@ -1064,9 +945,7 @@ describe("browser/docker", () => {
             const config = JSON.parse(writeConfig.firstCall.args[1]);
             assert.notCalled(prepareImage);
             assert.equal(config[browserName].versions["98.0"].image, "original-browser:1");
-            await driver.getLogs!();
-            assert.isTrue(command.getCalls().some(call => call.args[0].includes("ancestor=original-browser:1")));
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
     }
 
@@ -1081,7 +960,7 @@ describe("browser/docker", () => {
         it("should reuse a working CDP adapter without starting a proxy", async () => {
             const driver = await start("browser");
             fetchStub.resolves({ ok: true, json: async () => ({ domains: [] }) });
-            await driver.prepareCdp!("session-id");
+            await driver.prepareCdp("session-id", "session-label", 50);
             assert.calledWith(fetchStub, "http://127.0.0.1:12345/devtools/session-id/json/protocol");
             assert.lengthOf(
                 command.getCalls().filter(call => call.args[0][0] === "create"),
@@ -1089,7 +968,7 @@ describe("browser/docker", () => {
             );
             assert.isFalse(command.getCalls().some(call => call.args[0][0] === "exec"));
             assert.calledOnce(prepareImage);
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should check adapter presence before waiting for its native route", async () => {
@@ -1098,7 +977,7 @@ describe("browser/docker", () => {
             fetchStub.resolves({ ok: true, json: async () => ({ domains: [] }) });
             fetchStub.onFirstCall().rejects(new Error("CDP unavailable"));
             command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
-            await driver.prepareCdp!("session-id");
+            await driver.prepareCdp("session-id", "session-label", 50);
             assert.calledOnce(prepareImage);
             assert.isTrue(command.getCalls().some(call => call.args[0][0] === "exec"));
             assert.lengthOf(
@@ -1109,7 +988,7 @@ describe("browser/docker", () => {
                 command.getCalls().filter(call => call.args[0][0] === "image"),
                 2,
             );
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should skip waiting when the browser image has no adapter", async () => {
@@ -1118,10 +997,10 @@ describe("browser/docker", () => {
             fetchStub.rejects(new Error("CDP unavailable"));
             command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
             command.withArgs(sinon.match.array.startsWith(["exec"])).resolves("absent\n");
-            assert.isFalse(await driver.prepareCdp!("session-id"));
+            assert.isFalse(await driver.prepareCdp("session-id", "session-label", 50));
             assert.calledOnce(fetchStub);
             assert.calledWith(warnStub, sinon.match("continuing without CDP"));
-            await driver.free();
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should propagate adapter inspection failures", async () => {
@@ -1129,8 +1008,8 @@ describe("browser/docker", () => {
             fetchStub.rejects(new Error("CDP unavailable"));
             command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
             command.withArgs(sinon.match.array.startsWith(["exec"])).rejects(new Error("exec failed"));
-            await assert.isRejected(driver.prepareCdp!("session-id"), "exec failed");
-            await driver.free();
+            await assert.isRejected(driver.prepareCdp("session-id", "session-label", 50), "exec failed");
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should fail if the browser exits before CDP is ready", async () => {
@@ -1138,16 +1017,19 @@ describe("browser/docker", () => {
             fetchStub.rejects(new Error("CDP unavailable"));
             command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
             command.withArgs(["inspect", "--format", "{{.State.Running}}", "browser-id"]).resolves("false");
-            await assert.isRejected(driver.prepareCdp!("session-id"), "browser container exited");
-            await driver.kill();
+            await assert.isRejected(driver.prepareCdp("session-id", "session-label", 50), "browser container exited");
+            await driver[Symbol.asyncDispose]();
         });
 
         it("should time out if CDP never becomes ready", async () => {
             const driver = await start("browser", { timeout: 10 });
             fetchStub.rejects(new Error("CDP unavailable"));
             command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
-            await assert.isRejected(driver.prepareCdp!("session-id"), "CDP adapter did not become ready");
-            await driver.kill();
+            await assert.isRejected(
+                driver.prepareCdp("session-id", "session-label", 50),
+                "CDP adapter did not become ready",
+            );
+            await driver[Symbol.asyncDispose]();
         });
     });
 
@@ -1165,131 +1047,21 @@ describe("browser/docker", () => {
             .rejects(new Error("No such image"));
         const driver = await start("browser");
         assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", selenoidImage]);
-        await driver.free();
+        await driver[Symbol.asyncDispose]();
     });
 
-    it("should retain the exit cleanup and allow retry after a removal failure", async () => {
+    it("should retain synchronous exit cleanup after a removal failure", async () => {
         const driver = await start("browser");
         const rm = command.withArgs(sinon.match.array.startsWith(["rm"]));
         rm.onFirstCall().rejects(new Error("daemon unavailable"));
-        await assert.isRejected(Promise.resolve(driver.free()), "Cannot remove Docker environment");
+        await assert.isRejected(driver[Symbol.asyncDispose](), "daemon unavailable");
         assert.neverCalledWith(process.off as SinonStub, "exit", exitHandlers[0]);
-        await driver.kill();
-        assert.calledWith(process.off as SinonStub, "exit", exitHandlers[0]);
-    });
-    describe("shared sessions", () => {
-        it("isolates containers by session label when identical browsers run together", async () => {
-            const controller = await start("browser");
-            const first = controller.createSession("98.0", 1000);
-            const second = controller.createSession("98.0", 1000);
-            const firstLabel = first.selenoidOptions!.labels["testplane.session"];
-            const secondLabel = second.selenoidOptions!.labels["testplane.session"];
-            assert.notEqual(firstLabel, secondLabel);
-            command.callsFake(async (args: string[]) => {
-                if (args[0] === "ps")
-                    return args.includes(`label=testplane.session=${firstLabel}`)
-                        ? "first-container"
-                        : "second-container";
-                return "";
-            });
-            await Promise.all([first.free(), first.kill()]);
-            assert.calledOnceWith(command.withArgs(["rm", "--force", "first-container"]));
-            assert.neverCalledWith(command, ["rm", "--force", "second-container"]);
-            assert.notCalled(removeConfig);
-            await second.free();
-            await controller.kill();
-        });
+        assert.calledWith(command, ["network", "rm", sinon.match.string]);
+        assert.calledOnce(removeConfig);
 
-        it("waits for Selenoid's concurrent container removal", async () => {
-            const controller = await start("browser");
-            const session = controller.createSession("98.0", 1000);
-            command.withArgs(sinon.match.array.startsWith(["ps", "--all"])).resolves("owned-container");
-            const remove = command.withArgs(["rm", "--force", "owned-container"]);
-            remove.onFirstCall().rejects(new Error("removal of container owned-container is already in progress"));
-            remove.onSecondCall().rejects(new Error("No such container: owned-container"));
-            await session.free();
-            assert.calledTwice(remove);
-            assert.notCalled(removeConfig);
-            await controller.kill();
-        });
+        exitHandlers[0]();
 
-        it("finds the CDP container by label instead of the shared image", async () => {
-            const controller = await start("browser");
-            const session = controller.createSession("98.0", 1000);
-            fetchStub.resetHistory();
-            fetchStub.onFirstCall().rejects(new Error("adapter starting"));
-            fetchStub.resolves({ ok: true, json: async () => ({ domains: [] }) });
-            command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("my-container");
-            await session.prepareCdp!("session-id");
-            const lookup = command.getCalls().find(call => call.args[0][0] === "ps")!.args[0];
-            assert.include(lookup, `label=testplane.session=${session.selenoidOptions!.labels["testplane.session"]}`);
-            assert.notInclude(lookup, "ancestor=browser");
-            await controller.kill();
-        });
-
-        it("saves only the session's browser logs and saves the controller log once", async () => {
-            const controller = await startDockerController(
-                { image: "chrome-image", selenoidImage },
-                {},
-                [
-                    {
-                        config: { image: "chrome-image", selenoidImage },
-                        browserName: "chrome",
-                        browserVersion: "chrome-route",
-                    },
-                    {
-                        config: { image: "firefox-image", selenoidImage },
-                        browserName: "firefox",
-                        browserVersion: "firefox-route",
-                    },
-                ],
-                2,
-            );
-            const session = controller.createSession("firefox-route", 1000);
-            const label = session.selenoidOptions!.labels["testplane.session"];
-            const file = { fd: 123, appendFile: sandbox.stub().resolves(), close: sandbox.stub().resolves() };
-            openLog.resolves(file);
-            command.withArgs(sinon.match.array.startsWith(["ps", "--all"])).resolves("my-firefox");
-            await session.saveLogs!("firefox-session");
-            assert.calledWith(file.appendFile, sinon.match("Image: firefox-image"));
-            assert.calledWith(file.appendFile, sinon.match("Selenoid log:"));
-            assert.calledOnceWith(spawnCommand, "docker", ["logs", "--timestamps", "my-firefox"], sinon.match.object);
-            const lookup = command.getCalls().find(call => call.args[0][0] === "ps")!.args[0];
-            assert.include(lookup, `label=testplane.session=${label}`);
-            await Promise.all([controller.free(), controller.kill()]);
-            assert.calledTwice(spawnCommand);
-            assert.match(spawnCommand.secondCall.args[1][2], /^testplane-/);
-        });
-
-        it("rejects conflicting controller images before image preparation", async () => {
-            await assert.isRejected(
-                startDockerController({ image: "browser", selenoidImage }, {}, [
-                    {
-                        config: { image: "browser", selenoidImage: "different" },
-                        browserName: "chrome",
-                        browserVersion: "1",
-                    },
-                ]),
-                "same docker.selenoidImage",
-            );
-            assert.notCalled(command);
-        });
-
-        it("releases the Selenoid slot and removes only the owned container after a failed DELETE", async () => {
-            const controller = await start("browser");
-            const session = controller.createSession("98.0", 1000);
-            session.setSessionId!("session-id");
-            fetchStub.rejects(new Error("connection failed"));
-            command.withArgs(sinon.match.array.startsWith(["ps", "--all"])).resolves("owned-container");
-            await session.kill();
-            assert.calledWith(
-                fetchStub,
-                "http://127.0.0.1:12345/wd/hub/session/session-id",
-                sinon.match({ method: "DELETE" }),
-            );
-            assert.calledWith(command, ["rm", "--force", "owned-container"]);
-            assert.notCalled(removeConfig);
-            await controller.kill();
-        });
+        const name = command.getCalls().find(call => call.args[0][0] === "create")!.args[0][2];
+        assert.calledWith(syncCommand, "docker", ["rm", "--force", name]);
     });
 });

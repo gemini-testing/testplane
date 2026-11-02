@@ -1,8 +1,14 @@
 "use strict";
 
-exports.stubBrowser = function (id, version, publicAPI = {}) {
+exports.stubBrowser = function (
+    id = "default-id",
+    version,
+    publicAPI = {},
+    config = { id, testsPerSession: Infinity },
+) {
     return {
-        id: id || "default-id",
+        id,
+        config,
         sessionId: process.hrtime().join("_"), // must be unique
         init: sinon.stub().resolves(),
         reset: sinon.stub().resolves(),

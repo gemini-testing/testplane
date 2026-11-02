@@ -11,6 +11,10 @@ const { makeConfigStub } = require("../../utils");
 describe("browser-pool", () => {
     const sandbox = sinon.createSandbox();
 
+    beforeEach(() => {
+        sandbox.stub(BasicPool, "create").returns(sinon.createStubInstance(BasicPool));
+    });
+
     afterEach(() => sandbox.restore());
 
     const mkPool_ = opts => {
@@ -26,12 +30,14 @@ describe("browser-pool", () => {
         const emitter = new EventEmitter();
         const config = makeConfigStub();
 
-        sandbox.spy(BasicPool, "create");
-
         pool.create(config, emitter);
 
         assert.calledOnce(BasicPool.create);
-        assert.calledWith(BasicPool.create, config, emitter);
+        assert.calledWith(
+            BasicPool.create,
+            { browserDownloadMirrors: config.browserDownloadMirrors, areLocalWdDebugLogsEnabled: config.system.debug },
+            emitter,
+        );
     });
 
     it("should create pool according to perBrowserLimit by default", () => {

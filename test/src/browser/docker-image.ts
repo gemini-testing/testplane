@@ -3,9 +3,9 @@ import sinon, { type SinonStub } from "sinon";
 import { mkdtemp, readFile, readdir, rm } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
-import type { prepareDockerBrowserImage as Prepare } from "src/browser/docker-image";
+import type { prepareDockerBrowserImage as Prepare } from "src/browser-backend/docker/browser-image";
 
-describe("browser/docker-image", () => {
+describe("browser-backend/docker/browser-image", () => {
     const sandbox = sinon.createSandbox();
     let directory: string;
     let prepare: typeof Prepare;
@@ -16,9 +16,9 @@ describe("browser/docker-image", () => {
     let recipes: string[];
 
     const load = (platform = "darwin", arch = "arm64"): typeof Prepare =>
-        proxyquire("src/browser/docker-image", {
+        proxyquire("src/browser-backend/docker/browser-image", {
             os: { tmpdir: () => directory, platform: () => platform, arch: () => arch },
-            "../utils/logger": { log: sandbox.stub(), warn: sandbox.stub() },
+            "../../utils/logger": { log: sandbox.stub(), warn: sandbox.stub() },
         }).prepareDockerBrowserImage;
 
     beforeEach(async () => {

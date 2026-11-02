@@ -13,8 +13,6 @@ import {
 } from "../events";
 import { RunnableEmitter } from "./types";
 import RuntimeConfig from "../config/runtime-config";
-import { configureDockerRun, stopDockerRun } from "../browser/docker-manager";
-import { DOCKER_GRID_URL } from "../constants/config";
 import WorkersRegistry from "../utils/workers-registry";
 import PromiseGroup from "./promise-group";
 import { TestCollection } from "../test-collection";
@@ -121,46 +119,50 @@ export class MainRunner extends RunnableEmitter {
         this.runned = true;
 
         let failed = false;
+        let runError: unknown;
         try {
-            await this._configureDocker(testCollection);
+            const browserConfigs = testCollection.getBrowsers().map(browserId => this.config.forBrowser(browserId));
+            await this.browserPool?.prewarm(browserConfigs);
             await this.emitAndWait(MasterEvents.RUNNER_START, this);
             this.emit(MasterEvents.BEGIN);
             await this._runTests(testCollection, opts);
         } catch (error) {
             failed = true;
-            // Report the cause before waiting for plugin and worker cleanup.
-            logger.error(error instanceof Error ? error.stack || error.message : error);
-            throw error;
-        } finally {
-            const finish = async (): Promise<void> => {
-                this.emit(MasterEvents.END);
-                await this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn);
-            };
-            if (failed) {
-                // A stalled cleanup must not hide the original error or block the CLI exit.
-                await this._cleanupAfterFailure("RUNNER_END handlers", finish);
-                await this._cleanupAfterFailure("workers", () => this.workersRegistry.end());
-                await this._cleanupAfterFailure("Docker", () => stopDockerRun(this.config));
-            } else {
-                try {
-                    await finish();
-                    await this.workersRegistry.end();
-                } finally {
-                    await stopDockerRun(this.config);
-                }
+            runError = error;
+        }
+
+        const cleanups: Array<[string, () => unknown]> = [
+            ["browser pool", (): Promise<void> | undefined => this.browserPool?.[Symbol.asyncDispose]()],
+            ["END handlers", (): boolean => this.emit(MasterEvents.END)],
+            [
+                "RUNNER_END handlers",
+                (): Promise<unknown> => this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn),
+            ],
+            ["workers", (): Promise<void> => this.workersRegistry.end()],
+        ];
+        const errors: unknown[] = [];
+
+        for (const [name, cleanup] of cleanups) {
+            try {
+                const pending = Promise.resolve().then(cleanup);
+                await (failed
+                    ? promiseTimeout(
+                          pending,
+                          FAILURE_CLEANUP_TIMEOUT,
+                          `Timed out waiting for ${name} cleanup after a runner error (${FAILURE_CLEANUP_TIMEOUT} ms)`,
+                      )
+                    : pending);
+            } catch (error) {
+                errors.push(error);
             }
         }
-    }
 
-    private async _cleanupAfterFailure(name: string, cleanup: () => Promise<void>): Promise<void> {
-        try {
-            await promiseTimeout(
-                cleanup(),
-                FAILURE_CLEANUP_TIMEOUT,
-                `Timed out waiting for ${name} cleanup after a runner error (${FAILURE_CLEANUP_TIMEOUT} ms)`,
-            );
-        } catch (error) {
-            logger.warn(error);
+        if (failed) {
+            errors.forEach(error => logger.warn(error));
+            throw runError;
+        } else if (errors.length > 0) {
+            errors.slice(1).forEach(error => logger.warn(error));
+            throw errors[0];
         }
     }
 
@@ -178,25 +180,6 @@ export class MainRunner extends RunnableEmitter {
         this.running.add(this._waitBrowserRunnerTestsCompletion(browserRunner));
 
         return true;
-    }
-
-    private async _configureDocker(testCollection: TestCollection): Promise<void> {
-        if (!RuntimeConfig.getInstance().local) {
-            const dockerSessions = testCollection.getBrowsers().reduce((total, browserId) => {
-                const browser = this.config.forBrowser(browserId);
-                return total + (browser.gridUrl === DOCKER_GRID_URL ? browser.sessionsPerBrowser : 0);
-            }, 0);
-            if (dockerSessions > 0) {
-                const { checkDockerParallelism } = await import("../browser/docker");
-                const limit = Math.min(dockerSessions, this.config.system.parallelLimit);
-                await checkDockerParallelism(limit);
-                configureDockerRun(
-                    this.config,
-                    testCollection.getBrowsers().filter(id => this.config.forBrowser(id).gridUrl === DOCKER_GRID_URL),
-                    limit,
-                );
-            }
-        }
     }
 
     protected async _runTests(testCollection: TestCollection, opts?: RunnerRunOptions): Promise<void> {

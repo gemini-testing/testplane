@@ -25,7 +25,12 @@ describe("browser/standalone/launchBrowser", () => {
     let launchBrowser;
     let receivedConfig;
     let initImageStub;
-    let newBrowserInitStub;
+    let pool;
+    let acquirePool;
+    let releasePool;
+    let disposeAttachment;
+    let existingBrowserInitStub;
+    let receivedRuntimeOptions;
 
     beforeEach(() => {
         savedEnvironment = Object.fromEntries(environmentNames.map(name => [name, process.env[name]]));
@@ -33,49 +38,53 @@ describe("browser/standalone/launchBrowser", () => {
 
         initImageStub = sandbox.stub().resolves();
 
-        class NewBrowserStub {
-            constructor(config) {
+        pool = {
+            getBrowser: sandbox.stub().callsFake(async config => {
                 receivedConfig = config;
-                this.publicAPI = {
-                    sessionId: "session-id",
-                    capabilities: {},
-                    options: {},
+                return {
+                    publicAPI: { sessionId: "session-id", capabilities: {}, options: {} },
+                    getDriverPid: () => 1234,
+                    cdpAvailable: true,
                 };
-            }
-
-            async init() {}
-
-            async kill() {}
-
-            getDriverPid() {
-                return undefined;
-            }
-        }
+            }),
+            freeBrowser: sandbox.stub().resolves(),
+        };
+        releasePool = sandbox.stub().resolves();
+        acquirePool = sandbox.stub().callsFake(async options => {
+            receivedRuntimeOptions = options;
+            return { pool, [Symbol.asyncDispose]: releasePool };
+        });
+        disposeAttachment = sandbox.stub().resolves();
+        existingBrowserInitStub = sandbox.stub().resolves();
 
         class ExistingBrowserStub {
             constructor() {
                 this.publicAPI = {
-                    overwriteCommand: sandbox.stub(),
-                    addCommand: sandbox.stub(),
+                    overwriteCommand(name, command) {
+                        this[name] = command;
+                    },
+                    addCommand(name, command) {
+                        this[name] = command;
+                    },
                 };
             }
 
-            async init() {}
+            init(...args) {
+                return existingBrowserInitStub(...args);
+            }
 
-            async quit() {}
+            [Symbol.asyncDispose]() {
+                return disposeAttachment();
+            }
         }
 
-        class WebdriverPoolStub {}
         class CalibratorStub {}
-
-        newBrowserInitStub = sandbox.stub(NewBrowserStub.prototype, "init").resolves();
 
         ({ launchBrowser } = proxyquire("../../../../src/browser/standalone/launchBrowser", {
             "../../image": { initImage: initImageStub },
-            "./../new-browser": { NewBrowser: NewBrowserStub },
-            "./../existing-browser": { ExistingBrowser: ExistingBrowserStub },
-            "./../calibrator": { Calibrator: CalibratorStub },
-            "../../browser-pool/webdriver-pool": { WebdriverPool: WebdriverPoolStub },
+            "./pool": { acquireStandalonePool: acquirePool },
+            "../existing-browser": { ExistingBrowser: ExistingBrowserStub },
+            "../calibrator": { Calibrator: CalibratorStub },
         }));
     });
 
@@ -93,7 +102,68 @@ describe("browser/standalone/launchBrowser", () => {
     it("should initialize images before initializing new browser", async () => {
         await launchBrowser();
 
-        assert.callOrder(initImageStub, newBrowserInitStub);
+        assert.callOrder(initImageStub, acquirePool, pool.getBrowser, existingBrowserInitStub);
+    });
+
+    it("should pass local driver debug settings to the pool", async () => {
+        await launchBrowser({ system: { debug: true } });
+
+        assert.isTrue(receivedRuntimeOptions.areLocalWdDebugLogsEnabled);
+    });
+
+    it("should release the attachment, session and pool lease once on concurrent close calls", async () => {
+        const browser = await launchBrowser();
+
+        await Promise.all([browser.deleteSession(), browser[Symbol.asyncDispose]()]);
+
+        assert.calledOnce(disposeAttachment);
+        assert.calledOnce(pool.freeBrowser);
+        assert.strictEqual(pool.freeBrowser.firstCall.args[0], await pool.getBrowser.firstCall.returnValue);
+        assert.calledOnce(releasePool);
+        assert.callOrder(disposeAttachment, pool.freeBrowser, releasePool);
+    });
+
+    it("should release the session and lease when attachment fails", async () => {
+        const error = new Error("attachment failed");
+        existingBrowserInitStub.rejects(error);
+
+        assert.strictEqual(await launchBrowser().catch(err => err), error);
+        assert.callOrder(disposeAttachment, pool.freeBrowser, releasePool);
+    });
+
+    it("should release the lease if session creation fails", async () => {
+        const error = new Error("session failed");
+        pool.getBrowser.rejects(error);
+
+        assert.strictEqual(await launchBrowser().catch(err => err), error);
+        assert.calledOnce(releasePool);
+        assert.notCalled(pool.freeBrowser);
+        assert.notCalled(disposeAttachment);
+    });
+
+    it("should release the lease even if session cleanup fails", async () => {
+        const browser = await launchBrowser();
+        const error = new Error("session cleanup failed");
+        pool.freeBrowser.rejects(error);
+
+        assert.strictEqual(await browser.deleteSession().catch(err => err), error);
+        assert.calledOnce(releasePool);
+    });
+
+    it("should use the same browser ID for equivalent configuration", async () => {
+        await launchBrowser({ desiredCapabilities: { browserName: "chrome", browserVersion: "123" } });
+        const firstId = receivedConfig.id;
+        await launchBrowser({ desiredCapabilities: { browserVersion: "123", browserName: "chrome" } });
+
+        assert.equal(receivedConfig.id, firstId);
+        await launchBrowser({ desiredCapabilities: { browserName: "chrome", browserVersion: "124" } });
+        assert.notEqual(receivedConfig.id, firstId);
+    });
+
+    it("should delegate driver PID lookup to the owning browser", async () => {
+        const browser = await launchBrowser();
+
+        assert.equal(browser.getDriverPid(), 1234);
     });
 
     it("should accept browser download mirrors in standalone options", async () => {
@@ -104,9 +174,12 @@ describe("browser/standalone/launchBrowser", () => {
             },
         });
 
-        assert.equal(receivedConfig.browserDownloadMirrors.chrome, "https://mirror.example/options/chrome");
-        assert.equal(receivedConfig.browserDownloadMirrors.geckodriver, "https://mirror.example/options/geckodriver");
-        assert.notProperty(receivedConfig.forBrowser("chrome"), "browserDownloadMirrors");
+        assert.equal(receivedRuntimeOptions.browserDownloadMirrors.chrome, "https://mirror.example/options/chrome");
+        assert.equal(
+            receivedRuntimeOptions.browserDownloadMirrors.geckodriver,
+            "https://mirror.example/options/geckodriver",
+        );
+        assert.notProperty(receivedConfig, "browserDownloadMirrors");
     });
 
     it("should read a browser download mirror from the environment", async () => {
@@ -115,9 +188,9 @@ describe("browser/standalone/launchBrowser", () => {
 
         await launchBrowser();
 
-        assert.equal(receivedConfig.browserDownloadMirrors.chrome, "https://mirror.example/environment/chrome");
+        assert.equal(receivedRuntimeOptions.browserDownloadMirrors.chrome, "https://mirror.example/environment/chrome");
         assert.equal(
-            receivedConfig.browserDownloadMirrors.geckodriver,
+            receivedRuntimeOptions.browserDownloadMirrors.geckodriver,
             "https://mirror.example/environment/geckodriver",
         );
     });
@@ -133,9 +206,9 @@ describe("browser/standalone/launchBrowser", () => {
             },
         });
 
-        assert.equal(receivedConfig.browserDownloadMirrors.chrome, "https://mirror.example/environment/chrome");
+        assert.equal(receivedRuntimeOptions.browserDownloadMirrors.chrome, "https://mirror.example/environment/chrome");
         assert.equal(
-            receivedConfig.browserDownloadMirrors.geckodriver,
+            receivedRuntimeOptions.browserDownloadMirrors.geckodriver,
             "https://mirror.example/environment/geckodriver",
         );
     });

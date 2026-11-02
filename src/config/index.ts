@@ -193,8 +193,8 @@ export class Config {
     }
 
     /**
-     * This method is used in subrocesses to merge a created config
-     * in a subrocess with a config from the main process
+     * This method is used in subprocesses to merge a created config
+     * in a subprocess with a config from the main process
      */
     mergeWith(config: Config): void {
         _.mergeWith(this, config, (l, r) => {

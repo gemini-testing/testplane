@@ -27,13 +27,39 @@ describe("config browser-options", () => {
     afterEach(() => sandbox.restore());
 
     describe("docker", () => {
-        [undefined, null, {}, { image: "" }, { image: "   " }].forEach(docker => {
-            it(`should defer the missing image check until browser startup: ${JSON.stringify(docker)}`, async () => {
+        [undefined, null, {}, { image: "" }, { image: "   " }, { image: 123 }].forEach(docker => {
+            it(`should reject a missing or invalid browser image: ${JSON.stringify(docker)}`, async () => {
                 Config.read.resolves({
                     gridUrl: "docker",
                     browsers: { chrome: mkBrowser_({ docker }) },
                 });
-                await assert.isFulfilled(createConfig());
+                await assert.isRejected(createConfig(), '"docker.image" must be a non-empty string');
+            });
+        });
+
+        [undefined, null, "", "   ", 123].forEach(selenoidImage => {
+            it(`should reject a missing or invalid Selenoid image: ${JSON.stringify(selenoidImage)}`, async () => {
+                Config.read.resolves({
+                    gridUrl: "docker",
+                    browsers: { chrome: mkBrowser_({ docker: { image: "browser:1", selenoidImage } }) },
+                });
+                await assert.isRejected(createConfig(), '"docker.selenoidImage" must be a non-empty string');
+            });
+        });
+
+        ["image", "selenoidImage"].forEach(key => {
+            ["-image", "image with whitespace"].forEach(value => {
+                it(`should reject an invalid docker.${key} reference: ${value}`, async () => {
+                    Config.read.resolves({
+                        gridUrl: "docker",
+                        browsers: {
+                            chrome: mkBrowser_({
+                                docker: { image: "browser:1", selenoidImage: "selenoid:1", [key]: value },
+                            }),
+                        },
+                    });
+                    await assert.isRejected(createConfig(), `Invalid docker.${key} "${value}"`);
+                });
             });
         });
 
@@ -46,10 +72,13 @@ describe("config browser-options", () => {
             Config.read.resolves({
                 gridUrl: "docker",
                 browsers: {
-                    first: mkBrowser_({ docker: { image: "browser:1", path: "/", port: "4444" } }),
+                    first: mkBrowser_({
+                        docker: { image: "browser:1", selenoidImage: "selenoid:1", path: "/", port: "4444" },
+                    }),
                     second: mkBrowser_({
                         docker: {
                             image: "browser:2",
+                            selenoidImage: "selenoid:1",
                             path: "/wd/hub",
                             port: "4723",
                             shmSize: 7516192768,
@@ -60,9 +89,15 @@ describe("config browser-options", () => {
                 },
             });
             const config = await createConfig();
-            assert.deepEqual(config.forBrowser("first").docker, { image: "browser:1", path: "/", port: "4444" });
+            assert.deepEqual(config.forBrowser("first").docker, {
+                image: "browser:1",
+                selenoidImage: "selenoid:1",
+                path: "/",
+                port: "4444",
+            });
             assert.deepEqual(config.serialize().browsers.second.docker, {
                 image: "browser:2",
+                selenoidImage: "selenoid:1",
                 path: "/wd/hub",
                 port: "4723",
                 shmSize: 7516192768,
@@ -75,8 +110,11 @@ describe("config browser-options", () => {
             Config.read.resolves({
                 docker: { selenoidImage: "selenoid:global" },
                 browsers: {
-                    inherited: mkBrowser_({ docker: { image: "browser:1" } }),
-                    overridden: mkBrowser_({ docker: { image: "browser:2", selenoidImage: "selenoid:custom" } }),
+                    inherited: mkBrowser_({ gridUrl: "docker", docker: { image: "browser:1" } }),
+                    overridden: mkBrowser_({
+                        gridUrl: "docker",
+                        docker: { image: "browser:2", selenoidImage: "selenoid:custom" },
+                    }),
                     globalOnly: mkBrowser_(),
                     disabled: mkBrowser_({ docker: null }),
                 },
@@ -150,7 +188,10 @@ describe("config browser-options", () => {
         it("should allow Docker only for a selected browser", async () => {
             Config.read.resolves({
                 browsers: {
-                    docker: mkBrowser_({ gridUrl: "docker", docker: { image: "browser:1", path: "/", port: "4444" } }),
+                    docker: mkBrowser_({
+                        gridUrl: "docker",
+                        docker: { image: "browser:1", selenoidImage: "selenoid:1", path: "/", port: "4444" },
+                    }),
                     local: mkBrowser_({ gridUrl: "local" }),
                 },
             });

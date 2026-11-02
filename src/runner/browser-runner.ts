@@ -4,7 +4,7 @@ import { CancelableEmitter } from "./types";
 import * as TestRunner from "./test-runner";
 import { InterceptedEvent, MasterEvents } from "../events";
 import SuiteMonitor from "./suite-monitor";
-import BrowserAgent from "./browser-agent";
+import { BrowserAgent } from "./browser-agent";
 import PromiseGroup from "./promise-group";
 import { Config } from "../config";
 import { BrowserPool } from "../browser-pool";
@@ -68,7 +68,7 @@ export class BrowserRunner extends CancelableEmitter {
 
     private async _runTest(test: Test): Promise<void> {
         const browserAgent = BrowserAgent.create({
-            id: this._browserId,
+            browserConfig: this.config.forBrowser(this._browserId),
             version: test.browserVersion,
             pool: this.browserPool,
         });

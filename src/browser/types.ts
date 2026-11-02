@@ -26,6 +26,14 @@ export const BrowserName = {
 } as const;
 
 export type W3CBrowserName = Exclude<(typeof BrowserName)[keyof typeof BrowserName], typeof BrowserName.CHROMIUM>;
+export type VendorSpecificCapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
+
+export const VENDOR_CAPABILITY_BY_BROWSER_NAME: Partial<Record<W3CBrowserName, VendorSpecificCapabilityName>> = {
+    [BrowserName.CHROME]: "goog:chromeOptions",
+    [BrowserName.CHROMEHEADLESSSHELL]: "goog:chromeOptions",
+    [BrowserName.FIREFOX]: "moz:firefoxOptions",
+    [BrowserName.EDGE]: "ms:edgeOptions",
+};
 
 export interface BrowserMeta {
     pid: number;
