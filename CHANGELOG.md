@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.3.6 (2026-11-02)
+
+
+### Bug Fixes
+
+* use full catch statement to support chrome 57 ([#1353](https://github.com/gemini-testing/testplane/issues/1353)) ([9a17310](https://github.com/gemini-testing/testplane/commit/9a173101bdae4994cb62be347df499a042f360e9))
+
 ### 9.3.5 (2026-11-02)
 
 ### 9.3.4 (2026-10-20)
