@@ -770,13 +770,22 @@ describe("profiler/runtime", () => {
         runtime.stop();
 
         const snapshot = runtime.snapshot();
-        assert.deepInclude(snapshot.metrics.find(metric => metric.name === "overflow.counter")!, {
-            value: Number.MAX_VALUE,
-        });
-        assert.deepInclude(snapshot.metrics.find(metric => metric.name === "valid.counter")!, { value: 3 });
-        assert.deepInclude(snapshot.errors.find(error => error.stage === "runtime.metric")!, {
-            message: "Metric overflow.counter overflowed",
-        });
+        assert.deepInclude(
+            snapshot.metrics.find(metric => metric.name === "overflow.counter")!,
+            {
+                value: Number.MAX_VALUE,
+            },
+        );
+        assert.deepInclude(
+            snapshot.metrics.find(metric => metric.name === "valid.counter")!,
+            { value: 3 },
+        );
+        assert.deepInclude(
+            snapshot.errors.find(error => error.stage === "runtime.metric")!,
+            {
+                message: "Metric overflow.counter overflowed",
+            },
+        );
     });
 
     it("should drop operations whose adjusted start offset overflows and retain valid siblings", () => {
@@ -811,9 +820,12 @@ describe("profiler/runtime", () => {
             runtime.snapshot().operations.map(item => item.id),
             ["valid-offset"],
         );
-        assert.deepInclude(runtime.snapshot().errors.find(error => error.stage === "transport.operation")!, {
-            message: "Dropped profiler operation with invalid start offset",
-        });
+        assert.deepInclude(
+            runtime.snapshot().errors.find(error => error.stage === "transport.operation")!,
+            {
+                message: "Dropped profiler operation with invalid start offset",
+            },
+        );
     });
 
     it("should retain owned copies of accepted worker records", () => {
@@ -874,10 +886,16 @@ describe("profiler/runtime", () => {
             attributes: { browserId: "chrome" },
             quality: { timing: "exact", cpu: "process-window", notes: ["original"] },
         });
-        assert.deepInclude(snapshot.truncation.find(entry => entry.collector === "worker")!, { seen: 2 });
-        assert.deepInclude(snapshot.aggregates.find(entry => entry.kind === "test.aggregate")!, {
-            attributes: { browserId: "chrome" },
-        });
+        assert.deepInclude(
+            snapshot.truncation.find(entry => entry.collector === "worker")!,
+            { seen: 2 },
+        );
+        assert.deepInclude(
+            snapshot.aggregates.find(entry => entry.kind === "test.aggregate")!,
+            {
+                attributes: { browserId: "chrome" },
+            },
+        );
     });
 
     it("should deduplicate sequenced fragments before merging aggregates", () => {
@@ -1010,14 +1028,23 @@ describe("profiler/runtime", () => {
         assert.deepInclude(master.snapshot().aggregates.find(aggregate => aggregate.name === "second")!.statistics, {
             sum: 2,
         });
-        assert.deepInclude(master.snapshot().metrics.find(metric => metric.name === "worker.counter")!, {
-            value: 2,
-            dimensions: { source: "original" },
-        });
-        assert.deepInclude(master.snapshot().errors.find(error => error.stage === "worker.original")!, {
-            message: "original",
-        });
-        assert.deepInclude(master.snapshot().truncation.find(entry => entry.collector === "worker")!, { seen: 2 });
+        assert.deepInclude(
+            master.snapshot().metrics.find(metric => metric.name === "worker.counter")!,
+            {
+                value: 2,
+                dimensions: { source: "original" },
+            },
+        );
+        assert.deepInclude(
+            master.snapshot().errors.find(error => error.stage === "worker.original")!,
+            {
+                message: "original",
+            },
+        );
+        assert.deepInclude(
+            master.snapshot().truncation.find(entry => entry.collector === "worker")!,
+            { seen: 2 },
+        );
     });
 
     it("should fail open if a pending fragment cannot be cloned", () => {
@@ -1038,9 +1065,12 @@ describe("profiler/runtime", () => {
         }
 
         assert.isEmpty((master as unknown as { _pendingFragments: Map<string, unknown> })._pendingFragments);
-        assert.deepInclude(master.snapshot().errors.find(error => error.stage === "transport.fragment")!, {
-            message: "clone failed",
-        });
+        assert.deepInclude(
+            master.snapshot().errors.find(error => error.stage === "transport.fragment")!,
+            {
+                message: "clone failed",
+            },
+        );
     });
 
     it("should allow an immediate fragment to be retried after cloning fails", () => {
@@ -1082,9 +1112,12 @@ describe("profiler/runtime", () => {
             master.snapshot().operations.map(item => item.id),
             ["retry"],
         );
-        assert.deepInclude(master.snapshot().errors.find(error => error.stage === "transport.fragment")!, {
-            message: "clone failed",
-        });
+        assert.deepInclude(
+            master.snapshot().errors.find(error => error.stage === "transport.fragment")!,
+            {
+                message: "clone failed",
+            },
+        );
     });
 
     it("should force-apply pending fragments when the per-source buffer exceeds the cap", () => {

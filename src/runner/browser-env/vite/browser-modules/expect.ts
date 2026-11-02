@@ -10,10 +10,13 @@ export const initExpect = (): Expect => {
 };
 
 function mockMatchers(matcherNames: string[]): Record<string, MockMatcherFn> {
-    return matcherNames.reduce((acc, matcherName) => {
-        acc[matcherName] = mockMatcher(matcherName);
-        return acc;
-    }, {} as Record<string, MockMatcherFn>);
+    return matcherNames.reduce(
+        (acc, matcherName) => {
+            acc[matcherName] = mockMatcher(matcherName);
+            return acc;
+        },
+        {} as Record<string, MockMatcherFn>,
+    );
 }
 
 function mockMatcher(matcherName: string): MockMatcherFn {

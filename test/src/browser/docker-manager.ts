@@ -20,7 +20,7 @@ describe("browser/docker-manager", () => {
                 desiredCapabilities: { browserName: "chrome" },
                 sessionRequestTimeout: id === "second" ? 2000 : 1000,
             }),
-        } as unknown as Config);
+        }) as unknown as Config;
 
     beforeEach(() => {
         controller = {

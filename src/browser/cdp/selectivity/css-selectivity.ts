@@ -18,15 +18,14 @@ import type { CssEvents, CSSRuleUsage } from "../domains/css";
 import type { SelectivityAssetState } from "./types";
 import type { SelectivityMapSourceMapUrlFn } from "../../../config/types";
 
-interface CssSessionCache
-    extends Record<
-        CDPStyleSheetId,
-        {
-            sourceMap: Exclude<Awaited<SelectivityAssetState>, Error>;
-            sourceMapUrl: string | null;
-            isError: boolean;
-        }
-    > {}
+interface CssSessionCache extends Record<
+    CDPStyleSheetId,
+    {
+        sourceMap: Exclude<Awaited<SelectivityAssetState>, Error>;
+        sourceMapUrl: string | null;
+        isError: boolean;
+    }
+> {}
 
 export class CSSSelectivity {
     private readonly _cdp: CDP;
@@ -35,8 +34,7 @@ export class CSSSelectivity {
     private readonly _sourceRoot: string;
     private readonly _mapSourceMapUrl: SelectivityMapSourceMapUrlFn | null;
     private _cssOnStyleSheetAddedFn:
-        | ((params: CssEvents["styleSheetAdded"], cdpSessionId?: CDPSessionId) => void)
-        | null = null;
+        ((params: CssEvents["styleSheetAdded"], cdpSessionId?: CDPSessionId) => void) | null = null;
     private readonly _stylesSourceMap: Record<CDPStyleSheetId, SelectivityAssetState> = {};
     private readonly _styleSheetIdToSourceMapUrl: Record<CDPStyleSheetId, string | null> = {};
     private readonly _coverageResult: CSSRuleUsage[] = [];

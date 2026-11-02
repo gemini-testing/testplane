@@ -335,10 +335,7 @@ export type StateOpts = {
 
 export type SelectivityDependencyScope = "browser" | "testplane";
 export type SelectivityDependencyReason =
-    | "browser-css-import"
-    | "browser-js-coverage"
-    | "testplane-js-import"
-    | "testplane-assert-view-reference";
+    "browser-css-import" | "browser-js-coverage" | "testplane-js-import" | "testplane-assert-view-reference";
 
 /**
  * @param {Object} dependency - Object with dependency scope and posix relative path

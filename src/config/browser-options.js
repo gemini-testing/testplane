@@ -267,7 +267,7 @@ function buildBrowserOptions(defaultFactory, extra) {
                     capabilities &&
                     Boolean(
                         (capabilities.platformName && capabilities.platformName.match(/Android/i)) ||
-                            (capabilities.browserName && capabilities.browserName.match(/Android/i)),
+                        (capabilities.browserName && capabilities.browserName.match(/Android/i)),
                     );
 
                 return isAndroid ? "viewport" : value;

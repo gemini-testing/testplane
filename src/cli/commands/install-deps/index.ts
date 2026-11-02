@@ -34,9 +34,8 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
         .action(async (browsers: string[]) => {
             try {
                 await testplane.profileCliCommand(commandName, async () => {
-                    const { installBrowsersWithDrivers, BrowserInstallStatus } = await import(
-                        "../../../browser-installer"
-                    );
+                    const { installBrowsersWithDrivers, BrowserInstallStatus } =
+                        await import("../../../browser-installer");
                     if (!browsers.length) {
                         browsers = Object.keys(testplane.config.browsers);
                     }

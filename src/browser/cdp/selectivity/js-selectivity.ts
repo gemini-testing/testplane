@@ -52,8 +52,7 @@ export class JSSelectivity {
     private readonly _sourceRoot: string;
     private readonly _mapSourceMapUrl: SelectivityMapSourceMapUrlFn | null;
     private _debuggerOnScriptParsedFn:
-        | ((params: DebuggerEvents["scriptParsed"], cdpSessionId?: CDPSessionId) => void)
-        | null = null;
+        ((params: DebuggerEvents["scriptParsed"], cdpSessionId?: CDPSessionId) => void) | null = null;
     private _scriptsSource: Record<CDPRuntimeScriptId, SelectivityAssetState> = {};
     private _scriptsSourceMap: Record<CDPRuntimeScriptId, SelectivityAssetState> = {};
     private _scriptIdToSourceUrl: Record<CDPRuntimeScriptId, string | null> = {};

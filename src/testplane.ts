@@ -77,8 +77,10 @@ interface RunnableOpts {
     saveHookLocations?: boolean;
 }
 
-export interface ReadTestsOpts
-    extends Pick<RunOpts, "tag" | "browsers" | "sets" | "grep" | "replMode" | "keepBrowserMode"> {
+export interface ReadTestsOpts extends Pick<
+    RunOpts,
+    "tag" | "browsers" | "sets" | "grep" | "replMode" | "keepBrowserMode"
+> {
     silent: boolean;
     ignore: string | string[];
     failed: FailedListItem[];

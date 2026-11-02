@@ -489,7 +489,7 @@ describe("testplane", () => {
                     browserVersion: "1",
                 };
                 mkRunner_(runner => {
-                    runner.emit(RunnerEvents.TEST_FAIL, results), runner.emit(RunnerEvents.RUNNER_END);
+                    (runner.emit(RunnerEvents.TEST_FAIL, results), runner.emit(RunnerEvents.RUNNER_END));
                 });
 
                 await runTestplane();

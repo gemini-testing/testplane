@@ -21,7 +21,11 @@ class DockerManager {
     private onExit = (): Promise<void> => this.stop();
     private sessions = new Set<() => Promise<void>>();
 
-    constructor(private entries: Map<string, DockerBrowserEntry>, private limit?: number, private timeout = 300_000) {
+    constructor(
+        private entries: Map<string, DockerBrowserEntry>,
+        private limit?: number,
+        private timeout = 300_000,
+    ) {
         signalHandler.once(MasterEvents.RUNNER_END, this.onExit);
     }
 

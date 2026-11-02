@@ -328,8 +328,8 @@ function operationKindLabel(kind: string): string {
         (kind.startsWith("browser.session.")
             ? "browser session operation"
             : kind.startsWith("testplane.phase.")
-            ? "phase"
-            : "operation")
+              ? "phase"
+              : "operation")
     );
 }
 
@@ -342,12 +342,12 @@ function unattributedAction(
         gap?.previous && gap.next
             ? `between ${unattributedBoundary(gap.previous)} and ${unattributedBoundary(gap.next)}`
             : gap?.previous
-            ? `after ${unattributedBoundary(gap.previous)}`
-            : gap?.next
-            ? `before ${unattributedBoundary(gap.next)}`
-            : parent
-            ? `inside \`${parent.name}\``
-            : "during this interval";
+              ? `after ${unattributedBoundary(gap.previous)}`
+              : gap?.next
+                ? `before ${unattributedBoundary(gap.next)}`
+                : parent
+                  ? `inside \`${parent.name}\``
+                  : "during this interval";
     const inspect = `Inspect custom code that can run ${location}, including plugins or listeners, callbacks, module initialization, and synchronous filesystem or CPU work. Disable only suspected extensions one at a time.`;
     return profile.level < 3
         ? `Try profiler.level 3 to retain more operations around this interval. ${inspect}`
@@ -1183,10 +1183,10 @@ function testDiscoveryBreakdown(profile: NormalizedProfile, phase: RetainedOpera
         outlierThresholdMs === undefined
             ? undefined
             : fileSummary
-            ? fileSummary.maxWallMs >= outlierThresholdMs
-            : profile.level >= 2
-            ? outliers.length > 0
-            : undefined;
+              ? fileSummary.maxWallMs >= outlierThresholdMs
+              : profile.level >= 2
+                ? outliers.length > 0
+                : undefined;
 
     return {
         globWallMs: operationUnionWithin(phase, globOperations),

@@ -135,8 +135,8 @@ function renderExecutionBreakdown(result: Readonly<ProfilerResultV1>): string[] 
 function renderFindingGroup(group: FindingGroup, position: number): string[] {
     const label =
         group.findings.length > 1 || TABLE_FINDINGS.has(group.analyzerId)
-            ? FINDING_GROUP_LABELS[group.analyzerId] ?? FINDING_LABELS[group.analyzerId] ?? "Performance notes"
-            : FINDING_LABELS[group.analyzerId] ?? "Performance note";
+            ? (FINDING_GROUP_LABELS[group.analyzerId] ?? FINDING_LABELS[group.analyzerId] ?? "Performance notes")
+            : (FINDING_LABELS[group.analyzerId] ?? "Performance note");
     const entity =
         group.findings.length === 1 && !TABLE_FINDINGS.has(group.analyzerId)
             ? findingEntity(group.findings[0])
