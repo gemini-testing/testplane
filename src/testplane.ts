@@ -250,12 +250,13 @@ export class Testplane extends BaseTestplane {
         );
         await this._emitInitEventOnce();
 
-        this._profiler.runtime.withSpan(
+        await this._profiler.runtime.withSpan(
             "testplane.phase.runner-init",
             { name: "Initialize runner and workers" },
-            () => {
+            async () => {
                 runner.init();
-                preloadWebdriverIO();
+                // The local browser installer synchronously requires ESM dependencies shared with WDIO.
+                await preloadWebdriverIO();
                 initGlobalFilesToRemove();
             },
         );

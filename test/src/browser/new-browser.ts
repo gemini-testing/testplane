@@ -56,6 +56,27 @@ describe("NewBrowser", () => {
     afterEach(() => sandbox.restore());
 
     describe("constructor", () => {
+        it("should leave BiDi dialogs to the attached execution browser", async () => {
+            session.isBidi = true;
+            session.on = sandbox.stub();
+
+            await mkBrowser_().init();
+
+            assert.calledOnceWith(session.on, "dialog", sinon.match.func);
+            const dialog = { dismiss: sandbox.stub(), accept: sandbox.stub() };
+            session.on.firstCall.args[1](dialog);
+            assert.notCalled(dialog.dismiss);
+            assert.notCalled(dialog.accept);
+        });
+
+        it("should not add a dialog observer to a Classic session", async () => {
+            session.on = sandbox.stub();
+
+            await mkBrowser_().init();
+
+            assert.notCalled(session.on);
+        });
+
         it("should create session with properties from browser config", async () => {
             await mkBrowser_().init();
 
