@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { randomUUID } from "node:crypto";
 import { InstructionsList, Instructions } from "./build-instructions";
 import { SkipController } from "./controllers/skip-controller";
 import { OnlyController } from "./controllers/only-controller";
@@ -87,8 +88,8 @@ export class TestParser extends EventEmitter {
 
         const { readFiles } = await import("./mocha-reader");
 
-        const rand = Math.random();
-        const esmDecorator = (f: string): string => f + `?rand=${rand}`;
+        const readId = randomUUID();
+        const esmDecorator = (file: URL | string): string => `${file}?rand=${readId}`;
         const isBrowserEnv = isRunInBrowserEnv(config);
         const profileTestFiles = this.#profiler.isEnabled(2);
         const effectiveRunnableOpts = profileTestFiles ? { ...runnableOpts, saveHookLocations: true } : runnableOpts;
