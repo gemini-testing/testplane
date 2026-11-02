@@ -1,3 +1,5 @@
+import { describe, it } from "testplane";
+
 describe("web, chrome app", () => {
     it("should lead to the project repository when click on github link", async ({browser}) => {
         await browser.url("https://testplane.io");

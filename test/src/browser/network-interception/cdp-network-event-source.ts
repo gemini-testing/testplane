@@ -386,6 +386,22 @@ describe("CDP network event source", () => {
         assert.notCalled(command.withArgs("Network.getResponseBody"));
     });
 
+    it("should record a response whose loadingFinished event arrives while stopping", async () => {
+        await start();
+        request();
+        response();
+        const result = Promise.allSettled([responses[0].consumeBody()]);
+
+        const stopped = monitor.stop();
+        await flushAttachments();
+        finish();
+        await stopped;
+
+        assert.deepEqual(await result, [{ status: "fulfilled", value: Buffer.from("response body") }]);
+        assert.calledOnce(finished);
+        assert.callOrder(command.withArgs("Network.getResponseBody"), command.withArgs("Target.detachFromTarget"));
+    });
+
     it("should settle incomplete bodies and remove listeners when stopped", async () => {
         await start();
         request();

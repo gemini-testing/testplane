@@ -28,6 +28,13 @@ export class NewBrowser extends Browser implements AsyncDisposable {
             session => backend.deleteSession(session, { force: browser._forceClose }),
         );
 
+        if (browser._session.isBidi) {
+            // This connection owns the session lifecycle, not test execution.
+            // ExistingBrowser attaches another connection in the worker (or in
+            // standalone mode). Only that connection may handle user dialogs.
+            browser._session.on("dialog", () => {});
+        }
+
         browser._addCommands();
         browser.restoreHttpTimeout();
         await browser._setPageLoadTimeout();

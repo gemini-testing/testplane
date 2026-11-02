@@ -1,9 +1,10 @@
 "use strict";
 
 const _ = require("lodash");
-const Mocha = require("mocha");
+const { Mocha } = require("mocha");
 
 const { MochaEventBus } = require("./mocha-event-bus");
+const { loadFiles } = require("./load-files");
 const { TreeBuilderDecorator } = require("./tree-builder-decorator");
 const { TestReaderEvents } = require("../../events");
 const { MasterEvents } = require("../../events");
@@ -59,7 +60,7 @@ async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts, 
     files.forEach(f => mocha.addFile(f));
 
     try {
-        await mocha.loadFilesAsync({ esmDecorator });
+        await loadFiles(mocha, esmDecorator);
     } catch (err) {
         const errorMessage = (err.message || "").split("\n")[0].trim();
 
