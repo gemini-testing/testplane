@@ -1,4 +1,6 @@
 import { Command } from "@gemini-testing/commander";
+import { availableParallelism } from "os";
+import createDebug from "debug";
 import _ from "lodash";
 import fs from "fs-extra";
 import { Stats as RunnerStats } from "./stats";
@@ -27,6 +29,9 @@ import { TestsTracker, formatTrackedTests, getTestsByWorkerPid } from "./runner/
 import { UnhandledRejectionError } from "./errors/unhandled-rejection-error";
 import { ProfilerSanitizer } from "./profiler/sanitize";
 import type { SourceRef } from "./profiler/schema";
+import { DOCKER_GRID_URL } from "./constants/config";
+
+const debug = createDebug("testplane:run");
 
 interface RunOpts {
     browsers: string[];
@@ -251,6 +256,20 @@ export class Testplane extends BaseTestplane {
             () => this._startServersIfNeeded(),
         );
         await this._emitInitEventOnce();
+
+        if (this._config.system.parallelLimit === Infinity && !RuntimeConfig.getInstance().local) {
+            const browserIds = this._config.getBrowserIds();
+            if (
+                browserIds.length > 0 &&
+                browserIds.every(id => this._config.forBrowser(id).gridUrl === DOCKER_GRID_URL)
+            ) {
+                const cpus = availableParallelism();
+                this._config.system.parallelLimit = Math.max(1, Math.floor((cpus * 5) / 4));
+                debug(
+                    `All browsers use Docker: applying parallelLimit=${this._config.system.parallelLimit} based on ${cpus} available CPUs. Set system.parallelLimit to override.`,
+                );
+            }
+        }
 
         this._profiler.runtime.withSpan(
             "testplane.phase.runner-init",

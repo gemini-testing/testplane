@@ -12,18 +12,16 @@ export type FreeBrowserOpts = { hasFreeSlots?: boolean; force?: boolean; composi
 
 export class CachingPool implements Pool {
     private _caches: Record<string, LimitedUseSet<NewBrowser>>;
-    // private _config: Config;
     private _observer?: PoolObserver;
     private _closed = false;
     private _cancelError: Error | null = null;
     underlyingPool: BasicPool;
     log: debug.Debugger;
 
-    constructor(underlyingPool: BasicPool, /*config: Config, */ observer?: PoolObserver) {
+    constructor(underlyingPool: BasicPool, observer?: PoolObserver) {
         this.log = debug("testplane:pool:caching");
         this.underlyingPool = underlyingPool;
         this._caches = {};
-        // this._config = config;
         this._observer = isPoolObserver(observer) ? observer : undefined;
     }
 
