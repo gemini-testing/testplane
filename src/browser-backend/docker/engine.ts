@@ -152,7 +152,19 @@ export async function prepareDockerImages(
     browserName = "",
     scope = "prepare-docker",
 ): Promise<{ image: string; selenoidImage: string }> {
-    // Required image fields are validated during config parsing.
+    // Plugins can resolve images asynchronously during INIT, after config parsing.
+    for (const key of ["image", "selenoidImage"] as const) {
+        const image = config?.[key];
+        if (typeof image !== "string" || !image.trim()) {
+            throw new Error(`"docker.${key}" must be a non-empty string when "gridUrl" is "docker"`);
+        }
+        if (image.startsWith("-") || /\s/.test(image)) {
+            throw new Error(
+                `Invalid docker.${key} "${image}": expected a Docker image reference without whitespace or a leading dash.`,
+            );
+        }
+    }
+
     const image = config!.image!;
     const selenoidImage = config!.selenoidImage!;
 

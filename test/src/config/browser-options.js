@@ -27,39 +27,16 @@ describe("config browser-options", () => {
     afterEach(() => sandbox.restore());
 
     describe("docker", () => {
-        [undefined, null, {}, { image: "" }, { image: "   " }, { image: 123 }].forEach(docker => {
-            it(`should reject a missing or invalid browser image: ${JSON.stringify(docker)}`, async () => {
+        [undefined, null, {}, { image: "browser:1" }, { selenoidImage: "selenoid:1" }].forEach(docker => {
+            it(`should allow images to be resolved by INIT: ${JSON.stringify(docker)}`, async () => {
                 Config.read.resolves({
                     gridUrl: "docker",
                     browsers: { chrome: mkBrowser_({ docker }) },
                 });
-                await assert.isRejected(createConfig(), '"docker.image" must be a non-empty string');
-            });
-        });
+                const config = await createConfig();
 
-        [undefined, null, "", "   ", 123].forEach(selenoidImage => {
-            it(`should reject a missing or invalid Selenoid image: ${JSON.stringify(selenoidImage)}`, async () => {
-                Config.read.resolves({
-                    gridUrl: "docker",
-                    browsers: { chrome: mkBrowser_({ docker: { image: "browser:1", selenoidImage } }) },
-                });
-                await assert.isRejected(createConfig(), '"docker.selenoidImage" must be a non-empty string');
-            });
-        });
-
-        ["image", "selenoidImage"].forEach(key => {
-            ["-image", "image with whitespace"].forEach(value => {
-                it(`should reject an invalid docker.${key} reference: ${value}`, async () => {
-                    Config.read.resolves({
-                        gridUrl: "docker",
-                        browsers: {
-                            chrome: mkBrowser_({
-                                docker: { image: "browser:1", selenoidImage: "selenoid:1", [key]: value },
-                            }),
-                        },
-                    });
-                    await assert.isRejected(createConfig(), `Invalid docker.${key} "${value}"`);
-                });
+                assert.equal(config.forBrowser("chrome").gridUrl, "docker");
+                assert.deepEqual(config.forBrowser("chrome").docker, docker ?? null);
             });
         });
 

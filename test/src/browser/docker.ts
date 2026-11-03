@@ -147,6 +147,38 @@ describe("browser-backend/docker/controller", () => {
     });
 
     describe("image preparation without sessions", () => {
+        it("should reject a missing Docker config before running Docker", async () => {
+            await assert.isRejected(prepareDockerImages(null), '"docker.image" must be a non-empty string');
+
+            assert.notCalled(command);
+        });
+
+        for (const key of ["image", "selenoidImage"]) {
+            for (const value of [undefined, null, "", "   ", 123]) {
+                it(`should reject missing or invalid ${key} before running Docker: ${JSON.stringify(value)}`, async () => {
+                    await assert.isRejected(
+                        prepareDockerImages({ image: "browser:1", selenoidImage, [key]: value }),
+                        `"docker.${key}" must be a non-empty string`,
+                    );
+
+                    assert.notCalled(command);
+                    assert.notCalled(prepareImage);
+                });
+            }
+
+            for (const value of ["-image", "image with whitespace"]) {
+                it(`should reject an invalid ${key} reference before running Docker: ${value}`, async () => {
+                    await assert.isRejected(
+                        prepareDockerImages({ image: "browser:1", selenoidImage, [key]: value }),
+                        `Invalid docker.${key} "${value}"`,
+                    );
+
+                    assert.notCalled(command);
+                    assert.notCalled(prepareImage);
+                });
+            }
+        }
+
         it("should pull missing browser and controller images and prepare CDP without starting containers", async () => {
             for (const image of ["browser", selenoidImage]) {
                 command

@@ -6,7 +6,7 @@ const { option, section } = require("gemini-configparser");
 const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
 const utils = require("./utils");
-const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE, ENV_PREFIXES, DOCKER_GRID_URL } = require("../constants/config");
+const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE, ENV_PREFIXES } = require("../constants/config");
 const { BROWSERS_SUPPORT_BIDI } = require("../constants/browser");
 const { isSupportIsolation } = require("../utils/browser");
 const { TimeTravelMode } = require("./types");
@@ -32,26 +32,12 @@ exports.getPerBrowser = () => {
             parseEnv: JSON.parse,
             parseCli: JSON.parse,
             validate: value => utils.assertOptionalObject(value, "docker"),
-            map: (value, config, currentNode) => {
+            map: (value, config) => {
                 const result = value ? { ...value } : value;
                 if (result) {
                     for (const key of ["selenoidImage", "platform", "selenoidPlatform", "socketPath"]) {
                         if (result[key] === undefined && config.docker?.[key] !== undefined) {
                             result[key] = config.docker[key];
-                        }
-                    }
-                }
-
-                if (currentNode.gridUrl === DOCKER_GRID_URL) {
-                    for (const key of ["image", "selenoidImage"]) {
-                        const image = result?.[key];
-                        if (typeof image !== "string" || !image.trim()) {
-                            throw new Error(`"docker.${key}" must be a non-empty string when "gridUrl" is "docker"`);
-                        }
-                        if (image.startsWith("-") || /\s/.test(image)) {
-                            throw new Error(
-                                `Invalid docker.${key} "${image}": expected a Docker image reference without whitespace or a leading dash.`,
-                            );
                         }
                     }
                 }
