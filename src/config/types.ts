@@ -374,7 +374,7 @@ export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;
 
 /** Selenoid controller image and browser container settings. */
 export interface DockerConfig {
-    /** Required for Docker startup, either here or inherited from the top-level docker option. No default. */
+    /** Defaults to ghcr.io/gemini-testing/selenoid:1.11.3-docker-29. Can be inherited from the top-level docker option. */
     selenoidImage?: string;
     /** Browser image platform. Defaults to linux/amd64. */
     platform?: string;

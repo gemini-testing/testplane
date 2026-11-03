@@ -27,6 +27,33 @@ describe("config browser-options", () => {
     afterEach(() => sandbox.restore());
 
     describe("docker", () => {
+        it("should fill the default Selenoid image in partial root and browser options", async () => {
+            const docker = { platform: "linux/arm64" };
+            const browserDocker = { image: "browser:1" };
+            Config.read.resolves({
+                docker,
+                browsers: { chrome: mkBrowser_({ docker: browserDocker }) },
+            });
+            const config = await createConfig();
+            const selenoidImage = "ghcr.io/gemini-testing/selenoid:1.11.3-docker-29";
+
+            assert.deepEqual(config.docker, { ...docker, selenoidImage });
+            assert.deepEqual(config.serialize().browsers.chrome.docker, { ...docker, ...browserDocker, selenoidImage });
+            assert.deepEqual(docker, { platform: "linux/arm64" });
+            assert.deepEqual(browserDocker, { image: "browser:1" });
+        });
+
+        it("should use the default for a browser when root Docker options are null", async () => {
+            Config.read.resolves({
+                docker: null,
+                browsers: { chrome: mkBrowser_({ docker: { image: "browser:1" } }) },
+            });
+            const config = await createConfig();
+
+            assert.isNull(config.docker);
+            assert.deepEqual(config.forBrowser("chrome").docker, { ...defaults.docker, image: "browser:1" });
+        });
+
         [undefined, null, {}, { image: "browser:1" }, { selenoidImage: "selenoid:1" }].forEach(docker => {
             it(`should allow images to be resolved by INIT: ${JSON.stringify(docker)}`, async () => {
                 Config.read.resolves({
@@ -36,7 +63,10 @@ describe("config browser-options", () => {
                 const config = await createConfig();
 
                 assert.equal(config.forBrowser("chrome").gridUrl, "docker");
-                assert.deepEqual(config.forBrowser("chrome").docker, docker ?? null);
+                assert.deepEqual(
+                    config.forBrowser("chrome").docker,
+                    docker === null ? null : { ...defaults.docker, ...docker },
+                );
             });
         });
 
@@ -80,7 +110,7 @@ describe("config browser-options", () => {
                 shmSize: 7516192768,
                 volumes: ["/tmp/.X11-unix:/tmp/.X11-unix"],
             });
-            assert.isNull(config.forBrowser("remote").docker);
+            assert.deepEqual(config.forBrowser("remote").docker, defaults.docker);
         });
 
         it("should inherit the global selenoidImage and allow per-browser overrides", async () => {
@@ -124,6 +154,7 @@ describe("config browser-options", () => {
             });
             const config = await createConfig();
             assert.deepEqual(config.forBrowser("inherited").docker, {
+                ...defaults.docker,
                 image: "browser:1",
                 socketPath: "/run/podman/podman.sock",
             });
@@ -145,16 +176,19 @@ describe("config browser-options", () => {
             });
             const config = await createConfig();
             assert.deepEqual(config.forBrowser("inherited").docker, {
+                ...defaults.docker,
                 image: "browser:1",
                 platform: "linux/arm64",
                 selenoidPlatform: "linux/amd64",
             });
             assert.deepEqual(config.serialize().browsers.browserOverride.docker, {
+                ...defaults.docker,
                 image: "browser:2",
                 platform: "linux/amd64",
                 selenoidPlatform: "linux/amd64",
             });
             assert.deepEqual(config.serialize().browsers.controllerOverride.docker, {
+                ...defaults.docker,
                 image: "browser:3",
                 platform: "linux/arm64",
                 selenoidPlatform: "linux/arm64",
