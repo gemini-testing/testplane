@@ -13,7 +13,7 @@ import type { BrowserConfig } from "../../config/browser-config";
 import type { DockerConfig } from "../../config/types";
 import { getInstance } from "../../config/runtime-config";
 import { AsyncCleanupStack } from "../../utils/async-cleanup-stack";
-import { log, warn } from "../../utils/logger";
+import { warn } from "../../utils/logger";
 import {
     COMMAND_TIMEOUT,
     appendDockerOutput,
@@ -25,7 +25,7 @@ import {
     removeContainers,
 } from "./engine";
 import { CHECK_DEVTOOLS } from "./browser-image";
-import { timeDockerOperation } from "./timing";
+import {debugDocker, timeDockerOperation} from "./timing";
 
 interface DockerEnvironment {
     isPodman: boolean;
@@ -471,7 +471,7 @@ export class SelenoidDockerController implements AsyncDisposable {
         const container = containers[0];
         const adapter = await docker(["exec", "--user", "0", container, "/bin/sh", "-ec", CHECK_DEVTOOLS]);
         if (adapter.trim() === "absent") {
-            warn(`Docker browser session ${sessionId} has no /usr/bin/devtools adapter; continuing without CDP.`);
+            debugDocker(`Docker browser session ${sessionId} has no /usr/bin/devtools adapter; continuing without CDP.`);
 
             return false;
         }
@@ -505,7 +505,8 @@ export class SelenoidDockerController implements AsyncDisposable {
         const signal = AbortSignal.timeout(COMMAND_TIMEOUT);
 
         // DELETE returns before Selenoid finishes saving and renaming the log file.
-        for (;;) {
+        const ATTEMPTS_LIMIT = 50;
+        for (let attempt = 0; attempt < ATTEMPTS_LIMIT; attempt++) {
             const response = await fetch(url, { signal });
             if (response.ok && response.body) {
                 const logsDir = path.join(tmpdir(), "testplane-logs");
@@ -523,6 +524,8 @@ export class SelenoidDockerController implements AsyncDisposable {
             }
             await delay(100, null, { signal });
         }
+
+        throw new Error(`Failed to download Selenoid session log after ${ATTEMPTS_LIMIT} attempts.`);
     }
 
     private async _saveControllerLogs(): Promise<void> {
@@ -531,7 +534,7 @@ export class SelenoidDockerController implements AsyncDisposable {
         const logPath = path.join(logsDir, `${this._name}.log`);
         await using file = await open(logPath, "w", 0o600);
         await appendDockerOutput(file, "Selenoid", ["logs", "--timestamps", this._name]);
-        log(`Docker Selenoid log: ${logPath}`);
+        debugDocker(`Docker Selenoid log: ${logPath}`);
     }
 
     [Symbol.asyncDispose](): Promise<void> {

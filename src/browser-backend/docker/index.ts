@@ -3,11 +3,11 @@ import { remote } from "@testplane/webdriverio";
 import type { BrowserConfig } from "../../config/browser-config";
 import { AsyncCleanupStack } from "../../utils/async-cleanup-stack";
 import { getWdioCreateSessionOpts } from "../../utils/session-opts";
-import { log, warn } from "../../utils/logger";
+import { warn } from "../../utils/logger";
 import type { BrowserBackend, BrowserBackendOptions } from "../index";
 import { deleteWebdriverSession, trackSessionStart } from "../utils";
 import { SelenoidDockerController } from "./controller";
-import { timeDockerOperation } from "./timing";
+import {debugDocker, timeDockerOperation} from "./timing";
 
 interface SessionResources {
     cleanup: AsyncCleanupStack;
@@ -81,7 +81,7 @@ export class DockerBrowserBackend implements BrowserBackend {
                             capabilities["selenoid:options"]?.logName ?? null,
                         ),
                     ).then(
-                        file => log(`Docker session log: ${file}`),
+                        file => debugDocker(`Docker session log: ${file}`),
                         error => warn(`Cannot save Docker session log (${session.sessionId}): ${error}`),
                     );
                 }
