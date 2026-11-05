@@ -930,6 +930,70 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             assert.calledTwice(cdpMock.profiler.startPreciseCoverage);
             assert.deepEqual(Array.from((await jsSelectivity.stop()) || []), []);
         });
+
+        for (const method of ["takeCoverageSnapshot", "flushPage"] as const) {
+            for (const [reused, initial] of [
+                [false, "empty parsed metadata"],
+                [true, "empty parsed metadata"],
+                [false, "a no-comment fallback"],
+                [true, "a no-comment fallback"],
+            ] as const) {
+                it(`${method} should ${
+                    reused ? "not borrow a reused id's" : "use the same script's"
+                } source map parsed while waiting for another script after ${initial}`, async () => {
+                    const slowId = "slow-id";
+                    const slowSource = deferred<{ scriptSource: string }>();
+                    const slowRequested = deferred<void>();
+                    cdpMock.profiler.takePreciseCoverage.resolves({
+                        timestamp: 1,
+                        result: [...coverageFor("a").result, { ...coverageFor("slow").result[0], scriptId: slowId }],
+                    });
+                    cdpMock.debugger.getScriptSource.callsFake((_session: string, id: string) => {
+                        if (id !== slowId) {
+                            // No marker comment: only parsed metadata, e.g. a SourceMap header, declares the map.
+                            return Promise.resolve({ scriptSource: generatedSource });
+                        }
+                        slowRequested.resolve();
+                        return slowSource.promise;
+                    });
+                    fetchTextWithBrowserFallbackStub.callsFake((url: string) => {
+                        return Promise.resolve(sourceMapFor(url.slice(url.lastIndexOf("/") + 1, -".js.map".length)));
+                    });
+                    const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+                    await jsSelectivity.start();
+                    const scriptParsed = cdpMock.debugger.on.getCall(0).args[1];
+                    if (initial === "empty parsed metadata") {
+                        scriptParsed({ scriptId, url: sourceUrlFor("a"), sourceMapURL: "", hash: "AAA" }, sessionId);
+                    } else {
+                        cdpMock.profiler.takePreciseCoverage.onFirstCall().resolves(coverageFor("a"));
+                        await jsSelectivity.takeCoverageSnapshot();
+                    }
+
+                    // "slow" has no parsed event: its coverage fallback requests the source after the snapshot started.
+                    const snapshot = jsSelectivity[method]();
+                    await slowRequested.promise;
+                    const name = reused ? "b" : "a";
+                    const hash = reused ? "BBB" : "AAA";
+                    scriptParsed(
+                        { scriptId, url: sourceUrlFor(name), sourceMapURL: `${name}.js.map`, hash },
+                        sessionId,
+                    );
+                    slowSource.resolve({ scriptSource: sourceFor("slow") });
+                    await snapshot;
+                    cdpMock.profiler.takePreciseCoverage.resolves({ timestamp: 2, result: [] });
+
+                    const dependencies = await jsSelectivity.stop();
+
+                    assert.deepEqual(
+                        Array.from(dependencies || []).sort(),
+                        reused
+                            ? [`${sourceRoot}/src/slow.js`]
+                            : [`${sourceRoot}/src/a.js`, `${sourceRoot}/src/slow.js`],
+                    );
+                });
+            }
+        }
     });
 
     describe("late parsed source-map metadata", () => {

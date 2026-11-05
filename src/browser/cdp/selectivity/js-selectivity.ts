@@ -60,6 +60,8 @@ export class JSSelectivity {
     private _scriptIdToSourceMapUrl: Record<CDPRuntimeScriptId, string | null> = {};
     /** Last seen content hash per "scriptId" — used to detect a "scriptId" reused for a different script */
     private _scriptIdToHash: Record<CDPRuntimeScriptId, string> = {};
+    /** Bumped when a "scriptId" is reused for a different script, so a pending snapshot can tell them apart */
+    private _scriptIdGeneration: Record<CDPRuntimeScriptId, number> = {};
     /** Source files collected across all pages of the current test */
     private readonly _dependingSourceFiles = new Set<string>();
 
@@ -108,6 +110,7 @@ export class JSSelectivity {
             delete this._scriptsSourceMap[scriptId];
             delete this._scriptIdToSourceUrl[scriptId];
             delete this._scriptIdToSourceMapUrl[scriptId];
+            this._scriptIdGeneration[scriptId] = (this._scriptIdGeneration[scriptId] ?? 0) + 1;
         }
 
         this._scriptIdToHash[scriptId] = hash;
@@ -327,6 +330,7 @@ export class JSSelectivity {
         // Preserve this coverage window's assets before loading yields and a parsed event reuses the scriptId.
         const scripts = scriptIds.map(scriptId => ({
             scriptId,
+            generation: this._scriptIdGeneration[scriptId],
             sourceState: this._scriptsSource[scriptId],
             sourceMapState: this._scriptsSourceMap[scriptId],
             sourceMapUrl: this._scriptIdToSourceMapUrl[scriptId],
@@ -337,7 +341,17 @@ export class JSSelectivity {
         await this._waitForLoadingScripts();
 
         await Promise.all(
-            scripts.map(async ({ scriptId, sourceState, sourceMapState, sourceMapUrl, sourceUrl }) => {
+            scripts.map(async script => {
+                // The same script's parsed metadata may arrive while waiting and fill in a missing source map.
+                const isSameScript = script.generation === this._scriptIdGeneration[script.scriptId];
+                const { scriptId, sourceUrl } = script;
+                const { sourceState, sourceMapState, sourceMapUrl } = isSameScript
+                    ? {
+                          sourceState: this._scriptsSource[scriptId],
+                          sourceMapState: this._scriptsSourceMap[scriptId],
+                          sourceMapUrl: this._scriptIdToSourceMapUrl[scriptId],
+                      }
+                    : script;
                 const [source, sourceMaps] = await Promise.all([sourceState, sourceMapState]);
                 // Coverage fallback discovers the map URL asynchronously. Do not borrow a reused id's metadata.
                 const resolvedSourceMapUrl =
