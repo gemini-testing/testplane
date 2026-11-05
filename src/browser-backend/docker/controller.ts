@@ -64,7 +64,7 @@ export class SelenoidDockerController implements AsyncDisposable {
     private _browsers: Record<string, SelenoidBrowser> = {};
     private readonly _configPath: string;
     private readonly _socketPath: string;
-    private readonly _selenoidPlatform: string;
+    private readonly _selenoidPlatform: string | null;
     private readonly _selenoidImage: string;
     private readonly _containerFilter: string;
     private readonly _environment: DockerEnvironment;
@@ -218,8 +218,7 @@ export class SelenoidDockerController implements AsyncDisposable {
                 "create",
                 "--name",
                 this._name,
-                "--platform",
-                this._selenoidPlatform,
+                ...(this._selenoidPlatform !== null ? ["--platform", this._selenoidPlatform] : []),
                 "--pull",
                 "never",
                 ...(useSlirp ? ["--network", "host"] : ["--publish", "127.0.0.1::4444", "--network", this._network]),
@@ -304,7 +303,7 @@ export class SelenoidDockerController implements AsyncDisposable {
                         throw inspectError;
                     }
                 }
-                warn(`Cannot create a dual-stack Docker network; falling back to IPv4.\n${errorMessage(error)}`);
+                debugDocker(`Cannot create a dual-stack Docker network; falling back to IPv4. Error: ${errorMessage(error)}`);
                 await docker(["network", "create", this._network]);
             }
         });

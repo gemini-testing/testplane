@@ -55,14 +55,23 @@ describe("browser-backend/docker/browser-image", () => {
         ["win32", "arm64"],
     ]) {
         it(`should use the original image without preparing it on ${platform}/${arch}`, async () => {
-            assert.equal(await load(platform, arch)("chrome:latest", "session", docker), "chrome:latest");
+            assert.equal(
+                await load(platform, arch)("chrome:latest", "session", docker, "linux/amd64"),
+                "chrome:latest",
+            );
             assert.notCalled(docker);
             assert.deepEqual(await readdir(directory), []);
         });
     }
 
+    it("should leave native ARM64 images unchanged on Apple Silicon", async () => {
+        assert.equal(await prepare("chrome:latest", "session", docker, "linux/arm64"), "chrome:latest");
+        assert.notCalled(docker);
+        assert.deepEqual(await readdir(directory), []);
+    });
+
     it("should build from the immutable source, unpack in place and preserve the image user and startup", async () => {
-        const image = await prepare("chrome:latest", "session", docker);
+        const image = await prepare("chrome:latest", "session", docker, "linux/amd64");
         const base = image.replace("testplane-browser:", "testplane-browser-base:");
         assert.calledWith(docker, ["image", "tag", metadata.Id, base]);
         assert.match(recipes[0], new RegExp(`^FROM ${base}\nUSER 0\nRUN `));
@@ -84,9 +93,9 @@ describe("browser-backend/docker/browser-image", () => {
     });
 
     it("should reuse an existing image across invocations without building or running container commands", async () => {
-        const first = await prepare("chrome:latest", "first", docker);
+        const first = await prepare("chrome:latest", "first", docker, "linux/amd64");
         docker.resetHistory();
-        const second = await load()("chrome:latest", "second", docker);
+        const second = await load()("chrome:latest", "second", docker, "linux/amd64");
         assert.equal(first, second);
         assert.calledOnce(build);
         assert.equal(docker.callCount, 2);
@@ -94,48 +103,48 @@ describe("browser-backend/docker/browser-image", () => {
     });
 
     it("should use the selected platform for the adapter probe and image build", async () => {
-        await prepare("chrome:latest", "session", docker, "linux/arm64");
+        await prepare("chrome:latest", "session", docker, "linux/amd64/v3");
         for (const operation of ["run", "build"]) {
             const args = docker.getCalls().find(call => call.args[0][0] === operation)!.args[0];
-            assert.equal(args[args.indexOf("--platform") + 1], "linux/arm64");
+            assert.equal(args[args.indexOf("--platform") + 1], "linux/amd64/v3");
         }
     });
 
     it("should keep prepared image caches separate for different platforms", async () => {
-        const amd = await prepare("chrome:latest", "session", docker);
-        const arm = await prepare("chrome:latest", "session", docker, "linux/arm64");
-        assert.notEqual(amd, arm);
+        const defaultPlatform = await prepare("chrome:latest", "session", docker, "linux/amd64");
+        const variant = await prepare("chrome:latest", "session", docker, "linux/amd64/v3");
+        assert.notEqual(defaultPlatform, variant);
         assert.calledTwice(build);
     });
 
     it("should rebuild when the same source tag points to a new image", async () => {
-        const first = await prepare("chrome:latest", "first", docker);
+        const first = await prepare("chrome:latest", "first", docker, "linux/amd64");
         metadata.Id = `sha256:${"b".repeat(64)}`;
-        const second = await prepare("chrome:latest", "second", docker);
+        const second = await prepare("chrome:latest", "second", docker, "linux/amd64");
         assert.notEqual(first, second);
         assert.calledTwice(build);
     });
 
     it("should reuse the image for different tags with the same source ID", async () => {
-        const first = await prepare("chrome:latest", "first", docker);
-        const second = await prepare("chrome:149", "second", docker);
+        const first = await prepare("chrome:latest", "first", docker, "linux/amd64");
+        const second = await prepare("chrome:149", "second", docker, "linux/amd64");
         assert.equal(first, second);
         assert.calledOnce(build);
     });
 
     it("should build only once for concurrent callers sharing the filesystem lock", async () => {
         const images = await Promise.all([
-            prepare("chrome:latest", "first", docker),
-            load()("chrome:latest", "second", docker),
+            prepare("chrome:latest", "first", docker, "linux/amd64"),
+            load()("chrome:latest", "second", docker, "linux/amd64"),
         ]);
         assert.equal(images[0], images[1]);
         assert.calledOnce(build);
     });
 
     it("should rebuild a removed prepared image", async () => {
-        const first = await prepare("chrome:latest", "first", docker);
+        const first = await prepare("chrome:latest", "first", docker, "linux/amd64");
         images.delete(first);
-        assert.equal(await prepare("chrome:latest", "second", docker), first);
+        assert.equal(await prepare("chrome:latest", "second", docker, "linux/amd64"), first);
         assert.calledTwice(build);
     });
 
@@ -143,11 +152,14 @@ describe("browser-backend/docker/browser-image", () => {
         build
             .onFirstCall()
             .rejects(Object.assign(new Error("build failed"), { stderr: "apt error", stdout: "details" }));
-        await assert.isRejected(prepare("chrome:latest", "first", docker), "build failed\ndetails\napt error");
+        await assert.isRejected(
+            prepare("chrome:latest", "first", docker, "linux/amd64"),
+            "build failed\ndetails\napt error",
+        );
         assert.equal(images.size, 0);
         assert.deepEqual(await readdir(directory), ["testplane-docker-image-locks"]);
         assert.deepEqual(await readdir(path.join(directory, "testplane-docker-image-locks")), []);
-        await prepare("chrome:latest", "retry", docker);
+        await prepare("chrome:latest", "retry", docker, "linux/amd64");
         assert.calledTwice(build);
     });
 
@@ -155,14 +167,14 @@ describe("browser-backend/docker/browser-image", () => {
         docker
             .withArgs(sinon.match.array.startsWith(["image", "inspect", "--format"]))
             .rejects(new Error("daemon unavailable"));
-        await assert.isRejected(prepare("chrome:latest", "session", docker), "daemon unavailable");
+        await assert.isRejected(prepare("chrome:latest", "session", docker, "linux/amd64"), "daemon unavailable");
         assert.notCalled(build);
         assert.deepEqual(await readdir(directory), []);
     });
 
     it("should use the original image without building when the adapter is absent", async () => {
         docker.withArgs(sinon.match.array.startsWith(["run"])).resolves("absent\n");
-        assert.equal(await prepare("chrome:69", "session", docker), "chrome:69");
+        assert.equal(await prepare("chrome:69", "session", docker, "linux/amd64"), "chrome:69");
         assert.notCalled(build);
         assert.deepEqual(recipes, []);
         assert.deepEqual(await readdir(directory), []);
@@ -174,7 +186,7 @@ describe("browser-backend/docker/browser-image", () => {
 
     it("should propagate adapter probe errors instead of skipping preparation", async () => {
         docker.withArgs(sinon.match.array.startsWith(["run"])).rejects(new Error("daemon unavailable"));
-        await assert.isRejected(prepare("chrome:69", "session", docker), "daemon unavailable");
+        await assert.isRejected(prepare("chrome:69", "session", docker, "linux/amd64"), "daemon unavailable");
         assert.notCalled(build);
     });
 
@@ -185,15 +197,15 @@ describe("browser-backend/docker/browser-image", () => {
             .resolves("absent")
             .onSecondCall()
             .resolves("present");
-        await prepare("chrome:latest", "first", docker);
+        await prepare("chrome:latest", "first", docker, "linux/amd64");
         metadata.Id = `sha256:${"b".repeat(64)}`;
-        assert.match(await prepare("chrome:latest", "second", docker), /^testplane-browser:/);
+        assert.match(await prepare("chrome:latest", "second", docker, "linux/amd64"), /^testplane-browser:/);
         assert.calledOnce(build);
     });
 
     it("should preserve the default root user", async () => {
         metadata.Config.User = "";
-        await prepare("chrome:latest", "session", docker);
+        await prepare("chrome:latest", "session", docker, "linux/amd64");
         assert.match(recipes[0], /USER 0\n$/);
     });
 });

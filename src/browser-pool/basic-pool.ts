@@ -28,7 +28,7 @@ export function getBackendKey(config: BrowserConfig): string {
         return `docker:${JSON.stringify([
             docker?.socketPath ?? "/var/run/docker.sock",
             docker?.selenoidImage ?? null,
-            docker?.selenoidPlatform ?? "linux/amd64",
+            docker?.selenoidPlatform ?? null,
         ])}`;
     }
 

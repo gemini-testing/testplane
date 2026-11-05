@@ -376,9 +376,9 @@ export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;
 export interface DockerConfig {
     /** Defaults to ghcr.io/gemini-testing/selenoid:1.11.3-docker-29. Can be inherited from the top-level docker option. */
     selenoidImage?: string;
-    /** Browser image platform. Defaults to linux/amd64. */
+    /** Browser image platform. When pulling, prefers the Docker daemon's platform, then linux/amd64. */
     platform?: string;
-    /** Selenoid controller platform, independent of the browser. Defaults to linux/amd64. */
+    /** Selenoid controller platform. When pulling, prefers the Docker daemon's platform, then linux/amd64. */
     selenoidPlatform?: string;
     /** Absolute engine socket path on the daemon's Linux host. Defaults to /var/run/docker.sock. */
     socketPath?: string;

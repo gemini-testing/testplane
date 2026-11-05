@@ -5,14 +5,15 @@ import path from "path";
 import type { DockerConfig } from "../../config/types";
 import { log } from "../../utils/logger";
 import { prepareDockerBrowserImage } from "./browser-image";
-import { timeDockerOperation } from "./timing";
+import {timeDockerOperation} from "./timing";
 
-const DEFAULT_PLATFORM = "linux/amd64";
-const IMAGE_PLATFORM = "{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}";
+const LINUX_PLATFORM = /^linux\/[a-z0-9_]+(?:\/[a-z0-9_.-]+)?$/;
+const IMAGE_PLATFORM_FORMAT = "{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}";
 export const COMMAND_TIMEOUT = 30_000;
 const PULL_TIMEOUT = 10 * 60_000;
-const pendingImages = new Map<string, Promise<void>>();
+const pendingImages = new Map<string, Promise<string>>();
 type DockerError = Error & { stderr?: string };
+type ImageManifest = { Descriptor?: { platform?: { os: string; architecture: string; variant?: string } } };
 
 export function docker(args: string[], { includeStderr = false, timeout = COMMAND_TIMEOUT } = {}): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -93,16 +94,30 @@ export function getSocketPath(config: DockerConfig | null | undefined): string {
     return value;
 }
 
-export function getPlatform(config: DockerConfig | null | undefined, key: "platform" | "selenoidPlatform"): string {
+export function getPlatform(
+    config: DockerConfig | null | undefined,
+    key: "platform" | "selenoidPlatform",
+): string | null {
     const value = config?.[key];
     if (value === undefined) {
-        return DEFAULT_PLATFORM;
+        return null;
     }
-    if (typeof value !== "string" || !/^linux\/[a-z0-9_]+(?:\/[a-z0-9_.-]+)?$/.test(value)) {
+    if (typeof value !== "string" || !LINUX_PLATFORM.test(value)) {
         throw new Error(`"docker.${key}" must be a Linux platform such as "linux/amd64" or "linux/arm64".`);
     }
 
     return value;
+}
+
+async function getDaemonPlatform(): Promise<string> {
+    const platform = await docker(["version", "--format", "{{.Server.Os}}/{{.Server.Arch}}"]);
+    if (!LINUX_PLATFORM.test(platform)) {
+        throw new Error(
+            `Invalid Docker daemon platform "${platform}"; expected a Linux platform such as "linux/amd64" or "linux/arm64".`,
+        );
+    }
+
+    return platform;
 }
 
 function matchesPlatform(actual: string, expected: string): boolean {
@@ -112,38 +127,66 @@ function matchesPlatform(actual: string, expected: string): boolean {
         : actual === expected;
 }
 
-async function ensureImageImpl(image: string, expectedPlatform: string): Promise<void> {
+async function ensureImageImpl(image: string, platformOverride: string | null): Promise<string> {
+    const daemonPlatform = await getDaemonPlatform();
+    let desiredPlatform = platformOverride ?? daemonPlatform;
     let platform: string;
     try {
-        platform = await docker(["image", "inspect", "--format", IMAGE_PLATFORM, "--", image]);
+        platform = await docker(["image", "inspect", "--format", IMAGE_PLATFORM_FORMAT, "--", image]);
+        if (platformOverride === null && matchesPlatform(platform, "linux/amd64")) {
+            return platform;
+        }
     } catch (error) {
         if (!/no such (image|object)/i.test(errorMessage(error))) {
             throw error;
         }
 
-        log(`Docker image "${image}" is not available locally. Pulling it for ${expectedPlatform}...`);
+        // Select a supported platform before Docker downloads any image layers.
+        const manifest = JSON.parse(await docker(["manifest", "inspect", "--verbose", image]));
+        const imagePlatforms = (Array.isArray(manifest) ? manifest : [manifest]).flatMap((entry: ImageManifest) => {
+            const platform = entry?.Descriptor?.platform;
+
+            return platform?.os && platform.architecture
+                ? [[platform.os, platform.architecture, platform.variant].filter(Boolean).join("/")]
+                : [];
+        });
+        const supports = (platform: string): boolean => imagePlatforms.some(actual => matchesPlatform(actual, platform));
+
+        if (!supports(desiredPlatform) && platformOverride === null && supports("linux/amd64")) {
+            desiredPlatform = "linux/amd64";
+        }
+        if (!supports(desiredPlatform)) {
+            throw new Error(
+                `Docker image "${image}" supports ${imagePlatforms.join(", ") || "no known platforms"}; requested "${desiredPlatform}".`,
+            );
+        }
+
+        log(`Docker image "${image}" is not available locally. Pulling it for ${desiredPlatform}...`);
         await timeDockerOperation(image, "pull image", () =>
-            docker(["pull", "--platform", expectedPlatform, "--quiet", image], { timeout: PULL_TIMEOUT }),
+            docker(["pull", "--platform", desiredPlatform, "--quiet", image], { timeout: PULL_TIMEOUT }),
         );
-        platform = await docker(["image", "inspect", "--format", IMAGE_PLATFORM, "--", image]);
+        platform = await docker(["image", "inspect", "--format", IMAGE_PLATFORM_FORMAT, "--", image]);
     }
 
-    if (!matchesPlatform(platform, expectedPlatform)) {
+    if (!matchesPlatform(platform, desiredPlatform)) {
         throw new Error(
-            `Docker image "${image}" targets "${platform}"; expected "${expectedPlatform}". Pull or build the ${expectedPlatform} image.`,
+            `Docker image "${image}" targets "${platform}"; expected "${desiredPlatform}". Pull or build a matching image.`,
         );
     }
+
+    return platform;
 }
 
-async function ensureImage(image: string, platform: string): Promise<void> {
-    const key = `${image}\n${platform}`;
+function ensureImage(image: string, platformOverride: string | null): Promise<string> {
+    const key = `${image}\n${platformOverride ?? ""}`;
     if (!pendingImages.has(key)) {
         pendingImages.set(
             key,
-            ensureImageImpl(image, platform).finally(() => pendingImages.delete(key)),
+            ensureImageImpl(image, platformOverride).finally(() => pendingImages.delete(key)),
         );
     }
-    await pendingImages.get(key);
+
+    return pendingImages.get(key)!;
 }
 
 /** Prepare persistent images without starting browser sessions or Selenoid. */
@@ -168,9 +211,11 @@ export async function prepareDockerImages(
     const image = config!.image!;
     const selenoidImage = config!.selenoidImage!;
 
-    const platform = getPlatform(config, "platform");
+    const configuredPlatform = getPlatform(config, "platform");
     const selenoidPlatform = getPlatform(config, "selenoidPlatform");
-    await timeDockerOperation(scope, `prepare browser image ${image}`, () => ensureImage(image, platform));
+    const platform = await timeDockerOperation(scope, `prepare browser image ${image}`, () =>
+        ensureImage(image, configuredPlatform),
+    );
     await timeDockerOperation(scope, `prepare Selenoid image ${selenoidImage}`, () =>
         ensureImage(selenoidImage, selenoidPlatform),
     );

@@ -16,6 +16,7 @@ describe("browser-backend/docker/controller", () => {
     let SelenoidDockerController: typeof Controller;
     let controllers: Controller[];
     let warnStub: SinonStub;
+    let debugStub: SinonStub;
     let prepareImage: SinonStub;
     let command: SinonStub;
     let syncCommand: SinonStub;
@@ -29,6 +30,7 @@ describe("browser-backend/docker/controller", () => {
     let writeStream: SinonStub;
     let logChunks: Buffer[];
     const selenoidImage = "registry.example.com/selenoid:1.11.3";
+    const daemonPlatformCommand = ["version", "--format", "{{.Server.Os}}/{{.Server.Arch}}"];
 
     const makeConfig = (
         id: string,
@@ -59,6 +61,15 @@ describe("browser-backend/docker/controller", () => {
         command.withArgs(["info", "--format", "{{.OSType}}"]).resolves("linux");
         command.withArgs(["info", "--format", "{{json .SecurityOptions}}"]).resolves('["name=seccomp"]');
         command.withArgs(["version", "--format", "{{json .Server.Components}}"]).resolves('[{"Name":"Engine"}]');
+        command.withArgs(daemonPlatformCommand).resolves("linux/amd64");
+        command
+            .withArgs(sinon.match.array.startsWith(["manifest", "inspect"]))
+            .resolves(
+                JSON.stringify([
+                    { Descriptor: { platform: { os: "linux", architecture: "amd64" } } },
+                    { Descriptor: { platform: { os: "linux", architecture: "arm64", variant: "v8" } } },
+                ]),
+            );
         command
             .withArgs(sinon.match.array.startsWith(["inspect", "--format", "{{json .NetworkSettings.Ports}}"]))
             .resolves(JSON.stringify({ "4444/tcp": [{ HostIp: "127.0.0.1", HostPort: "12345" }] }));
@@ -93,6 +104,7 @@ describe("browser-backend/docker/controller", () => {
             return child;
         });
         warnStub = sandbox.stub();
+        debugStub = sandbox.stub();
         getPortStub = sandbox.stub().resolves(12346);
         logChunks = [];
         writeStream = sandbox.stub().callsFake(
@@ -107,7 +119,7 @@ describe("browser-backend/docker/controller", () => {
         prepareImage = sandbox.stub().callsFake(async (image: string) => image);
         const engine = proxyquire("src/browser-backend/docker/engine", {
             "./browser-image": { prepareDockerBrowserImage: prepareImage },
-            "../../utils/logger": { log: sandbox.stub() },
+            "../../utils/logger": { log: sandbox.stub(), warn: warnStub },
             // eslint-disable-next-line camelcase
             child_process: {
                 spawn: spawnCommand,
@@ -122,6 +134,7 @@ describe("browser-backend/docker/controller", () => {
         prepareDockerImages = engine.prepareDockerImages;
         ({ SelenoidDockerController } = proxyquire("src/browser-backend/docker/controller", {
             "./engine": engine,
+            "./timing": { debugDocker: debugStub },
             "../../utils/logger": { warn: warnStub, log: sandbox.stub() },
             "get-port": getPortStub,
             "fs/promises": {
@@ -198,9 +211,8 @@ describe("browser-backend/docker/controller", () => {
             const result = await prepareDockerImages({ image: "browser", selenoidImage }, "Chrome");
 
             assert.deepEqual(result, { image: "testplane-browser:prepared", selenoidImage });
-            for (const image of ["browser", selenoidImage]) {
-                assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", image]);
-            }
+            assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", "browser"]);
+            assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", selenoidImage]);
             assert.calledOnce(prepareImage);
             assert.isFalse(command.getCalls().some(call => ["create", "start", "network"].includes(call.args[0][0])));
             assert.notCalled(writeConfig);
@@ -229,22 +241,237 @@ describe("browser-backend/docker/controller", () => {
     describe("platform selection", () => {
         const imagePlatform = "{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}";
 
-        it("should prepare an ARM browser while keeping the default AMD64 controller", async () => {
+        describe("registry platform selection", () => {
+            const manifestCommand = ["manifest", "inspect", "--verbose", "browser"];
+
+            beforeEach(() => {
+                command
+                    .withArgs(["image", "inspect", "--format", imagePlatform, "--", "browser"])
+                    .onFirstCall()
+                    .rejects(new Error("No such image"));
+            });
+
+            it("should pull a compatible single-platform image only after checking its metadata", async () => {
+                command
+                    .withArgs(manifestCommand)
+                    .resolves(JSON.stringify({ Descriptor: { platform: { os: "linux", architecture: "amd64" } } }));
+
+                await prepareDockerImages({ image: "browser", selenoidImage });
+
+                const inspect = command.withArgs(manifestCommand);
+                const pull = command.withArgs(["pull", "--platform", "linux/amd64", "--quiet", "browser"]);
+                assert.calledOnce(inspect);
+                assert.calledOnce(pull);
+                assert.callOrder(inspect, pull);
+            });
+
+            for (const multiPlatform of [false, true]) {
+                it(`should fall back to amd64 when arm64 is absent (manifest list: ${multiPlatform})`, async () => {
+                    command.withArgs(daemonPlatformCommand).resolves("linux/arm64");
+                    const manifest = { Descriptor: { platform: { os: "linux", architecture: "amd64" } } };
+                    command.withArgs(manifestCommand).resolves(JSON.stringify(multiPlatform ? [manifest] : manifest));
+
+                    await prepareDockerImages({ image: "browser", selenoidImage }, "chrome");
+
+                    assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", "browser"]);
+                    assert.calledWith(prepareImage, "browser", sinon.match.string, sinon.match.func, "linux/amd64");
+                    assert.calledOnce(warnStub);
+                    assert.calledWithMatch(warnStub, "unavailable for linux/arm64; using linux/amd64");
+                    assert.calledWithMatch(warnStub, "requires emulation");
+                });
+            }
+
+            it("should fail before pulling when neither the native platform nor amd64 is available", async () => {
+                command.withArgs(daemonPlatformCommand).resolves("linux/arm64");
+                command
+                    .withArgs(manifestCommand)
+                    .resolves(
+                        JSON.stringify([
+                            { Descriptor: { platform: { os: "linux", architecture: "riscv64" } } },
+                            { Descriptor: { platform: { os: "unknown", architecture: "unknown" } } },
+                        ]),
+                    );
+
+                await assert.isRejected(
+                    prepareDockerImages({ image: "browser", selenoidImage }),
+                    'requested "linux/arm64"',
+                );
+
+                assert.isFalse(command.getCalls().some(call => call.args[0][0] === "pull"));
+                assert.notCalled(warnStub);
+            });
+
+            it("should enforce the selected native platform after pulling even if amd64 is an allowed fallback", async () => {
+                command.withArgs(daemonPlatformCommand).resolves("linux/arm64");
+                // Inspection after pulling returns amd64 although the registry advertised arm64.
+
+                await assert.isRejected(
+                    prepareDockerImages({ image: "browser", selenoidImage }),
+                    'targets "linux/amd64"; expected "linux/arm64"',
+                );
+
+                assert.calledWith(command, ["pull", "--platform", "linux/arm64", "--quiet", "browser"]);
+                assert.notCalled(warnStub);
+            });
+
+            for (const { name, manifest, platform } of [
+                {
+                    name: "a single-platform image",
+                    manifest: { Descriptor: { platform: { os: "linux", architecture: "amd64" } } },
+                    platform: "linux/arm64",
+                },
+                {
+                    name: "a multi-platform image with no matching architecture",
+                    manifest: [
+                        { Descriptor: { platform: { os: "linux", architecture: "amd64" } } },
+                        { Descriptor: { platform: { os: "linux", architecture: "arm", variant: "v7" } } },
+                    ],
+                    platform: "linux/arm64",
+                },
+                {
+                    name: "an image with a different variant",
+                    manifest: { Descriptor: { platform: { os: "linux", architecture: "arm", variant: "v6" } } },
+                    platform: "linux/arm/v7",
+                },
+                { name: "an image without platform metadata", manifest: {}, platform: "linux/amd64" },
+            ]) {
+                it(`should reject ${name} when the platform is explicitly requested`, async () => {
+                    command.withArgs(manifestCommand).resolves(JSON.stringify(manifest));
+
+                    await assert.isRejected(
+                        prepareDockerImages({ image: "browser", selenoidImage, platform }),
+                        `requested "${platform}"`,
+                    );
+
+                    assert.calledWith(command, manifestCommand);
+                    assert.isFalse(command.getCalls().some(call => call.args[0][0] === "pull"));
+                });
+            }
+
+            it("should propagate registry inspection errors without pulling", async () => {
+                command.withArgs(manifestCommand).rejects(new Error("registry access denied"));
+
+                await assert.isRejected(
+                    prepareDockerImages({ image: "browser", selenoidImage }),
+                    "registry access denied",
+                );
+
+                assert.isFalse(command.getCalls().some(call => call.args[0][0] === "pull"));
+            });
+        });
+
+        for (const platform of ["linux/amd64", "linux/arm64"]) {
+            it(`should select the daemon's ${platform} platform regardless of the client architecture`, async () => {
+                sandbox.stub(process, "arch").value(platform === "linux/amd64" ? "arm64" : "x64");
+                command.withArgs(daemonPlatformCommand).resolves(platform);
+                command
+                    .withArgs(["image", "inspect", "--format", imagePlatform, "--", "browser"])
+                    .onFirstCall()
+                    .rejects(new Error("No such image"))
+                    .onSecondCall()
+                    .resolves(platform);
+
+                await start("browser");
+
+                assert.calledWith(command, ["pull", "--platform", platform, "--quiet", "browser"]);
+                assert.calledWith(prepareImage, "browser", sinon.match.string, sinon.match.func, platform);
+                assert.notCalled(warnStub);
+                const create = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+                assert.notInclude(create, "--platform");
+            });
+        }
+
+        for (const platform of ["", "/", "<no value>/<no value>", "linux/", "windows/amd64"]) {
+            it(`should reject an invalid daemon platform before preparing images: ${JSON.stringify(platform)}`, async () => {
+                command.withArgs(daemonPlatformCommand).resolves(platform);
+
+                await assert.isRejected(
+                    prepareDockerImages({ image: "browser", selenoidImage }),
+                    "Invalid Docker daemon platform",
+                );
+
+                assert.calledOnceWith(command, daemonPlatformCommand);
+                assert.notCalled(prepareImage);
+            });
+        }
+
+        it("should propagate daemon platform discovery errors", async () => {
+            command.withArgs(daemonPlatformCommand).rejects(new Error("Cannot connect to the Docker daemon"));
+
+            await assert.isRejected(
+                prepareDockerImages({ image: "browser", selenoidImage }),
+                "Cannot connect to the Docker daemon",
+            );
+
+            assert.calledOnceWith(command, daemonPlatformCommand);
+            assert.notCalled(prepareImage);
+        });
+
+        it("should not detect the daemon platform when both image platforms are explicitly configured", async () => {
             command
                 .withArgs(["image", "inspect", "--format", imagePlatform, "--", "browser"])
                 .onFirstCall()
                 .rejects(new Error("No such image"))
                 .onSecondCall()
                 .resolves("linux/arm64/v8");
-            const driver = await start("browser", {}, { platform: "linux/arm64" });
+            const driver = await start("browser", {}, { platform: "linux/arm64", selenoidPlatform: "linux/amd64" });
             assert.calledWith(command, ["pull", "--platform", "linux/arm64", "--quiet", "browser"]);
-            assert.calledWith(prepareImage, "browser", sinon.match.string, sinon.match.func, "linux/arm64");
+            assert.calledWith(prepareImage, "browser", sinon.match.string, sinon.match.func, "linux/arm64/v8");
             const create = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
             assert.equal(create[create.indexOf("--platform") + 1], "linux/amd64");
+            assert.neverCalledWith(command, daemonPlatformCommand);
             const entry = JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"];
             assert.notProperty(entry, "platform");
             assert.notProperty(entry, "selenoidPlatform");
             await driver[Symbol.asyncDispose]();
+        });
+
+        it("should prefer native Selenoid independently of the browser platform", async () => {
+            command.withArgs(daemonPlatformCommand).resolves("linux/arm64");
+            command
+                .withArgs(["image", "inspect", "--format", imagePlatform, "--", selenoidImage])
+                .onFirstCall()
+                .rejects(new Error("No such image"))
+                .onSecondCall()
+                .resolves("linux/arm64");
+
+            await start("browser", {}, { platform: "linux/amd64" });
+
+            assert.calledWith(command, ["pull", "--platform", "linux/arm64", "--quiet", selenoidImage]);
+            assert.calledWith(command, ["manifest", "inspect", "--verbose", selenoidImage]);
+            const create = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+            assert.notInclude(create, "--platform");
+        });
+
+        describe("Selenoid platform fallback", () => {
+            beforeEach(() => {
+                command.withArgs(daemonPlatformCommand).resolves("linux/arm64");
+                command
+                    .withArgs(["image", "inspect", "--format", imagePlatform, "--", selenoidImage])
+                    .onFirstCall()
+                    .rejects(new Error("No such image"));
+                command
+                    .withArgs(["manifest", "inspect", "--verbose", selenoidImage])
+                    .resolves(JSON.stringify({ Descriptor: { platform: { os: "linux", architecture: "amd64" } } }));
+            });
+
+            it("should fall back to AMD64 when native Selenoid is unavailable", async () => {
+                await prepareDockerImages({ image: "browser", selenoidImage });
+
+                assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", selenoidImage]);
+                assert.calledOnce(warnStub);
+                assert.calledWithMatch(warnStub, "unavailable for linux/arm64; using linux/amd64");
+            });
+
+            it("should not fall back when Selenoid's platform is explicitly configured", async () => {
+                await assert.isRejected(
+                    prepareDockerImages({ image: "browser", selenoidImage, selenoidPlatform: "linux/arm64" }),
+                    'requested "linux/arm64"',
+                );
+
+                assert.isFalse(command.getCalls().some(call => call.args[0][0] === "pull"));
+                assert.notCalled(warnStub);
+            });
         });
 
         it("should pull and start an ARM controller independently of the browser platform", async () => {
@@ -272,6 +499,18 @@ describe("browser-backend/docker/controller", () => {
             assert.notCalled(prepareImage);
         });
 
+        for (const platform of ["linux/arm64/v8", "linux/amd64"]) {
+            it(`should reuse a cached ${platform} image on arm64 without querying the registry`, async () => {
+                command.withArgs(daemonPlatformCommand).resolves("linux/arm64");
+                command.withArgs(["image", "inspect", "--format", imagePlatform, "--", "browser"]).resolves(platform);
+
+                await prepareDockerImages({ image: "browser", selenoidImage }, "chrome");
+
+                assert.calledWith(prepareImage, "browser", sinon.match.string, sinon.match.func, platform);
+                assert.isFalse(command.getCalls().some(call => ["manifest", "pull"].includes(call.args[0][0])));
+            });
+        }
+
         for (const key of ["platform", "selenoidPlatform"]) {
             for (const value of [null, "", "arm64", "--privileged", "linux/arm64 extra", "windows/amd64", 123]) {
                 it(`should reject invalid ${key}: ${JSON.stringify(value)}`, async () => {
@@ -289,6 +528,34 @@ describe("browser-backend/docker/controller", () => {
             ]);
             assert.equal(results[0].status, "fulfilled");
             assert.equal(results[1].status, "rejected");
+        });
+
+        it("should keep native-with-fallback selection separate from an explicit native platform", async () => {
+            command.withArgs(daemonPlatformCommand).resolves("linux/arm64");
+            const results = await Promise.allSettled([
+                prepareDockerImages({ image: "browser", selenoidImage }),
+                prepareDockerImages({ image: "browser", selenoidImage, platform: "linux/arm64" }),
+            ]);
+
+            assert.equal(results[0].status, "fulfilled");
+            assert.equal(results[1].status, "rejected");
+            assert.include((results[1] as PromiseRejectedResult).reason.message, 'expected "linux/arm64"');
+        });
+
+        it("should keep automatic Selenoid image validation separate from an explicit platform", async () => {
+            command.withArgs(daemonPlatformCommand).resolves("linux/arm64");
+            command
+                .withArgs(["image", "inspect", "--format", imagePlatform, "--", selenoidImage])
+                .resolves("linux/arm64");
+
+            const results = await Promise.allSettled([
+                prepareDockerImages({ image: "browser", selenoidImage }),
+                prepareDockerImages({ image: "browser", selenoidImage, selenoidPlatform: "linux/amd64" }),
+            ]);
+
+            assert.equal(results[0].status, "fulfilled");
+            assert.equal(results[1].status, "rejected");
+            assert.include((results[1] as PromiseRejectedResult).reason.message, 'expected "linux/amd64"');
         });
 
         it("should reject conflicting controller platforms before preparing images", async () => {
@@ -409,8 +676,6 @@ describe("browser-backend/docker/controller", () => {
         assert.match(name, /^testplane-/);
         assert.calledWith(command, ["network", "create", "--ipv6", `${name}-network`]);
         assert.deepEqual(args.slice(3), [
-            "--platform",
-            "linux/amd64",
             "--pull",
             "never",
             "--publish",
@@ -461,7 +726,7 @@ describe("browser-backend/docker/controller", () => {
     });
 
     for (const missingNetwork of ["network does-not-exist not found", "no such network does-not-exist"]) {
-        it(`should warn and fall back to IPv4 when dual-stack creation fails and the network is missing (${missingNetwork})`, async () => {
+        it(`should log and fall back to IPv4 when dual-stack creation fails and the network is missing (${missingNetwork})`, async () => {
             const dualStack = command.withArgs(sinon.match.array.startsWith(["network", "create", "--ipv6"]));
             dualStack.rejects(new Error("IPv6 is unavailable"));
             const inspect = command.withArgs(sinon.match.array.startsWith(["network", "inspect"]));
@@ -471,9 +736,9 @@ describe("browser-backend/docker/controller", () => {
             const network = dualStack.firstCall.args[0][3];
             const ipv4 = command.withArgs(["network", "create", network]);
             assert.calledOnce(ipv4);
-            assert.calledOnce(warnStub);
-            assert.calledWithMatch(warnStub, "falling back to IPv4.\nIPv6 is unavailable");
-            assert.callOrder(dualStack, inspect, warnStub, ipv4);
+            assert.calledOnce(debugStub);
+            assert.calledWithMatch(debugStub, "falling back to IPv4. Error: IPv6 is unavailable");
+            assert.callOrder(dualStack, inspect, debugStub, ipv4);
             await driver[Symbol.asyncDispose]();
             assert.calledWith(command, ["network", "rm", network]);
         });
@@ -516,7 +781,7 @@ describe("browser-backend/docker/controller", () => {
         });
 
         await assert.isRejected(start("browser"), "IPv4 creation failed");
-        assert.calledOnce(warnStub);
+        assert.calledOnce(debugStub);
         assert.isFalse(command.getCalls().some(call => call.args[0][0] === "create"));
     });
 
@@ -769,16 +1034,24 @@ describe("browser-backend/docker/controller", () => {
     it("should not pull an image already available locally", async () => {
         const driver = await start("browser");
         assert.isFalse(command.getCalls().some(call => call.args[0][0] === "pull"));
+        assert.isFalse(command.getCalls().some(call => call.args[0][0] === "manifest"));
         await driver[Symbol.asyncDispose]();
     });
 
-    it("should share the pull between parallel sessions", async () => {
+    it("should share the platform selection and fallback pull between parallel sessions", async () => {
+        command.withArgs(daemonPlatformCommand).resolves("linux/arm64");
+        command
+            .withArgs(["manifest", "inspect", "--verbose", "browser"])
+            .resolves(JSON.stringify({ Descriptor: { platform: { os: "linux", architecture: "amd64" } } }));
         command
             .withArgs(sinon.match.array.startsWith(["image", "inspect"]))
             .onFirstCall()
             .rejects(new Error("No such image: browser"));
         const drivers = await Promise.all([start("browser"), start("browser")]);
         assert.equal(command.getCalls().filter(call => call.args[0][0] === "pull").length, 1);
+        assert.equal(command.getCalls().filter(call => call.args[0][0] === "manifest").length, 1);
+        assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", "browser"]);
+        assert.calledOnce(warnStub);
         await Promise.all(drivers.map(driver => driver[Symbol.asyncDispose]()));
     });
 
@@ -1044,7 +1317,7 @@ describe("browser-backend/docker/controller", () => {
             command.withArgs(sinon.match.array.startsWith(["exec"])).resolves("absent\n");
             assert.isFalse(await driver.prepareCdp("session-id", "session-label", 50));
             assert.calledOnce(fetchStub);
-            assert.calledWith(warnStub, sinon.match("continuing without CDP"));
+            assert.calledWith(debugStub, sinon.match("continuing without CDP"));
             await driver[Symbol.asyncDispose]();
         });
 

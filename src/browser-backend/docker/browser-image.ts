@@ -46,10 +46,10 @@ export async function prepareDockerBrowserImage(
     source: string,
     scope: string,
     docker: Docker,
-    platform = "linux/amd64",
+    platform: string,
 ): Promise<string> {
     // The packed CDP adapter only needs repair under emulation on Apple Silicon.
-    if (hostPlatform() !== "darwin" || arch() !== "arm64") {
+    if (hostPlatform() !== "darwin" || arch() !== "arm64" || platform.split("/")[1] !== "amd64") {
         return source;
     }
 

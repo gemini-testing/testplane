@@ -81,6 +81,19 @@ describe("browser-pool/basic-pool", () => {
             assert.strictEqual(NewBrowser.create.firstCall.args[1], NewBrowser.create.secondCall.args[1]);
         });
 
+        it("should create separate backends for automatic and explicit Selenoid platforms", async () => {
+            const pool = mkPool_();
+            const automatic = dockerConfig("automatic");
+            const explicit = dockerConfig("explicit");
+            explicit.docker.selenoidPlatform = "linux/amd64";
+
+            await pool.prewarm([automatic, explicit]);
+
+            assert.calledTwice(SelenoidDockerController.create);
+            assert.calledWith(SelenoidDockerController.create, [automatic]);
+            assert.calledWith(SelenoidDockerController.create, [explicit]);
+        });
+
         it("should prewarm additional images when the shared backend already exists", async () => {
             const preparedImages = new Set();
             SelenoidDockerController.create.callsFake(async configs => {
