@@ -66,7 +66,7 @@ export class MainRunner extends RunnableEmitter {
         super();
 
         this.config = config;
-        this.exitOnError = new ExitOnError(config.exitOnError);
+        this.exitOnError = new ExitOnError(config.system);
         this.interceptors = interceptors;
         this.browserPool = null;
 

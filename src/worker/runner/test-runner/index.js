@@ -14,6 +14,7 @@ const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
 const { startSelectivity } = require("../../../browser/cdp/selectivity");
 const { noopProfilerRuntime } = require("../../../profiler/runtime/noop");
+const { createErrorMatchers } = require("../../../utils/error-patterns");
 
 const SNAPSHOTS_TIMEOUT_MS = 10000;
 const SNAPSHOTS_WARNING_TIMEOUT_MS = 2000;
@@ -366,5 +367,7 @@ module.exports = class TestRunner {
 };
 
 function isSessionBroken(error, { system: { patternsOnReject } }) {
-    return error && patternsOnReject.some(p => new RegExp(p).test(error.message));
+    return (
+        error && createErrorMatchers(patternsOnReject, "system.patternsOnReject").some(p => p.matches(error.message))
+    );
 }

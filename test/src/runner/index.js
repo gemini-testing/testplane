@@ -101,10 +101,18 @@ describe("NodejsEnvRunner", () => {
 
     afterEach(() => sandbox.restore());
 
-    describe("exitOnError", () => {
-        it("should share counters across browsers and cancel all runners once before intercepted events", async () => {
+    describe("maxFailures", () => {
+        it("should share a counter across browsers and cancel all runners once before intercepted events", async () => {
             const config = makeConfigStub({
-                exitOnError: { enabled: true, filters: [{ name: "quota", filter: /429/, limit: 2 }] },
+                system: {
+                    maxFailures: {
+                        limit: 2,
+                        patterns: [
+                            { name: "quota", pattern: /429/ },
+                            { name: "access", pattern: /403/ },
+                        ],
+                    },
+                },
             });
             const interceptor = sandbox.stub().returns({ event: RunnerEvents.TEST_PASS });
             const runner = new Runner(config, [{ event: RunnerEvents.TEST_FAIL, handler: interceptor }]);
@@ -117,7 +125,7 @@ describe("NodejsEnvRunner", () => {
             let checks = 0;
             onWaitTestsCompletion_(() => {
                 const check = BrowserRunner.create.getCall(checks).args[5];
-                const failedTest = { id: "same-test", file: "test.js", err: new Error("429") };
+                const failedTest = { id: "same-test", file: "test.js", err: new Error(checks === 0 ? "429" : "403") };
                 const error = check(failedTest);
                 if (checks++ === 0) {
                     assert.isUndefined(error);
@@ -130,16 +138,16 @@ describe("NodejsEnvRunner", () => {
             await run_({ runner, testCollection });
 
             assert.calledOnce(onError);
-            assert.include(onError.firstCall.args[0].message, '"quota"');
+            assert.include(onError.firstCall.args[0].message, 'limit of 2 matching errors (pattern "access")');
             assert.calledTwice(cancel);
             assert.calledOnce(workers.cancel);
             assert.notCalled(interceptor);
         });
 
-        it("should not invoke filters after cancellation", async () => {
-            const filter = sandbox.spy(() => true);
+        it("should not invoke patterns after cancellation", async () => {
+            const pattern = sandbox.spy(() => true);
             const config = makeConfigStub({
-                exitOnError: { enabled: true, filters: [{ name: "quota", filter, limit: 1 }] },
+                system: { maxFailures: { limit: 1, patterns: [{ name: "quota", pattern }] } },
             });
             const runner = new Runner(config);
             runner.cancel(new Error("cancelled"));
@@ -150,7 +158,7 @@ describe("NodejsEnvRunner", () => {
 
             await run_({ runner });
 
-            assert.notCalled(filter);
+            assert.notCalled(pattern);
         });
     });
 

@@ -18,108 +18,135 @@ describe("config options", () => {
 
     afterEach(() => sandbox.restore());
 
-    describe("exitOnError", () => {
-        it("should be disabled with no filters by default", () => {
-            assert.deepEqual(parse_().exitOnError, { enabled: false, filters: [] });
+    describe("system.maxFailures", () => {
+        it("should have no failure limit by default", () => {
+            assert.strictEqual(parse_().system.maxFailures, Infinity);
         });
 
-        it("should preserve named function and RegExp filters", () => {
-            const exitOnError = {
-                enabled: true,
-                filters: [
-                    { name: "quota", filter: /Too Many Requests/i, limit: 5 },
-                    { name: "access", filter: text => text.includes("Access denied"), limit: 1 },
+        [1, 20, Number.MAX_SAFE_INTEGER, Infinity].forEach(maxFailures => {
+            it(`should accept a numeric limit: ${maxFailures}`, () => {
+                assert.strictEqual(parse_({ options: { system: { maxFailures } } }).system.maxFailures, maxFailures);
+            });
+        });
+
+        it("should preserve named function and RegExp patterns with a shared limit", () => {
+            const maxFailures = {
+                limit: 5,
+                patterns: [
+                    { name: "quota", pattern: /Too Many Requests/i },
+                    { name: "access", pattern: text => text.includes("Access denied") },
                 ],
             };
+            const result = parse_({ options: { system: { maxFailures, patternsOnReject: maxFailures.patterns } } });
 
-            assert.deepEqual(parse_({ options: { exitOnError } }).exitOnError, exitOnError);
+            assert.deepEqual(result.system.maxFailures, maxFailures);
+            assert.deepEqual(result.system.patternsOnReject, maxFailures.patterns);
         });
 
-        it("should allow partial config and override enabled from environment", () => {
-            const result = parse_({
-                options: { exitOnError: { filters: [{ name: "quota", filter: /429/, limit: 1 }] } },
-                env: { ["testplane_exit_on_error_enabled"]: "true" },
+        ["20", '{"limit": 3, "patterns": ["429"]}', "Infinity"].forEach(value => {
+            const expected = value === "Infinity" ? Infinity : JSON.parse(value);
+            it(`should parse ${value} from environment and CLI`, () => {
+                const fromEnv = parse_({ env: { ["testplane_system_max_failures"]: value } });
+                const fromCli = parse_({ argv: ["--system-max-failures", value] });
+
+                assert.deepEqual(fromEnv.system.maxFailures, expected);
+                assert.deepEqual(fromCli.system.maxFailures, expected);
             });
-
-            assert.isTrue(result.exitOnError.enabled);
-            assert.equal(result.exitOnError.filters[0].limit, 1);
         });
 
-        [null, {}, "quota", true].forEach(filters => {
-            it(`should reject invalid filters: ${JSON.stringify(filters)}`, () => {
+        [null, false, true, "5", [], {}, { limit: 2 }].forEach(maxFailures => {
+            it(`should reject invalid config: ${JSON.stringify(maxFailures)}`, () => {
+                assert.throws(() => parse_({ options: { system: { maxFailures } } }), "system.maxFailures");
+            });
+        });
+
+        [0, -1, 1.5, NaN, -Infinity, Number.MAX_SAFE_INTEGER + 1].forEach(limit => {
+            it(`should reject invalid numeric limit: ${limit}`, () => {
                 assert.throws(
-                    () => parse_({ options: { exitOnError: { filters } } }),
-                    '"exitOnError.filters" must be an array',
+                    () => parse_({ options: { system: { maxFailures: limit } } }),
+                    '"system.maxFailures" must be a positive safe integer',
                 );
             });
         });
 
-        [null, [], "quota"].forEach(rule => {
-            it(`should reject invalid rule: ${JSON.stringify(rule)}`, () => {
+        [undefined, null, 0, -1, 1.5, Infinity, NaN, "5", Number.MAX_SAFE_INTEGER + 1].forEach(limit => {
+            it(`should reject invalid object limit: ${limit}`, () => {
                 assert.throws(
-                    () => parse_({ options: { exitOnError: { filters: [rule] } } }),
-                    '"exitOnError.filters[0]" must be an object',
+                    () => parse_({ options: { system: { maxFailures: { limit, patterns: [] } } } }),
+                    '"system.maxFailures.limit" must be a positive safe integer',
                 );
             });
         });
+    });
 
-        [undefined, null, "", "   ", 42, {}, []].forEach(name => {
-            it(`should reject invalid rule name: ${JSON.stringify(name)}`, () => {
+    ["maxFailures", "patternsOnReject"].forEach(option => {
+        describe(`system.${option} patterns`, () => {
+            const parsePatterns = patterns =>
+                parse_({
+                    options: { system: { [option]: option === "maxFailures" ? { limit: 2, patterns } : patterns } },
+                });
+            const path = option === "maxFailures" ? "system.maxFailures.patterns" : "patternsOnReject";
+
+            [null, {}, "quota", true].forEach(patterns => {
+                it(`should reject invalid patterns: ${JSON.stringify(patterns)}`, () => {
+                    assert.throws(() => parsePatterns(patterns), `"${path}" must be an array`);
+                });
+            });
+
+            [null, [], 42].forEach(rule => {
+                it(`should reject invalid pattern object: ${JSON.stringify(rule)}`, () => {
+                    assert.throws(
+                        () => parsePatterns([rule]),
+                        `"${path}[0]" must be a string, RegExp or named pattern object`,
+                    );
+                });
+            });
+
+            [undefined, null, "", "   ", 42, {}, []].forEach(name => {
+                it(`should reject invalid pattern name: ${JSON.stringify(name)}`, () => {
+                    assert.throws(
+                        () => parsePatterns([{ name, pattern: /429/ }]),
+                        `"${path}[0].name" must be a non-empty string`,
+                    );
+                });
+            });
+
+            it("should reject duplicate names", () => {
                 assert.throws(
                     () =>
-                        parse_({
-                            options: { exitOnError: { filters: [{ name, filter: /429/, limit: 1 }] } },
-                        }),
-                    '"exitOnError.filters[0].name" must be a non-empty string',
+                        parsePatterns([
+                            { name: "quota", pattern: /429/ },
+                            { name: "quota", pattern: /503/ },
+                        ]),
+                    `"${path}[1].name" must be unique`,
                 );
             });
-        });
 
-        [true, false].forEach(enabled => {
-            it(`should reject duplicate rule names when enabled is ${enabled}`, () => {
-                assert.throws(
-                    () =>
-                        parse_({
-                            options: {
-                                exitOnError: {
-                                    enabled,
-                                    filters: [
-                                        { name: "quota", filter: /429/, limit: 1 },
-                                        { name: "access", filter: /403/, limit: 2 },
-                                        { name: "quota", filter: /503/, limit: 3 },
-                                    ],
-                                },
-                            },
-                        }),
-                    '"exitOnError.filters[2].name" must be unique: duplicate rule name "quota"',
+            it("should accept legacy patterns and names matching object prototype properties", () => {
+                const patterns = [
+                    "429",
+                    /403/,
+                    { name: "__proto__", pattern: /503/ },
+                    { name: "constructor", pattern: () => true },
+                ];
+                const result = parsePatterns(patterns);
+                assert.deepEqual(
+                    option === "maxFailures" ? result.system.maxFailures.patterns : result.system.patternsOnReject,
+                    patterns,
                 );
             });
-        });
 
-        it("should accept rule names matching object prototype properties", () => {
-            const filters = [
-                { name: "__proto__", filter: /429/, limit: 1 },
-                { name: "constructor", filter: /403/, limit: 2 },
-            ];
-
-            assert.deepEqual(parse_({ options: { exitOnError: { filters } } }).exitOnError.filters, filters);
-        });
-
-        [null, "429", 42, {}].forEach(filter => {
-            it(`should reject invalid filter: ${JSON.stringify(filter)}`, () => {
-                assert.throws(
-                    () => parse_({ options: { exitOnError: { filters: [{ name: "quota", filter, limit: 1 }] } } }),
-                    '"exitOnError.filters[0].filter" must be a function or RegExp',
-                );
+            [undefined, null, "429", 42, {}].forEach(pattern => {
+                it(`should reject invalid named pattern: ${JSON.stringify(pattern)}`, () => {
+                    assert.throws(
+                        () => parsePatterns([{ name: "quota", pattern }]),
+                        `"${path}[0].pattern" must be a function or RegExp`,
+                    );
+                });
             });
-        });
 
-        [undefined, 0, -1, 1.5, Infinity, NaN, "5", Number.MAX_SAFE_INTEGER + 1].forEach(limit => {
-            it(`should reject invalid limit: ${limit}`, () => {
-                assert.throws(
-                    () => parse_({ options: { exitOnError: { filters: [{ name: "quota", filter: /429/, limit }] } } }),
-                    '"exitOnError.filters[0].limit" must be a positive safe integer',
-                );
+            it("should reject invalid legacy regular expression strings", () => {
+                assert.throws(() => parsePatterns(["["]), "Invalid regular expression");
             });
         });
     });

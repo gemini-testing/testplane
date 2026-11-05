@@ -27,6 +27,7 @@ function makeConfigStub(opts = {}) {
             mochaOpts: {},
             expectOpts: {},
             patternsOnReject: [],
+            maxFailures: Infinity,
             testRunEnv: NODEJS_TEST_RUN_ENV,
             workers: 1,
         },
@@ -43,7 +44,6 @@ function makeConfigStub(opts = {}) {
         timeTravel: { mode: "off" },
         selectivity: { enabled: false },
         profiler: { level: 0, output: null },
-        exitOnError: { enabled: false, filters: [] },
     });
 
     const config = {
@@ -57,7 +57,6 @@ function makeConfigStub(opts = {}) {
         timeTravel: opts.timeTravel,
         selectivity: opts.selectivity,
         profiler: opts.profiler,
-        exitOnError: opts.exitOnError,
         takeScreenshotOnFails: opts.takeScreenshotOnFails,
     };
 

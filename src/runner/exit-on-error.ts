@@ -1,23 +1,27 @@
-import type { ExitOnErrorConfig } from "../config/types";
+import type { SystemConfig } from "../config/types";
 import type { Test } from "../types";
+import { createErrorMatchers, type ErrorMatcher } from "../utils/error-patterns";
 
 export type CheckTestError = (test: Test) => Error | undefined;
 
 /** Shared by all browsers for a single run. */
 export class ExitOnError {
     private stopped = false;
-    private readonly rules;
+    private count = 0;
+    private readonly limit: number;
+    private readonly patterns: ErrorMatcher[] | undefined;
+    private readonly patternsOnReject: ErrorMatcher[];
 
-    constructor(config: ExitOnErrorConfig) {
-        this.rules = config.enabled
-            ? config.filters.map(({ name, filter, limit }) => ({
-                  name,
-                  // Do not mutate the user's RegExp (including its lastIndex).
-                  filter: typeof filter === "function" ? filter : new RegExp(filter.source, filter.flags),
-                  limit,
-                  count: 0,
-              }))
-            : [];
+    constructor({
+        maxFailures = Infinity,
+        patternsOnReject = [],
+    }: Pick<SystemConfig, "maxFailures" | "patternsOnReject">) {
+        this.patternsOnReject = createErrorMatchers(patternsOnReject, "system.patternsOnReject");
+        this.limit = typeof maxFailures === "number" ? maxFailures : maxFailures.limit;
+        this.patterns =
+            typeof maxFailures === "number"
+                ? undefined
+                : createErrorMatchers(maxFailures.patterns, "system.maxFailures");
     }
 
     check(test: Test): Error | undefined {
@@ -26,36 +30,34 @@ export class ExitOnError {
         }
 
         const errorText = test.err.message;
-
-        for (const rule of this.rules) {
-            let matches: boolean;
-            try {
-                if (typeof rule.filter === "function") {
-                    matches = rule.filter(errorText);
-                    if (typeof matches !== "boolean") {
-                        // Also consume rejections from an accidentally async filter.
-                        void Promise.resolve(matches).catch(() => {});
-                        throw new TypeError("filter must synchronously return a boolean");
-                    }
-                } else {
-                    rule.filter.lastIndex = 0;
-                    matches = rule.filter.test(errorText);
-                }
-            } catch (cause) {
+        try {
+            const rejected = this.patternsOnReject.find(pattern => pattern.matches(errorText));
+            if (rejected) {
                 this.stopped = true;
-                return new Error(`exitOnError filter "${rule.name}" failed`, { cause });
+                return new Error(`system.patternsOnReject matched pattern "${rejected.name}": ${errorText}`, {
+                    cause: test.err,
+                });
             }
 
-            if (matches) {
-                rule.count++;
-                if (rule.count >= rule.limit) {
-                    this.stopped = true;
-                    return new Error(
-                        `exitOnError rule "${rule.name}" reached its limit of ${rule.limit} matching errors: ${errorText}`,
-                        { cause: test.err },
-                    );
-                }
+            if (this.limit === Infinity) {
+                return undefined;
             }
+            const matched = this.patterns?.find(pattern => pattern.matches(errorText));
+            if (this.patterns && !matched) {
+                return undefined;
+            }
+
+            // Count each failed attempt once, even when several patterns match.
+            if (++this.count >= this.limit) {
+                this.stopped = true;
+                const description = matched ? `matching errors (pattern "${matched.name}")` : "errors";
+                return new Error(`system.maxFailures reached its limit of ${this.limit} ${description}: ${errorText}`, {
+                    cause: test.err,
+                });
+            }
+        } catch (error) {
+            this.stopped = true;
+            return error as Error;
         }
 
         return undefined;

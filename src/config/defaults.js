@@ -84,10 +84,6 @@ module.exports = {
     testsPerWorker: Infinity,
     retry: 0,
     shouldRetry: null,
-    exitOnError: {
-        enabled: false,
-        filters: [],
-    },
     mochaOpts: {
         slow: 10000,
         timeout: 60000,
@@ -97,6 +93,7 @@ module.exports = {
         interval: 100,
     },
     patternsOnReject: [],
+    maxFailures: Infinity,
     meta: null,
     windowSize: null,
     tempDir: "",
