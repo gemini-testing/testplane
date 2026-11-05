@@ -6,11 +6,16 @@ import { BrowserOpts, Pool, PoolObserver, PoolObserverOperation } from "./types"
 import { CancelledError } from "./cancelled-error";
 import { buildCompositeBrowserId } from "./utils";
 import { Browser } from "../browser/browser";
+import type { FreeBrowserOpts } from "./caching-pool";
 
 export interface LimitedPoolOpts {
     limit: number;
     isSpecificBrowserLimiter?: boolean;
     observer?: PoolObserver;
+}
+
+interface LimitedPoolFreeBrowserOpts extends FreeBrowserOpts {
+    remainingRequestsForBrowser?: number;
 }
 
 interface QueueItem {
@@ -28,6 +33,7 @@ export class LimitedPool implements Pool {
     private _limit: number;
     private _launched: number;
     private _requests: number;
+    private _requestsByBrowser: Map<string, number>;
     private _requestQueue: yallist<QueueItem>;
     private _highPriorityRequestQueue: yallist<QueueItem>;
     private _isSpecificBrowserLimiter: boolean;
@@ -46,6 +52,7 @@ export class LimitedPool implements Pool {
         this._limit = opts.limit;
         this._launched = 0;
         this._requests = 0;
+        this._requestsByBrowser = new Map();
         this._requestQueue = yallist.create();
         this._highPriorityRequestQueue = yallist.create();
         this._isSpecificBrowserLimiter = _.isBoolean(opts.isSpecificBrowserLimiter)
@@ -59,27 +66,39 @@ export class LimitedPool implements Pool {
         this.log(`get browser ${id} with opts:${optsToPrint} (launched ${this._launched}, limit ${this._limit})`);
 
         ++this._requests;
+        this._requestsByBrowser.set(id, (this._requestsByBrowser.get(id) || 0) + 1);
         this._sampleState(id);
         try {
             return await this._getBrowser(id, opts);
         } catch (e) {
             --this._requests;
+            this._requestsByBrowser.set(id, this._requestsByBrowser.get(id)! - 1);
             this._sampleState(id);
             return await Promise.reject(e);
         }
     }
 
-    async freeBrowser(browser: Browser, opts: BrowserOpts = {}): Promise<void> {
+    async freeBrowser(browser: Browser, opts: LimitedPoolFreeBrowserOpts = {}): Promise<void> {
         --this._requests;
+        this._requestsByBrowser.set(browser.id, this._requestsByBrowser.get(browser.id)! - 1);
         this._sampleState(browser.id);
 
         const nextRequest = this._lookAtNextRequest();
-        const compositeIdForNextRequest =
-            nextRequest && buildCompositeBrowserId(nextRequest.id, nextRequest.opts.version);
-        const hasFreeSlots = this._launched < this._limit;
-        const shouldFreeUnusedResource = this._isSpecificBrowserLimiter && this._launched > this._requests;
+        const compositeIdForNextRequest = nextRequest
+            ? buildCompositeBrowserId(nextRequest.id, nextRequest.opts.version)
+            : opts.compositeIdForNextRequest;
+        // Внешний лимитер видит также запросы, ещё не дошедшие до пула браузера.
+        const remainingRequestsForBrowser =
+            opts.remainingRequestsForBrowser ?? this._requestsByBrowser.get(browser.id)!;
+        const hasFreeSlots = this._launched < this._limit && opts.hasFreeSlots !== false;
+        const nextRequestNeedsAnotherBrowser =
+            compositeIdForNextRequest &&
+            compositeIdForNextRequest !== buildCompositeBrowserId(browser.id, browser.version);
+        const shouldFreeUnusedResource =
+            this._isSpecificBrowserLimiter &&
+            (this._launched > remainingRequestsForBrowser || nextRequestNeedsAnotherBrowser);
         const force = opts.force || shouldFreeUnusedResource;
-        const optsForFree = { force, compositeIdForNextRequest, hasFreeSlots };
+        const optsForFree = { force, compositeIdForNextRequest, hasFreeSlots, remainingRequestsForBrowser };
 
         this.log(`free browser ${browser.fullId} with opts:${JSON.stringify(optsForFree)}`);
 
