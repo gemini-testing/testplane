@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 9.4.0 (2026-11-05)
+
+
+### Features
+
+* implement "docker" gridUrl to run browsers inside local docker containers ([#1338](https://github.com/gemini-testing/testplane/issues/1338)) ([2386ece](https://github.com/gemini-testing/testplane/commit/2386ecef678fe0faa77b362db0d7b34191c70c4c))
+
 ### 9.3.7 (2026-11-05)
 
 
