@@ -24,6 +24,7 @@ const { promiseDelay } = require("../../src/utils/promise");
 describe("testplane", () => {
     const sandbox = sinon.createSandbox();
     let Testplane, initReporters, signalHandler, loggerWarnStub, loggerErrorStub;
+    let availableParallelismStub, getDockerCpuCountStub, debugStub;
 
     const mkTestplane_ = async config => {
         Config.create.resolves(config || makeConfigStub());
@@ -55,12 +56,18 @@ describe("testplane", () => {
 
         loggerWarnStub = sandbox.stub();
         loggerErrorStub = sandbox.stub();
+        availableParallelismStub = sandbox.stub().returns(8);
+        getDockerCpuCountStub = sandbox.stub().resolves(8);
+        debugStub = sandbox.stub();
 
         sandbox.stub(ViteServer, "create").returns(Object.create(ViteServer.prototype));
         sandbox.stub(ViteServer.prototype, "start").resolves();
         sandbox.stub(ViteServer.prototype, "close").resolves();
 
         Testplane = proxyquire("src/testplane", {
+            os: { availableParallelism: availableParallelismStub },
+            "./browser-backend/docker/engine": { getDockerCpuCount: getDockerCpuCountStub },
+            debug: () => debugStub,
             "./reporters": { initReporters },
             "./signal-handler": signalHandler,
             "./utils/logger": {
@@ -256,6 +263,132 @@ describe("testplane", () => {
                 await testplane.run([], { replMode: { enabled: true } });
 
                 assert.equal(testplane.config.system.mochaOpts.timeout, 0);
+            });
+        });
+
+        describe("automatic Docker parallel limit", () => {
+            let config, runner;
+
+            beforeEach(() => {
+                runner = mkRunner_();
+                config = makeConfigStub({ browsers: ["chrome", "firefox"] });
+                config.system.parallelLimit = Infinity;
+                for (const id of config.getBrowserIds()) {
+                    Object.assign(config.forBrowser(id), {
+                        gridUrl: "docker",
+                        docker: { selenoidImage: `selenoid:${id}` },
+                    });
+                }
+                const runtime = RuntimeConfig.getInstance();
+                runtime.extend.callsFake(opts => Object.assign(runtime, opts));
+            });
+
+            for (const [localCpus, dockerCpus, expected] of [
+                [1, 1, 1],
+                [3, 3, 3],
+                [8, 8, 10],
+                [12, 4, 5],
+                [4, 12, 5],
+            ]) {
+                it(`should share a limit of ${expected} with ${localCpus} local and ${dockerCpus} Docker CPUs`, async () => {
+                    availableParallelismStub.returns(localCpus);
+                    getDockerCpuCountStub.resolves(dockerCpus);
+                    let limitAtRunnerInit;
+                    runner.init.callsFake(() => {
+                        limitAtRunnerInit = config.system.parallelLimit;
+                    });
+
+                    await (await mkTestplane_(config)).run();
+
+                    assert.equal(config.system.parallelLimit, expected);
+                    assert.equal(limitAtRunnerInit, expected);
+                    assert.calledOnce(getDockerCpuCountStub);
+                    assert.calledOnceWith(
+                        debugStub,
+                        sinon.match(
+                            `parallelLimit=${expected} based on ${Math.min(localCpus, dockerCpus)} available CPUs (local: ${localCpus}, Docker: ${dockerCpus})`,
+                        ),
+                    );
+                });
+            }
+
+            it("should fall back to local CPUs when Docker CPU discovery fails", async () => {
+                getDockerCpuCountStub.resolves(null);
+
+                await (await mkTestplane_(config)).run();
+
+                assert.equal(config.system.parallelLimit, 10);
+                assert.calledWith(
+                    debugStub,
+                    sinon.match("parallelLimit=10 based on 8 available CPUs (local: 8, Docker: unavailable)"),
+                );
+            });
+
+            it("should resolve backends after async INIT handlers complete", async () => {
+                config.forBrowser("chrome").gridUrl = "http://grid";
+                const testplane = await mkTestplane_(config);
+                testplane.on(RunnerEvents.INIT, async () => {
+                    await Promise.resolve();
+                    config.forBrowser("chrome").gridUrl = "docker";
+                });
+
+                await testplane.run();
+
+                assert.equal(config.system.parallelLimit, 10);
+            });
+
+            for (const gridUrl of ["local", "http://grid"]) {
+                it(`should preserve Infinity for mixed Docker and ${gridUrl} browsers`, async () => {
+                    config.forBrowser("firefox").gridUrl = gridUrl;
+
+                    await (await mkTestplane_(config)).run();
+
+                    assert.equal(config.system.parallelLimit, Infinity);
+                    assert.notCalled(availableParallelismStub);
+                    assert.notCalled(getDockerCpuCountStub);
+                    assert.notCalled(debugStub);
+                });
+            }
+
+            it("should preserve an explicit finite limit", async () => {
+                config.system.parallelLimit = 20;
+
+                await (await mkTestplane_(config)).run();
+
+                assert.equal(config.system.parallelLimit, 20);
+                assert.notCalled(availableParallelismStub);
+                assert.notCalled(getDockerCpuCountStub);
+                assert.notCalled(debugStub);
+            });
+
+            it("should preserve a limit set by an async INIT handler", async () => {
+                const testplane = await mkTestplane_(config);
+                testplane.on(RunnerEvents.INIT, async () => {
+                    await Promise.resolve();
+                    config.system.parallelLimit = 20;
+                });
+
+                await testplane.run();
+
+                assert.equal(config.system.parallelLimit, 20);
+                assert.notCalled(availableParallelismStub);
+            });
+
+            it("should preserve Infinity when there are no browsers", async () => {
+                config.getBrowserIds = () => [];
+
+                await (await mkTestplane_(config)).run();
+
+                assert.equal(config.system.parallelLimit, Infinity);
+                assert.notCalled(availableParallelismStub);
+            });
+
+            it("should preserve Infinity when --local overrides Docker", async () => {
+                await (await mkTestplane_(config)).run([], { local: true });
+
+                assert.equal(config.system.parallelLimit, Infinity);
+                assert.notCalled(availableParallelismStub);
+                assert.notCalled(debugStub);
             });
         });
 
@@ -489,7 +622,7 @@ describe("testplane", () => {
                     browserVersion: "1",
                 };
                 mkRunner_(runner => {
-                    runner.emit(RunnerEvents.TEST_FAIL, results), runner.emit(RunnerEvents.RUNNER_END);
+                    (runner.emit(RunnerEvents.TEST_FAIL, results), runner.emit(RunnerEvents.RUNNER_END));
                 });
 
                 await runTestplane();

@@ -59,9 +59,8 @@ describe("computeSafeArea", () => {
     it("should keep full modal safe area when non-scrollable modal contains positioned children", async ({
         browser,
     }) => {
-        const { default: html } = await import(
-            "./fixtures/safe-areas/non-scrollable-modal-with-positioned-children.html?raw"
-        );
+        const { default: html } =
+            await import("./fixtures/safe-areas/non-scrollable-modal-with-positioned-children.html?raw");
         document.body.innerHTML = html;
 
         const modal = document.querySelector(".target-modal");
@@ -112,9 +111,8 @@ describe("computeSafeArea", () => {
     });
 
     it("should compute safe area for capture inside scrollable panel with large border radius", async ({ browser }) => {
-        const { default: html } = await import(
-            "./fixtures/safe-areas/scrollable-container-with-border-radius.html?raw"
-        );
+        const { default: html } =
+            await import("./fixtures/safe-areas/scrollable-container-with-border-radius.html?raw");
         document.body.innerHTML = html;
 
         const panel = document.querySelector(".panel");

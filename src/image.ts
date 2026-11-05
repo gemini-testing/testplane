@@ -105,7 +105,7 @@ const hasICCPChunk = (buffer: Buffer): boolean => {
     const IDATChunkType = Buffer.from("IDAT", "ascii").readUInt32BE(0);
     const PLTEChunkType = Buffer.from("PLTE", "ascii").readUInt32BE(0);
 
-    for (let nextChunkPointer = PNG_SIGNATURE.byteLength; nextChunkPointer <= buffer.length - auxChunkSizeBytes; ) {
+    for (let nextChunkPointer = PNG_SIGNATURE.byteLength; nextChunkPointer <= buffer.length - auxChunkSizeBytes;) {
         const chunkLength = buffer.readUInt32BE(nextChunkPointer);
         const chunkType = buffer.readUInt32BE(nextChunkPointer + 4);
 

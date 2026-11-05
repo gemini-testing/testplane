@@ -4,7 +4,7 @@ const RegularTestRunner = require("src/runner/test-runner/regular-test-runner");
 const InsistantTestRunner = require("src/runner/test-runner/insistant-test-runner");
 const HighPriorityBrowserAgent = require("src/runner/test-runner/high-priority-browser-agent");
 const { MasterEvents: Events } = require("src/events");
-const BrowserAgent = require("src/runner/browser-agent");
+const { BrowserAgent } = require("src/runner/browser-agent");
 const { AssertViewError } = require("src/browser/commands/assert-view/errors/assert-view-error");
 const { NoRefImageError } = require("src/browser/commands/assert-view/errors/no-ref-image-error");
 const { Test } = require("src/test-reader/test-object");
@@ -25,8 +25,7 @@ describe("runner/test-runner/insistant-test-runner", () => {
         const config = opts.config || makeConfigStub();
 
         const browserId = Object.keys(config.browsers)[0];
-        const browserAgent = opts.browserAgent || BrowserAgent.create();
-        browserAgent.browserId = browserId;
+        const browserAgent = opts.browserAgent || BrowserAgent.create({ browserConfig: config.forBrowser(browserId) });
 
         return InsistantTestRunner.create(test, config, browserAgent);
     };
@@ -80,7 +79,7 @@ describe("runner/test-runner/insistant-test-runner", () => {
         it("should run test in regular test runner", async () => {
             const test = new Test({});
             const config = makeConfigStub();
-            const browserAgent = BrowserAgent.create();
+            const browserAgent = BrowserAgent.create({ browserConfig: { id: "default-id" } });
 
             const runner = InsistantTestRunner.create(test, config, browserAgent);
             const workers = mkWorkers_();
@@ -177,7 +176,7 @@ describe("runner/test-runner/insistant-test-runner", () => {
                 it("should create test runner with high priority browser agent", async () => {
                     onFirstTestRun_(innerRunner => innerRunner.emit(Events.TEST_FAIL, makeFailedTest_()));
 
-                    const browserAgent = Object.create(BrowserAgent.prototype);
+                    const browserAgent = BrowserAgent.create({ browserConfig: { id: "some-default-browser" } });
                     const highPriorityBrowserAgent = Object.create(HighPriorityBrowserAgent.prototype);
                     HighPriorityBrowserAgent.create.withArgs(browserAgent).returns(highPriorityBrowserAgent);
                     const runner = mkRunnerWithRetries_({ browserAgent });

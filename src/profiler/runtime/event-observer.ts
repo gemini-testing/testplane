@@ -19,7 +19,10 @@ class ProfilerEventObserver implements EventObserver {
     private readonly _sanitizer = new ProfilerSanitizer();
     private readonly _plugins: Array<{ name: string; root: string }>;
 
-    constructor(private readonly _manager: ProfilerManager, config: Config) {
+    constructor(
+        private readonly _manager: ProfilerManager,
+        config: Config,
+    ) {
         this._plugins = buildPluginIndex(Object.keys(config.plugins ?? {}));
     }
 

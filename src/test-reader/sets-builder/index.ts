@@ -65,6 +65,10 @@ export class SetsBuilder {
         return this;
     }
 
+    getBrowserIds(): string[] {
+        return _.uniq(this.#getSets().flatMap(set => set.getBrowsers()));
+    }
+
     build(
         projectRoot: string,
         globOpts: { ignore?: string[] | string } = {},

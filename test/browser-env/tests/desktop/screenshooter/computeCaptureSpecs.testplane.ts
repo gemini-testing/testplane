@@ -308,9 +308,8 @@ describe("computeCaptureSpecs", () => {
         });
 
         it("should not clip element by a display:contents ancestor with overflow:hidden", async () => {
-            const { default: html } = await import(
-                "./fixtures/capture-areas/display-contents-overflow-hidden.html?raw"
-            );
+            const { default: html } =
+                await import("./fixtures/capture-areas/display-contents-overflow-hidden.html?raw");
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".target"]);
@@ -360,9 +359,8 @@ describe("computeCaptureSpecs", () => {
         it("should not clip absolutely positioned element when containing block is outside overflow:hidden ancestor", async ({
             browser,
         }) => {
-            const { default: html } = await import(
-                "./fixtures/capture-areas/absolute-in-overflow-hidden-external-containing-block.html?raw"
-            );
+            const { default: html } =
+                await import("./fixtures/capture-areas/absolute-in-overflow-hidden-external-containing-block.html?raw");
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".target"]);

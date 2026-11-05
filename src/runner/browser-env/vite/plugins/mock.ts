@@ -290,12 +290,12 @@ function rewriteImportDeclaration({
 
         const isModuleMockedRelatively = Boolean(
             source.startsWith(".") &&
-                [...registeredMocks.values()].find(m => {
-                    const absMockPath = path.resolve(path.dirname(testFilePath || "/"), m);
-                    const absMockPathWithoutExtName = getPathWithoutExtName(absMockPath);
+            [...registeredMocks.values()].find(m => {
+                const absMockPath = path.resolve(path.dirname(testFilePath || "/"), m);
+                const absMockPathWithoutExtName = getPathWithoutExtName(absMockPath);
 
-                    return absImportPathWithoutExtName === absMockPathWithoutExtName;
-                }),
+                return absImportPathWithoutExtName === absMockPathWithoutExtName;
+            }),
         );
 
         const isModuleMocked = isModuleMockedRelatively || registeredMocks.has(source);

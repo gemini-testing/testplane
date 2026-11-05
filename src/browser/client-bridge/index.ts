@@ -12,8 +12,8 @@ const bundlesCache: Record<string, string> = {};
 export type ClientBridgeArgument<T> = T extends Element
     ? WebdriverIO.Element
     : T extends object
-    ? { [K in keyof T]: ClientBridgeArgument<T[K]> }
-    : T;
+      ? { [K in keyof T]: ClientBridgeArgument<T[K]> }
+      : T;
 
 interface Browser {
     execute: <R>(command: string, ...args: unknown[]) => Promise<R>;

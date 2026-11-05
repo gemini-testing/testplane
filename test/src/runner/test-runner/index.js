@@ -3,7 +3,7 @@
 const TestRunner = require("src/runner/test-runner");
 const SkippedTestRunner = require("src/runner/test-runner/skipped-test-runner");
 const InsistantTestRunner = require("src/runner/test-runner/insistant-test-runner");
-const BrowserAgent = require("src/runner/browser-agent");
+const { BrowserAgent } = require("src/runner/browser-agent");
 const { Test } = require("src/test-reader/test-object");
 
 const { makeConfigStub } = require("../../../utils");
@@ -40,7 +40,7 @@ describe("runner/test-runner", () => {
 
         const test = new Test({});
         const config = makeConfigStub();
-        const browserAgent = BrowserAgent.create();
+        const browserAgent = BrowserAgent.create({ browserConfig: config.forBrowser("default-id") });
 
         TestRunner.create(test, config, browserAgent);
 

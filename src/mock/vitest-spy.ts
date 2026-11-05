@@ -308,8 +308,9 @@ export interface Mock<T extends Procedure = Procedure> extends MockInstance<T> {
 
 type PartialMaybePromise<T> = T extends Promise<Awaited<T>> ? Promise<Partial<Awaited<T>>> : Partial<T>;
 
-export interface PartialMock<T extends Procedure = Procedure>
-    extends MockInstance<(...args: Parameters<T>) => PartialMaybePromise<ReturnType<T>>> {
+export interface PartialMock<T extends Procedure = Procedure> extends MockInstance<
+    (...args: Parameters<T>) => PartialMaybePromise<ReturnType<T>>
+> {
     new (...args: Parameters<T>): ReturnType<T>;
     (...args: Parameters<T>): ReturnType<T>;
 }
@@ -336,22 +337,22 @@ export type MockedObjectDeep<T> = MaybeMockedConstructor<T> & {
 export type MaybeMockedDeep<T> = T extends Procedure
     ? MockedFunctionDeep<T>
     : T extends object
-    ? MockedObjectDeep<T>
-    : T;
+      ? MockedObjectDeep<T>
+      : T;
 
 export type MaybePartiallyMockedDeep<T> = T extends Procedure
     ? PartiallyMockedFunctionDeep<T>
     : T extends object
-    ? MockedObjectDeep<T>
-    : T;
+      ? MockedObjectDeep<T>
+      : T;
 
 export type MaybeMocked<T> = T extends Procedure ? MockedFunction<T> : T extends object ? MockedObject<T> : T;
 
 export type MaybePartiallyMocked<T> = T extends Procedure
     ? PartiallyMockedFunction<T>
     : T extends object
-    ? MockedObject<T>
-    : T;
+      ? MockedObject<T>
+      : T;
 
 interface Constructable {
     new (...args: any[]): any;
@@ -389,8 +390,8 @@ export function spyOn<T, M extends Classes<Required<T>> | Methods<Required<T>>>(
 ): Required<T>[M] extends { new (...args: infer A): infer R }
     ? MockInstance<(this: R, ...args: A) => R>
     : T[M] extends Procedure
-    ? MockInstance<T[M]>
-    : never;
+      ? MockInstance<T[M]>
+      : never;
 export function spyOn<T, K extends keyof T>(obj: T, method: K, accessType?: "get" | "set"): MockInstance {
     const dictionary = {
         get: "getter",
