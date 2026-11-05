@@ -25,7 +25,7 @@ import {
     removeContainers,
 } from "./engine";
 import { CHECK_DEVTOOLS } from "./browser-image";
-import {debugDocker, timeDockerOperation} from "./timing";
+import { debugDocker, timeDockerOperation } from "./timing";
 
 interface DockerEnvironment {
     isPodman: boolean;
@@ -303,7 +303,9 @@ export class SelenoidDockerController implements AsyncDisposable {
                         throw inspectError;
                     }
                 }
-                debugDocker(`Cannot create a dual-stack Docker network; falling back to IPv4. Error: ${errorMessage(error)}`);
+                debugDocker(
+                    `Cannot create a dual-stack Docker network; falling back to IPv4. Error: ${errorMessage(error)}`,
+                );
                 await docker(["network", "create", this._network]);
             }
         });
@@ -470,7 +472,9 @@ export class SelenoidDockerController implements AsyncDisposable {
         const container = containers[0];
         const adapter = await docker(["exec", "--user", "0", container, "/bin/sh", "-ec", CHECK_DEVTOOLS]);
         if (adapter.trim() === "absent") {
-            debugDocker(`Docker browser session ${sessionId} has no /usr/bin/devtools adapter; continuing without CDP.`);
+            debugDocker(
+                `Docker browser session ${sessionId} has no /usr/bin/devtools adapter; continuing without CDP.`,
+            );
 
             return false;
         }

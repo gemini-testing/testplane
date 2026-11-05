@@ -1,6 +1,9 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
-import type { prepareDockerImages as PrepareDockerImages } from "src/browser-backend/docker/engine";
+import type {
+    prepareDockerImages as PrepareDockerImages,
+    getDockerCpuCount as GetDockerCpuCount,
+} from "src/browser-backend/docker/engine";
 import type { SelenoidDockerController as Controller } from "src/browser-backend/docker/controller";
 import type { BrowserConfig } from "src/config/browser-config";
 import type { DockerConfig } from "src/config/types";
@@ -13,6 +16,7 @@ import path from "path";
 describe("browser-backend/docker/controller", () => {
     const sandbox = sinon.createSandbox();
     let prepareDockerImages: typeof PrepareDockerImages;
+    let getDockerCpuCount: typeof GetDockerCpuCount;
     let SelenoidDockerController: typeof Controller;
     let controllers: Controller[];
     let warnStub: SinonStub;
@@ -132,6 +136,7 @@ describe("browser-backend/docker/controller", () => {
             },
         });
         prepareDockerImages = engine.prepareDockerImages;
+        getDockerCpuCount = engine.getDockerCpuCount;
         ({ SelenoidDockerController } = proxyquire("src/browser-backend/docker/controller", {
             "./engine": engine,
             "./timing": { debugDocker: debugStub },
@@ -157,6 +162,28 @@ describe("browser-backend/docker/controller", () => {
         } finally {
             sandbox.restore();
         }
+    });
+
+    describe("Docker CPU count", () => {
+        it("should read the server CPU count", async () => {
+            command.withArgs(["info", "--format", "{{.NCPU}}"]).resolves("4\n");
+
+            assert.equal(await getDockerCpuCount(), 4);
+        });
+
+        for (const value of ["", "0", "-1", "1.5", "Infinity", "<no value>", "9007199254740992"]) {
+            it(`should return null for an invalid CPU count: ${JSON.stringify(value)}`, async () => {
+                command.withArgs(["info", "--format", "{{.NCPU}}"]).resolves(value);
+
+                assert.isNull(await getDockerCpuCount());
+            });
+        }
+
+        it("should return null when the daemon query fails", async () => {
+            command.withArgs(["info", "--format", "{{.NCPU}}"]).rejects(new Error("Docker unavailable"));
+
+            assert.isNull(await getDockerCpuCount());
+        });
     });
 
     describe("image preparation without sessions", () => {
@@ -275,9 +302,6 @@ describe("browser-backend/docker/controller", () => {
 
                     assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", "browser"]);
                     assert.calledWith(prepareImage, "browser", sinon.match.string, sinon.match.func, "linux/amd64");
-                    assert.calledOnce(warnStub);
-                    assert.calledWithMatch(warnStub, "unavailable for linux/arm64; using linux/amd64");
-                    assert.calledWithMatch(warnStub, "requires emulation");
                 });
             }
 
@@ -407,7 +431,7 @@ describe("browser-backend/docker/controller", () => {
             assert.notCalled(prepareImage);
         });
 
-        it("should not detect the daemon platform when both image platforms are explicitly configured", async () => {
+        it("should honor explicit image platforms even when they differ from the daemon platform", async () => {
             command
                 .withArgs(["image", "inspect", "--format", imagePlatform, "--", "browser"])
                 .onFirstCall()
@@ -419,7 +443,6 @@ describe("browser-backend/docker/controller", () => {
             assert.calledWith(prepareImage, "browser", sinon.match.string, sinon.match.func, "linux/arm64/v8");
             const create = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
             assert.equal(create[create.indexOf("--platform") + 1], "linux/amd64");
-            assert.neverCalledWith(command, daemonPlatformCommand);
             const entry = JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"];
             assert.notProperty(entry, "platform");
             assert.notProperty(entry, "selenoidPlatform");
@@ -459,8 +482,6 @@ describe("browser-backend/docker/controller", () => {
                 await prepareDockerImages({ image: "browser", selenoidImage });
 
                 assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", selenoidImage]);
-                assert.calledOnce(warnStub);
-                assert.calledWithMatch(warnStub, "unavailable for linux/arm64; using linux/amd64");
             });
 
             it("should not fall back when Selenoid's platform is explicitly configured", async () => {
@@ -1051,7 +1072,6 @@ describe("browser-backend/docker/controller", () => {
         assert.equal(command.getCalls().filter(call => call.args[0][0] === "pull").length, 1);
         assert.equal(command.getCalls().filter(call => call.args[0][0] === "manifest").length, 1);
         assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", "browser"]);
-        assert.calledOnce(warnStub);
         await Promise.all(drivers.map(driver => driver[Symbol.asyncDispose]()));
     });
 

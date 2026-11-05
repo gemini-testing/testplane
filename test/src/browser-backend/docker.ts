@@ -23,7 +23,7 @@ describe("browser-backend/docker", () => {
     let createController: SinonStub;
     let remote: SinonStub;
     let warn: SinonStub;
-    let log: SinonStub;
+    let debug: SinonStub;
 
     const makeConfig = (options: Partial<BrowserConfig> = {}): BrowserConfig =>
         createBrowserConfig_({
@@ -56,7 +56,7 @@ describe("browser-backend/docker", () => {
         createController = sandbox.stub().resolves(controller);
         remote = sandbox.stub().resolves(session);
         warn = sandbox.stub();
-        log = sandbox.stub();
+        debug = sandbox.stub();
 
         class ControllerStub {
             static create = createController;
@@ -65,7 +65,8 @@ describe("browser-backend/docker", () => {
         Backend = proxyquire("src/browser-backend/docker", {
             "./controller": { SelenoidDockerController: ControllerStub },
             "@testplane/webdriverio": { remote },
-            "../../utils/logger": { log, warn },
+            "../../utils/logger": { warn },
+            "./timing": { debugDocker: debug },
             "../utils": proxyquire("src/browser-backend/utils", { "../utils/logger": { warn } }),
         }).DockerBrowserBackend;
     });
@@ -176,7 +177,7 @@ describe("browser-backend/docker", () => {
         assert.calledOnce(session.deleteSession);
         assert.calledOnceWith(controller.saveSessionLogs, session.sessionId, null);
         assert.callOrder(session.deleteSession, controller.saveSessionLogs);
-        assert.calledWith(log, "Docker session log: /tmp/session.log");
+        assert.calledWith(debug, "Docker session log: /tmp/session.log");
     });
 
     it("should preserve a configured Selenoid log filename", async () => {

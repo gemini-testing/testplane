@@ -70,18 +70,15 @@ describe("browser-backend/docker/browser-image", () => {
         assert.deepEqual(await readdir(directory), []);
     });
 
-    it("should build from the immutable source, unpack in place and preserve the image user and startup", async () => {
+    it("should copy the published adapter into the immutable source and preserve the image user and startup", async () => {
         const image = await prepare("chrome:latest", "session", docker, "linux/amd64");
         const base = image.replace("testplane-browser:", "testplane-browser-base:");
         assert.calledWith(docker, ["image", "tag", metadata.Id, base]);
-        assert.match(recipes[0], new RegExp(`^FROM ${base}\nUSER 0\nRUN `));
-        assert.include(recipes[0], "upx-ucl -d /usr/bin/devtools");
-        assert.include(recipes[0], "apt-get update -qq");
-        assert.include(recipes[0], "apt-get install -y --no-install-recommends upx-ucl");
-        assert.include(recipes[0], "if [ -f /usr/bin/devtools ]");
-        assert.include(recipes[0], "/usr/bin/devtools -help");
-        assert.match(recipes[0], /USER selenium:1200\n$/);
-        assert.notMatch(recipes[0], /^(ENTRYPOINT|CMD|ENV|SHELL) /m);
+        assert.equal(
+            recipes[0],
+            `FROM ghcr.io/gemini-testing/devtools-proxy:latest AS devtools\nFROM ${base}\nCOPY --from=devtools /usr/bin/devtools /usr/bin/devtools\n`,
+        );
+        assert.notMatch(recipes[0], /^(USER|ENTRYPOINT|CMD|ENV|SHELL) /m);
         assert.calledWith(
             docker,
             ["build", "--platform", "linux/amd64", "--pull=false", "--tag", image, sinon.match.string],
@@ -206,6 +203,6 @@ describe("browser-backend/docker/browser-image", () => {
     it("should preserve the default root user", async () => {
         metadata.Config.User = "";
         await prepare("chrome:latest", "session", docker, "linux/amd64");
-        assert.match(recipes[0], /USER 0\n$/);
+        assert.notMatch(recipes[0], /^USER /m);
     });
 });

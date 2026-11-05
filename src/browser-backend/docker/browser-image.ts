@@ -7,21 +7,9 @@ import { warn } from "../../utils/logger";
 import { debugDocker, timeDockerOperation } from "./timing";
 
 const BUILD_TIMEOUT = 10 * 60_000;
-// Runs only while building the image. The original entrypoint starts devtools normally afterwards.
-const PREPARE_DEVTOOLS = `
-if [ -f /usr/bin/devtools ]; then
-    if head -c 1024 /usr/bin/devtools | grep -q 'UPX!'; then
-        if ! command -v upx-ucl >/dev/null 2>&1; then
-            apt-get update -qq
-            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends upx-ucl
-            rm -rf /var/lib/apt/lists/*
-        fi
-        upx-ucl -d /usr/bin/devtools
-    fi
-    /usr/bin/devtools -help
-fi
-`;
-const RECIPE = `USER 0\nRUN ${JSON.stringify(["/bin/sh", "-ec", PREPARE_DEVTOOLS])}\n`;
+// See https://github.com/gemini-testing/images/tree/master/static/chrome/devtools
+const DEVTOOLS_IMAGE = "ghcr.io/gemini-testing/devtools-proxy:latest";
+const RECIPE = "COPY --from=devtools /usr/bin/devtools /usr/bin/devtools\n";
 
 export const CHECK_DEVTOOLS = "if [ -f /usr/bin/devtools ]; then echo present; else echo absent; fi";
 
@@ -48,21 +36,18 @@ export async function prepareDockerBrowserImage(
     docker: Docker,
     platform: string,
 ): Promise<string> {
-    // The packed CDP adapter only needs repair under emulation on Apple Silicon.
+    // Replace the packed CDP adapter for AMD64 browsers running from Apple Silicon.
     if (hostPlatform() !== "darwin" || arch() !== "arm64" || platform.split("/")[1] !== "amd64") {
         return source;
     }
 
     const [metadata] = JSON.parse(await docker(["image", "inspect", source])) as {
         Id: string;
-        Config: { User?: string };
     }[];
-    const user = metadata.Config.User || "0";
-    if (!/^sha256:[a-f0-9]{64}$/.test(metadata.Id) || /[\r\n]/.test(user)) {
+    if (!/^sha256:[a-f0-9]{64}$/.test(metadata.Id)) {
         throw new Error(`Invalid Docker image metadata for "${source}"`);
     }
-    const recipe = `${RECIPE}USER ${user}\n`;
-    const key = createHash("sha256").update(`${metadata.Id}\n${platform}\n${recipe}`).digest("hex");
+    const key = createHash("sha256").update(`${metadata.Id}\n${platform}\n${DEVTOOLS_IMAGE}\n${RECIPE}`).digest("hex");
     const image = `testplane-browser:${key}`;
     if (await imageExists(image, docker)) {
         debugDocker(`[Docker timing][${scope}] prepared browser image: ${image}`);
@@ -117,7 +102,10 @@ export async function prepareDockerBrowserImage(
         try {
             // Pin FROM to the inspected image even if the original tag changes during the build.
             await docker(["image", "tag", metadata.Id, base]);
-            await writeFile(path.join(directory, "Dockerfile"), `FROM ${base}\n${recipe}`);
+            await writeFile(
+                path.join(directory, "Dockerfile"),
+                `FROM ${DEVTOOLS_IMAGE} AS devtools\nFROM ${base}\n${RECIPE}`,
+            );
             await timeDockerOperation(scope, `build browser image ${image}`, () =>
                 docker(["build", "--platform", platform, "--pull=false", "--tag", image, directory], {
                     timeout: BUILD_TIMEOUT,
@@ -132,7 +120,6 @@ export async function prepareDockerBrowserImage(
                     [failure.message, failure.stdout?.trim(), failure.stderr?.trim()].filter(Boolean).join("\n"),
             );
         } finally {
-            // This removes only our temporary tag, not the source image or the prepared image.
             await docker(["image", "rm", base]).catch(error => warn((error as Error).message));
             await rm(directory, { recursive: true, force: true });
         }

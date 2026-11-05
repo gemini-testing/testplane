@@ -7,7 +7,7 @@ import { warn } from "../../utils/logger";
 import type { BrowserBackend, BrowserBackendOptions } from "../index";
 import { deleteWebdriverSession, trackSessionStart } from "../utils";
 import { SelenoidDockerController } from "./controller";
-import {debugDocker, timeDockerOperation} from "./timing";
+import { debugDocker, timeDockerOperation } from "./timing";
 
 interface SessionResources {
     cleanup: AsyncCleanupStack;

@@ -24,7 +24,7 @@ const { promiseDelay } = require("../../src/utils/promise");
 describe("testplane", () => {
     const sandbox = sinon.createSandbox();
     let Testplane, initReporters, signalHandler, loggerWarnStub, loggerErrorStub;
-    let availableParallelismStub, debugStub;
+    let availableParallelismStub, getDockerCpuCountStub, debugStub;
 
     const mkTestplane_ = async config => {
         Config.create.resolves(config || makeConfigStub());
@@ -57,6 +57,7 @@ describe("testplane", () => {
         loggerWarnStub = sandbox.stub();
         loggerErrorStub = sandbox.stub();
         availableParallelismStub = sandbox.stub().returns(8);
+        getDockerCpuCountStub = sandbox.stub().resolves(8);
         debugStub = sandbox.stub();
 
         sandbox.stub(ViteServer, "create").returns(Object.create(ViteServer.prototype));
@@ -65,6 +66,7 @@ describe("testplane", () => {
 
         Testplane = proxyquire("src/testplane", {
             os: { availableParallelism: availableParallelismStub },
+            "./browser-backend/docker/engine": { getDockerCpuCount: getDockerCpuCountStub },
             debug: () => debugStub,
             "./reporters": { initReporters },
             "./signal-handler": signalHandler,
@@ -281,13 +283,16 @@ describe("testplane", () => {
                 runtime.extend.callsFake(opts => Object.assign(runtime, opts));
             });
 
-            for (const [cpus, expected] of [
-                [1, 1],
-                [3, 3],
-                [8, 10],
+            for (const [localCpus, dockerCpus, expected] of [
+                [1, 1, 1],
+                [3, 3, 3],
+                [8, 8, 10],
+                [12, 4, 5],
+                [4, 12, 5],
             ]) {
-                it(`should share a limit of ${expected} across Docker backends with ${cpus} available CPUs`, async () => {
-                    availableParallelismStub.returns(cpus);
+                it(`should share a limit of ${expected} with ${localCpus} local and ${dockerCpus} Docker CPUs`, async () => {
+                    availableParallelismStub.returns(localCpus);
+                    getDockerCpuCountStub.resolves(dockerCpus);
                     let limitAtRunnerInit;
                     runner.init.callsFake(() => {
                         limitAtRunnerInit = config.system.parallelLimit;
@@ -297,12 +302,27 @@ describe("testplane", () => {
 
                     assert.equal(config.system.parallelLimit, expected);
                     assert.equal(limitAtRunnerInit, expected);
+                    assert.calledOnce(getDockerCpuCountStub);
                     assert.calledOnceWith(
                         debugStub,
-                        sinon.match(`parallelLimit=${expected} based on ${cpus} available CPUs`),
+                        sinon.match(
+                            `parallelLimit=${expected} based on ${Math.min(localCpus, dockerCpus)} available CPUs (local: ${localCpus}, Docker: ${dockerCpus})`,
+                        ),
                     );
                 });
             }
+
+            it("should fall back to local CPUs when Docker CPU discovery fails", async () => {
+                getDockerCpuCountStub.resolves(null);
+
+                await (await mkTestplane_(config)).run();
+
+                assert.equal(config.system.parallelLimit, 10);
+                assert.calledWith(
+                    debugStub,
+                    sinon.match("parallelLimit=10 based on 8 available CPUs (local: 8, Docker: unavailable)"),
+                );
+            });
 
             it("should resolve backends after async INIT handlers complete", async () => {
                 config.forBrowser("chrome").gridUrl = "http://grid";
@@ -325,6 +345,7 @@ describe("testplane", () => {
 
                     assert.equal(config.system.parallelLimit, Infinity);
                     assert.notCalled(availableParallelismStub);
+                    assert.notCalled(getDockerCpuCountStub);
                     assert.notCalled(debugStub);
                 });
             }
@@ -336,6 +357,7 @@ describe("testplane", () => {
 
                 assert.equal(config.system.parallelLimit, 20);
                 assert.notCalled(availableParallelismStub);
+                assert.notCalled(getDockerCpuCountStub);
                 assert.notCalled(debugStub);
             });
 

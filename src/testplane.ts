@@ -30,6 +30,7 @@ import { UnhandledRejectionError } from "./errors/unhandled-rejection-error";
 import { ProfilerSanitizer } from "./profiler/sanitize";
 import type { SourceRef } from "./profiler/schema";
 import { DOCKER_GRID_URL } from "./constants/config";
+import { getDockerCpuCount } from "./browser-backend/docker/engine";
 
 const debug = createDebug("testplane:run");
 
@@ -263,10 +264,12 @@ export class Testplane extends BaseTestplane {
                 browserIds.length > 0 &&
                 browserIds.every(id => this._config.forBrowser(id).gridUrl === DOCKER_GRID_URL)
             ) {
-                const cpus = availableParallelism();
+                const localCpus = availableParallelism();
+                const dockerCpus = await getDockerCpuCount();
+                const cpus = Math.min(localCpus, dockerCpus ?? localCpus);
                 this._config.system.parallelLimit = Math.max(1, Math.floor((cpus * 5) / 4));
                 debug(
-                    `All browsers use Docker: applying parallelLimit=${this._config.system.parallelLimit} based on ${cpus} available CPUs. Set system.parallelLimit to override.`,
+                    `All browsers use Docker: applying parallelLimit=${this._config.system.parallelLimit} based on ${cpus} available CPUs (local: ${localCpus}, Docker: ${dockerCpus ?? "unavailable"}). Set system.parallelLimit to override.`,
                 );
             }
         }

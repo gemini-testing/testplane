@@ -5,7 +5,7 @@ import path from "path";
 import type { DockerConfig } from "../../config/types";
 import { log } from "../../utils/logger";
 import { prepareDockerBrowserImage } from "./browser-image";
-import {timeDockerOperation} from "./timing";
+import { debugDocker, timeDockerOperation } from "./timing";
 
 const LINUX_PLATFORM = /^linux\/[a-z0-9_]+(?:\/[a-z0-9_.-]+)?$/;
 const IMAGE_PLATFORM_FORMAT = "{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}";
@@ -25,6 +25,19 @@ export function docker(args: string[], { includeStderr = false, timeout = COMMAN
             }
         });
     });
+}
+
+export async function getDockerCpuCount(): Promise<number | null> {
+    try {
+        const value = await docker(["info", "--format", "{{.NCPU}}"]);
+        const cpus = Number(value);
+
+        return Number.isSafeInteger(cpus) && cpus > 0 ? cpus : null;
+    } catch (e: unknown) {
+        debugDocker(`Failed to get docker CPU count: ${e}`);
+
+        return null;
+    }
 }
 
 export function errorMessage(error: unknown): string {
@@ -150,7 +163,8 @@ async function ensureImageImpl(image: string, platformOverride: string | null): 
                 ? [[platform.os, platform.architecture, platform.variant].filter(Boolean).join("/")]
                 : [];
         });
-        const supports = (platform: string): boolean => imagePlatforms.some(actual => matchesPlatform(actual, platform));
+        const supports = (platform: string): boolean =>
+            imagePlatforms.some(actual => matchesPlatform(actual, platform));
 
         if (!supports(desiredPlatform) && platformOverride === null && supports("linux/amd64")) {
             desiredPlatform = "linux/amd64";
