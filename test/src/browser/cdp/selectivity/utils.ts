@@ -1,5 +1,7 @@
 import sinon, { type SinonStub, type SinonStubbedInstance } from "sinon";
 import proxyquire from "proxyquire";
+import { createHash } from "node:crypto";
+import { runInNewContext } from "node:vm";
 import type { CDPRuntime } from "src/browser/cdp/domains/runtime";
 import { NormalizedDependencies, TestDependenciesFileContents } from "src/browser/cdp/selectivity/types";
 
@@ -90,12 +92,15 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should try direct fetch first for non-embedded URLs", async () => {
             const url = "http://example.com/sourcemap.js.map";
-            fetchStub.resolves({ text: () => Promise.resolve("source map content") });
+            const response = new Response("source map content");
+            const cancelSpy = sandbox.spy(response.body as ReadableStream, "cancel");
+            fetchStub.resolves(response);
 
             const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
 
             assert.equal(result, "source map content");
             assert.calledOnceWith(fetchStub, url);
+            assert.notCalled(cancelSpy);
             assert.notCalled(runtimeStub.evaluate);
         });
 
@@ -108,11 +113,237 @@ describe("CDP/Selectivity/Utils", () => {
 
             assert.equal(result, "browser fetched content");
             assert.calledOnceWith(fetchStub, url);
+            const expression = runtimeStub.evaluate.firstCall.args[1].expression;
+            assert.include(expression, `fetch(${JSON.stringify(url)})`);
             assert.calledOnceWith(runtimeStub.evaluate, sessionId, {
-                expression: `fetch("${url}").then(r => r.text())`,
+                expression,
                 awaitPromise: true,
                 returnByValue: true,
             });
+        });
+
+        it("should fall back once when direct fetch returns an HTTP error with valid JSON", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            const sourceMap = '{"version":3,"sources":["a.js"],"names":[],"mappings":"AAAA"}';
+            fetchStub.resolves(new Response(sourceMap, { status: 404 }));
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+            assert.equal(result, "browser fetched content");
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        it("should cancel a rejected native Response body before browser fallback without reading it", async () => {
+            const response = new Response("HTTP error body", { status: 500 });
+            const cancelSpy = sandbox.spy(response.body as ReadableStream, "cancel");
+            const textSpy = sandbox.spy(response, "text");
+            fetchStub.resolves(response);
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(
+                "http://example.com/app.js.map",
+                runtimeStub,
+                sessionId,
+            );
+
+            assert.equal(result, "browser fetched content");
+            assert.calledOnce(cancelSpy);
+            assert.callOrder(cancelSpy, runtimeStub.evaluate);
+            assert.isTrue(response.bodyUsed);
+            assert.notCalled(textSpy);
+        });
+
+        it("should await rejected-body cancellation before starting browser fallback", async () => {
+            let finishCancel = (): void => {};
+            const cancellation = new Promise<void>(resolve => {
+                finishCancel = resolve;
+            });
+            const cancel = sandbox.stub().returns(cancellation);
+            fetchStub.resolves({ ok: false, status: 500, body: { cancel } });
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const pendingFetch = utils.fetchTextWithBrowserFallback(
+                "http://example.com/app.js.map",
+                runtimeStub,
+                sessionId,
+            );
+            await Promise.resolve();
+
+            assert.calledOnce(cancel);
+            assert.notCalled(runtimeStub.evaluate);
+            finishCancel();
+            assert.equal(await pendingFetch, "browser fetched content");
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        for (const browserSucceeds of [true, false]) {
+            it(`should preserve browser ${
+                browserSucceeds ? "success" : "failure"
+            } when cancellation rejects`, async () => {
+                const cancel = sandbox.stub().rejects(new Error("Cancellation failed"));
+                const text = sandbox.stub();
+                fetchStub.resolves({ ok: false, status: 500, body: { cancel }, text });
+                if (browserSucceeds) {
+                    runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+                } else {
+                    runtimeStub.evaluate.rejects(new Error("Browser unavailable"));
+                }
+
+                const result = utils.fetchTextWithBrowserFallback(
+                    "http://example.com/app.js.map",
+                    runtimeStub,
+                    sessionId,
+                );
+
+                if (browserSucceeds) {
+                    assert.equal(await result, "browser fetched content");
+                } else {
+                    await assert.isRejected(result, "Browser unavailable");
+                }
+                assert.calledOnce(cancel);
+                assert.calledOnce(runtimeStub.evaluate);
+                assert.notCalled(text);
+            });
+        }
+
+        it("should fall back for an HTTP error without a response body", async () => {
+            fetchStub.resolves(new Response(null, { status: 304 }));
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(
+                "http://example.com/app.js.map",
+                runtimeStub,
+                sessionId,
+            );
+
+            assert.equal(result, "browser fetched content");
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        it("should fall back when reading the direct response body fails", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            fetchStub.resolves({ ok: true, text: sandbox.stub().rejects(new Error("Body read failed")) });
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "browser fetched content" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+            assert.equal(result, "browser fetched content");
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        it("should make the browser fetch expression reject an HTTP error with a valid source map", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            const sourceMap = '{"version":3,"sources":["a.js"],"names":[],"mappings":"AAAA"}';
+            const browserFetchStub = sandbox.stub().resolves(new Response(sourceMap, { status: 404 }));
+            fetchStub.rejects(new Error("Network error"));
+            runtimeStub.evaluate.callsFake(async (_sessionId, { expression }) => ({
+                result: { type: "string", value: await runInNewContext(expression, { fetch: browserFetchStub }) },
+            }));
+
+            await assert.isRejected(utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId), "HTTP 404");
+
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
+            assert.calledOnceWith(browserFetchStub, url);
+        });
+
+        [
+            { name: "quotes and backslashes", url: 'http://example.com/sourcemap.js.map?path=\\nested&name="quoted"' },
+            { name: "a trailing backslash", url: "http://example.com/sourcemap.js.map?path=folder\\" },
+            {
+                name: "literal control characters",
+                url: "http://example.com/sourcemap.js.map?line=first\nsecond&tab=\tvalue",
+            },
+        ].forEach(({ name, url }) => {
+            it(`should preserve ${name} in the URL passed to browser fetch`, async () => {
+                const browserFetchStub = sandbox.stub().resolves(new Response("browser fetched content"));
+                fetchStub.rejects(new Error("Network error"));
+                runtimeStub.evaluate.callsFake(async (_sessionId, { expression }) => ({
+                    result: { type: "string", value: await runInNewContext(expression, { fetch: browserFetchStub }) },
+                }));
+
+                const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+                assert.equal(result, "browser fetched content");
+                assert.calledOnceWith(fetchStub, url);
+                assert.calledOnce(runtimeStub.evaluate);
+                assert.calledOnceWith(browserFetchStub, url);
+                assert.include(runtimeStub.evaluate.firstCall.args[1].expression, `fetch(${JSON.stringify(url)})`);
+            });
+        });
+
+        it("should reject Runtime.evaluate exceptionDetails instead of returning undefined", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            fetchStub.rejects(new Error("Network error"));
+            runtimeStub.evaluate.resolves({
+                result: { type: "object", subtype: "error", value: undefined },
+                exceptionDetails: { text: "Uncaught (in promise) TypeError: Failed to fetch" },
+            });
+
+            await assert.isRejected(utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId), "Failed to fetch");
+
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        it("should reject Runtime.evaluate exceptionDetails even when the result value is a string", async () => {
+            const url = "http://example.com/sourcemap.js.map";
+            fetchStub.rejects(new Error("Network error"));
+            runtimeStub.evaluate.resolves({
+                result: { type: "string", value: "fetch error" },
+                exceptionDetails: { text: "Uncaught (in promise) fetch error" },
+            });
+
+            await assert.isRejected(utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId), "fetch error");
+
+            assert.calledOnce(runtimeStub.evaluate);
+        });
+
+        [
+            { name: "undefined", result: { type: "undefined" as const, value: undefined } },
+            { name: "null", result: { type: "object" as const, value: null } },
+            { name: "object", result: { type: "object" as const, value: { version: 3 } } },
+            { name: "number", result: { type: "number" as const, value: 42 } },
+        ].forEach(({ name, result }) => {
+            it(`should reject a non-string browser result (${name})`, async () => {
+                const url = "http://example.com/sourcemap.js.map";
+                fetchStub.rejects(new Error("Network error"));
+                runtimeStub.evaluate.resolves({ result });
+
+                await assert.isRejected(
+                    utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId),
+                    "expected text",
+                );
+
+                assert.calledOnceWith(fetchStub, url);
+                assert.calledOnce(runtimeStub.evaluate);
+            });
+        });
+
+        it("should preserve an empty successful direct response", async () => {
+            const url = "http://example.com/empty.js";
+            fetchStub.resolves(new Response(""));
+
+            const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+            assert.equal(result, "");
+            assert.calledOnceWith(fetchStub, url);
+            assert.notCalled(runtimeStub.evaluate);
+        });
+
+        it("should preserve an empty successful browser response", async () => {
+            const url = "http://example.com/empty.js";
+            fetchStub.rejects(new Error("Network error"));
+            runtimeStub.evaluate.resolves({ result: { type: "string", value: "" } });
+
+            const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
+
+            assert.equal(result, "");
+            assert.calledOnceWith(fetchStub, url);
+            assert.calledOnce(runtimeStub.evaluate);
         });
 
         it("should throw error if both fetch methods fail", async () => {
@@ -254,16 +485,88 @@ describe("CDP/Selectivity/Utils", () => {
             assert.isTrue(result.has("b.js"));
         });
 
-        it("should ignore a full-span wrapper when the bundle has more than 2 real files", () => {
-            // parsedMaps has 3 real files (a.js, b.js, c.js) -> a function covering the whole
-            // bundle is the whole-bundle wrapper and must be dropped
+        it("should ignore a full-span wrapper with more than two unique source files", () => {
             const result = utils.extractSourceFilesDeps(parsedMaps, mkCoverages([{ startOffset: 0, endOffset: 400 }]));
 
             assert.equal(result.size, 0);
         });
 
+        it("should still collect called modules after ignoring their full-span wrapper", () => {
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([
+                    { startOffset: 0, endOffset: 400 },
+                    { startOffset: 30, endOffset: 90 },
+                    { startOffset: 210, endOffset: 290 },
+                ]),
+            );
+
+            assert.sameMembers([...result], ["a.js", "b.js"]);
+        });
+
+        it("should count repeated source names once when deciding whether to ignore a wrapper", () => {
+            const maps = { offset: [10, 20, 30, 40, 50], filename: ["a.js", "b.js", "a.js", "b.js", "a.js"] };
+
+            const result = utils.extractSourceFilesDeps(maps, mkCoverages([{ startOffset: 0, endOffset: 60 }]));
+
+            assert.sameMembers([...result], ["a.js", "b.js"]);
+        });
+
+        it("should ignore a wrapper when interleaved segments contain a third unique file", () => {
+            const maps = { offset: [10, 20, 30, 40, 50], filename: ["a.js", "b.js", "a.js", "c.js", "a.js"] };
+
+            const result = utils.extractSourceFilesDeps(maps, mkCoverages([{ startOffset: 0, endOffset: 60 }]));
+
+            assert.equal(result.size, 0);
+        });
+
+        it("should not apply the full-span heuristic to a partial function with three originals", () => {
+            const maps = { offset: [0, 10, 20, 30, 40], filename: ["a.js", "b.js", "c.js", "d.js", "e.js"] };
+
+            const result = utils.extractSourceFilesDeps(maps, mkCoverages([{ startOffset: 10, endOffset: 35 }]));
+
+            assert.sameMembers([...result], ["b.js", "c.js", "d.js"]);
+        });
+
+        it("should ignore a three-original IIFE but keep its separately called function", () => {
+            // Reduced from esbuild plain IIFE precise coverage with detailed:false.
+            // The wrapper heuristic intentionally trades top-level-only originals for narrower dependencies.
+            const maps = { offset: [479, 610, 916], filename: ["src/shared.js", "src/lazy.js", "src/alpha.js"] };
+            const coverages = mkCoverages([
+                { startOffset: 0, endOffset: 1668 },
+                { startOffset: 1, endOffset: 1629 },
+                { startOffset: 530, endOffset: 585 },
+                { startOffset: 678, endOffset: 694, count: 0 },
+                { startOffset: 703, endOffset: 815, count: 0 },
+                { startOffset: 846, endOffset: 890, count: 0 },
+                { startOffset: 1189, endOffset: 1625, count: 0 },
+            ]);
+
+            const result = utils.extractSourceFilesDeps(maps, coverages);
+
+            // More than two unique originals suppresses both wrappers; only the shared function is called.
+            assert.sameMembers([...result], ["src/shared.js"]);
+        });
+
+        it("should retain interleaved originals in an esbuild React IIFE", () => {
+            // Reduced from esbuild React IIFE precise coverage with detailed:false.
+            // beta.jsx has a called function, but shared.jsx only has top-level code.
+            const maps = {
+                offset: [1226132, 1226255, 1226304],
+                filename: ["src/beta.jsx", "src/shared.jsx", "src/beta.jsx"],
+            };
+            const coverages = mkCoverages([
+                { startOffset: 0, endOffset: 1227936 },
+                { startOffset: 1, endOffset: 1226664 },
+                { startOffset: 1226306, endOffset: 1226526 },
+            ]);
+
+            const result = utils.extractSourceFilesDeps(maps, coverages);
+
+            assert.sameMembers([...result], ["src/beta.jsx", "src/shared.jsx"]);
+        });
+
         it("should keep the file of a full-span function in a single-file bundle", () => {
-            // Only one real file -> a function spanning everything is a legitimate file wrapper, not noise
             const oneFileMaps = { offset: [10], filename: ["a.js"] };
 
             const result = utils.extractSourceFilesDeps(oneFileMaps, mkCoverages([{ startOffset: 0, endOffset: 50 }]));
@@ -272,10 +575,7 @@ describe("CDP/Selectivity/Utils", () => {
             assert.isTrue(result.has("a.js"));
         });
 
-        it("should keep files of a full-span function when the bundle has 2 real files (glue not counted)", () => {
-            // 3 segments but only 2 real files (the middle one is glue). A function spanning the whole
-            // bundle is treated as a legitimate (possibly concatenated) wrapper, so both files are kept.
-            // If glue were counted as a file the total would be 3 and they'd be wrongly dropped.
+        it("should keep files of a full-span function without treating glue as a dependency", () => {
             const twoFileMaps = { offset: [10, 100, 200], filename: ["a.js", "", "b.js"] };
 
             const result = utils.extractSourceFilesDeps(twoFileMaps, mkCoverages([{ startOffset: 0, endOffset: 250 }]));
@@ -292,6 +592,31 @@ describe("CDP/Selectivity/Utils", () => {
             );
 
             assert.equal(result.size, 0);
+        });
+
+        it("should collect an executed nested function even when its enclosing function has count:0", () => {
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([
+                    { startOffset: 0, endOffset: 400, count: 0 },
+                    { startOffset: 210, endOffset: 290 },
+                ]),
+            );
+
+            assert.sameMembers([...result], ["b.js"]);
+        });
+
+        it("should conservatively retain sources in nested zero-count blocks of a two-original function", () => {
+            const maps = { offset: [10, 100, 200, 300], filename: ["a.js", "", "b.js", "a.js"] };
+            const coverages = mkCoverages([{ startOffset: 0, endOffset: 400 }]);
+            const functionCoverage = coverages[0].functions[0];
+            functionCoverage.isBlockCoverage = true;
+            functionCoverage.ranges.push({ startOffset: 200, endOffset: 300, count: 0 });
+
+            const result = utils.extractSourceFilesDeps(maps, coverages);
+
+            // This collector uses function granularity even if given block coverage.
+            assert.sameMembers([...result], ["a.js", "b.js"]);
         });
 
         it("should skip functions without ranges", () => {
@@ -330,6 +655,27 @@ describe("CDP/Selectivity/Utils", () => {
             assert.equal(result.size, 1);
             assert.isTrue(result.has("a.js"));
         });
+
+        it("should filter sources of a retained full-span wrapper", () => {
+            const maps = { offset: [10, 100, 200], filename: ["a.js", "b.js", "a.js"] };
+            const result = utils.extractSourceFilesDeps(
+                maps,
+                mkCoverages([{ startOffset: 0, endOffset: 400 }]),
+                file => file === "b.js",
+            );
+
+            assert.sameMembers([...result], ["b.js"]);
+        });
+
+        it("should count unique originals before applying the optional source filter", () => {
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([{ startOffset: 0, endOffset: 400 }]),
+                file => file === "b.js",
+            );
+
+            assert.equal(result.size, 0);
+        });
     });
 
     describe("parseSourceMapRanges", () => {
@@ -350,8 +696,15 @@ describe("CDP/Selectivity/Utils", () => {
             });
 
         beforeEach(() => {
-            getCachedSelectivityFileStub = sandbox.stub().resolves(null);
-            setCachedSelectivityFileStub = sandbox.stub().resolves(undefined);
+            const cache = new Map<string, string>();
+            getCachedSelectivityFileStub = sandbox
+                .stub()
+                .callsFake(async (_type: string, key: string): Promise<string | null> => cache.get(key) ?? null);
+            setCachedSelectivityFileStub = sandbox
+                .stub()
+                .callsFake(async (_type: string, key: string, value: string): Promise<void> => {
+                    cache.set(key, value);
+                });
 
             // Use the real "@jridgewell/trace-mapping" here (no override) so eachMapping actually walks segments
             utilsReal = proxyquire("src/browser/cdp/selectivity/utils", {
@@ -393,7 +746,144 @@ describe("CDP/Selectivity/Utils", () => {
             const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "");
 
             assert.deepEqual(result, { offset: [0, 8], filename: ["a.js", "b.js"] });
-            assert.calledWith(setCachedSelectivityFileStub, "source-map-parse-result", sourceMaps, sinon.match.string);
+            const cacheKey = getCachedSelectivityFileStub.firstCall.args[1];
+            assert.match(cacheKey, /^source-map-ranges:v2:[a-f0-9]{64}$/);
+            assert.calledWith(getCachedSelectivityFileStub, "source-map-parse-result", cacheKey);
+            assert.calledWith(setCachedSelectivityFileStub, "source-map-parse-result", cacheKey, sinon.match.string);
+        });
+
+        it("should hash large inputs without serializing them on cache hits", async () => {
+            const source = '"\\\n'.repeat(256 * 1024);
+            const sourceMaps = mkSourceMaps(["large.js"], [[[0, 0, 0, 0]]]);
+            const cached = { offset: [0], filename: ["large.js"] };
+            getCachedSelectivityFileStub.resolves(JSON.stringify(cached));
+            const stringifySpy = sandbox.spy(JSON, "stringify");
+            const updateSpy = sandbox.spy(Object.getPrototypeOf(createHash("sha256")), "update");
+
+            const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "/large");
+
+            assert.deepEqual(result, cached);
+            assert.notCalled(stringifySpy);
+            assert.match(getCachedSelectivityFileStub.firstCall.args[1], /^source-map-ranges:v2:[a-f0-9]{64}$/);
+            const inputUpdates = updateSpy.getCalls().filter(call => call.args[1] === "utf16le");
+            assert.isAbove(inputUpdates.length, 3);
+            assert.isTrue(inputUpdates.every(call => call.args[0].length <= 64 * 1024));
+        });
+
+        it("should not reuse legacy raw-map or JSON tuple cache entries", async () => {
+            const source = "x\ny";
+            const sourceMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+            const legacyKeys = [sourceMaps, JSON.stringify([source, sourceMaps, "/new"])];
+            getCachedSelectivityFileStub.callsFake(
+                async (_type: string, key: string): Promise<string | null> =>
+                    legacyKeys.includes(key) ? '{"offset":[999],"filename":["stale.js"]}' : null,
+            );
+
+            const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "/new");
+
+            assert.deepEqual(result, { offset: [0, 2], filename: ["/new/a.js", "/new/b.js"] });
+            assert.calledOnce(setCachedSelectivityFileStub);
+        });
+
+        it("should frame input boundaries even when concatenated inputs are identical", async () => {
+            getCachedSelectivityFileStub.resolves('{"offset":[],"filename":[]}');
+            const inputs = [
+                ["ab", "c", ""],
+                ["a", "bc", ""],
+                ["a", "b", "c"],
+                ["", "a", "bc"],
+            ];
+
+            for (const [source, sourceMaps, sourceRoot] of inputs) {
+                await utilsReal.parseSourceMapRanges(source, sourceMaps, sourceRoot);
+            }
+
+            const keys = getCachedSelectivityFileStub.getCalls().map(call => call.args[1]);
+            assert.equal(new Set(keys).size, inputs.length);
+        });
+
+        it("should distinguish absent, null and empty sourceRoot values by type", async () => {
+            getCachedSelectivityFileStub.resolves('{"offset":[],"filename":[]}');
+
+            for (const sourceRoot of [undefined, null, ""]) {
+                await utilsReal.parseSourceMapRanges("x", "map", sourceRoot as unknown as string);
+            }
+
+            const keys = getCachedSelectivityFileStub.getCalls().map(call => call.args[1]);
+            assert.equal(new Set(keys).size, 3);
+        });
+
+        it("should preserve raw UTF-16 code units instead of replacing lone surrogates", async () => {
+            getCachedSelectivityFileStub.resolves('{"offset":[],"filename":[]}');
+
+            for (const source of ["\ud800", "\ud801", "\ufffd", "\u010a", "\n"]) {
+                await utilsReal.parseSourceMapRanges(source, "map", "");
+            }
+
+            const keys = getCachedSelectivityFileStub.getCalls().map(call => call.args[1]);
+            assert.equal(new Set(keys).size, 5);
+        });
+
+        it("should hash surrogate pairs across chunk boundaries like contiguous UTF-16 input", async () => {
+            const source = "x".repeat(64 * 1024 - 1) + "\ud83d\ude00\ud800";
+            const sourceMaps = mkSourceMaps(["unicode.js"], [[[0, 0, 0, 0]]]);
+            const sourceRoot = "/\ud801/\ufffd";
+            const hash = createHash("sha256").update("source-map-ranges:v2:");
+            for (const input of [source, sourceMaps, sourceRoot]) {
+                hash.update(`string:${input.length}:`).update(input, "utf16le");
+            }
+            const expectedKey = `source-map-ranges:v2:${hash.digest("hex")}`;
+            getCachedSelectivityFileStub.resolves('{"offset":[],"filename":[]}');
+
+            await utilsReal.parseSourceMapRanges(source, sourceMaps, sourceRoot);
+            await utilsReal.parseSourceMapRanges(source, sourceMaps, sourceRoot);
+
+            assert.alwaysCalledWith(getCachedSelectivityFileStub, "source-map-parse-result", expectedKey);
+        });
+
+        it("should not reuse cached offsets for a different generated source", async () => {
+            const sourceMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+
+            const shortSource = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "");
+            const longSource = await utilsReal.parseSourceMapRanges("longer-line\ny", sourceMaps, "");
+
+            assert.deepEqual(shortSource, { offset: [0, 2], filename: ["a.js", "b.js"] });
+            assert.deepEqual(longSource, { offset: [0, 12], filename: ["a.js", "b.js"] });
+            assert.calledTwice(setCachedSelectivityFileStub);
+        });
+
+        it("should not reuse cached filenames for a different sourceRoot override", async () => {
+            const sourceMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+
+            const firstRoot = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "/first");
+            const secondRoot = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "/second");
+
+            assert.deepEqual(firstRoot, { offset: [0, 2], filename: ["/first/a.js", "/first/b.js"] });
+            assert.deepEqual(secondRoot, { offset: [0, 2], filename: ["/second/a.js", "/second/b.js"] });
+            assert.calledTwice(setCachedSelectivityFileStub);
+        });
+
+        it("should not reuse cached results for different source maps", async () => {
+            const firstMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+            const secondMaps = mkSourceMaps(["c.js", "d.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+
+            const firstResult = await utilsReal.parseSourceMapRanges("x\ny", firstMaps, "");
+            const secondResult = await utilsReal.parseSourceMapRanges("x\ny", secondMaps, "");
+
+            assert.deepEqual(firstResult, { offset: [0, 2], filename: ["a.js", "b.js"] });
+            assert.deepEqual(secondResult, { offset: [0, 2], filename: ["c.js", "d.js"] });
+            assert.calledTwice(setCachedSelectivityFileStub);
+        });
+
+        it("should reuse cached results when source, source maps and sourceRoot are identical", async () => {
+            const sourceMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
+
+            const firstResult = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "/same");
+            const cachedResult = await utilsReal.parseSourceMapRanges("x\ny", sourceMaps, "/same");
+
+            assert.deepEqual(cachedResult, firstResult);
+            assert.calledTwice(getCachedSelectivityFileStub);
+            assert.calledOnce(setCachedSelectivityFileStub);
         });
 
         it("should record glue boundaries for generated-only mappings (no source)", async () => {
