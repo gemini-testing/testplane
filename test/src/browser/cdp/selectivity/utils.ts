@@ -774,9 +774,8 @@ describe("CDP/Selectivity/Utils", () => {
             const source = "x\ny";
             const sourceMaps = mkSourceMaps(["a.js", "b.js"], [[[0, 0, 0, 0]], [[0, 1, 0, 0]]]);
             const legacyKeys = [sourceMaps, JSON.stringify([source, sourceMaps, "/new"])];
-            getCachedSelectivityFileStub.callsFake(
-                async (_type: string, key: string): Promise<string | null> =>
-                    legacyKeys.includes(key) ? '{"offset":[999],"filename":["stale.js"]}' : null,
+            getCachedSelectivityFileStub.callsFake(async (_type: string, key: string): Promise<string | null> =>
+                legacyKeys.includes(key) ? '{"offset":[999],"filename":["stale.js"]}' : null,
             );
 
             const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "/new");
