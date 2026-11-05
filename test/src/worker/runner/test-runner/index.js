@@ -648,16 +648,23 @@ describe("worker/runner/test-runner", () => {
                     assert.notCalled(browser.markAsBroken);
                 });
 
-                it("should mark if session is broken", async () => {
-                    const config = makeConfigStub({ system: { patternsOnReject: ["FOO_BAR"] } });
-                    const test = mkTest_({ fn: sinon.stub().rejects(new Error("FOO_BAR")) });
-                    const runner = mkRunner_({ config, test });
-                    const browser = mkBrowser_();
-                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                [
+                    "FOO_BAR",
+                    /FOO_BAR/g,
+                    { name: "broken", pattern: /FOO_BAR/g },
+                    { name: "broken", pattern: text => text.includes("FOO_BAR") },
+                ].forEach(pattern => {
+                    it(`should mark if session matches ${String(pattern)}`, async () => {
+                        const config = makeConfigStub({ system: { patternsOnReject: [pattern] } });
+                        const test = mkTest_({ fn: sinon.stub().rejects(new Error("FOO_BAR")) });
+                        const runner = mkRunner_({ config, test });
+                        const browser = mkBrowser_();
+                        BrowserAgent.prototype.getBrowser.resolves(browser);
 
-                    await run_({ runner }).catch(() => {});
+                        await run_({ runner }).catch(() => {});
 
-                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
+                        assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
+                    });
                 });
             });
 

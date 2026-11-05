@@ -101,6 +101,67 @@ describe("NodejsEnvRunner", () => {
 
     afterEach(() => sandbox.restore());
 
+    describe("maxFailures", () => {
+        it("should share a counter across browsers and cancel all runners once before intercepted events", async () => {
+            const config = makeConfigStub({
+                system: {
+                    maxFailures: {
+                        limit: 2,
+                        patterns: [
+                            { name: "quota", pattern: /429/ },
+                            { name: "access", pattern: /403/ },
+                        ],
+                    },
+                },
+            });
+            const interceptor = sandbox.stub().returns({ event: RunnerEvents.TEST_PASS });
+            const runner = new Runner(config, [{ event: RunnerEvents.TEST_FAIL, handler: interceptor }]);
+            const onError = sandbox.spy(error => runner.cancel(error));
+            const cancel = sandbox.spy(BrowserRunner.prototype, "cancel");
+            const workers = mkWorkers_();
+            WorkersRegistry.prototype.register.returns(workers);
+            runner.on(RunnerEvents.ERROR, onError);
+            const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
+            let checks = 0;
+            onWaitTestsCompletion_(() => {
+                const check = BrowserRunner.create.getCall(checks).args[5];
+                const failedTest = { id: "same-test", file: "test.js", err: new Error(checks === 0 ? "429" : "403") };
+                const error = check(failedTest);
+                if (checks++ === 0) {
+                    assert.isUndefined(error);
+                } else {
+                    assert.instanceOf(error, Error);
+                    assert.isUndefined(check(failedTest));
+                }
+            });
+
+            await run_({ runner, testCollection });
+
+            assert.calledOnce(onError);
+            assert.include(onError.firstCall.args[0].message, 'limit of 2 matching errors (pattern "access")');
+            assert.calledTwice(cancel);
+            assert.calledOnce(workers.cancel);
+            assert.notCalled(interceptor);
+        });
+
+        it("should not invoke patterns after cancellation", async () => {
+            const pattern = sandbox.spy(() => true);
+            const config = makeConfigStub({
+                system: { maxFailures: { limit: 1, patterns: [{ name: "quota", pattern }] } },
+            });
+            const runner = new Runner(config);
+            runner.cancel(new Error("cancelled"));
+            onWaitTestsCompletion_(() => {
+                const check = BrowserRunner.create.firstCall.args[5];
+                check({ id: "one", err: new Error("cancelled") });
+            });
+
+            await run_({ runner });
+
+            assert.notCalled(pattern);
+        });
+    });
+
     describe("constructor", () => {
         it("should init temp with dir from config", () => {
             const config = makeConfigStub({ system: { tempDir: "some/dir" } });

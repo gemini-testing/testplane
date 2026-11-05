@@ -263,12 +263,30 @@ export interface MochaOpts {
     ui?: string | ((suite: unknown) => void);
 }
 
+export interface ErrorPattern {
+    /** Unique, non-empty pattern name used in error messages. */
+    name: string;
+    pattern: RegExp | ((errorText: string) => boolean);
+}
+
+/** Strings and RegExp preserve the existing patternsOnReject format. */
+export type ErrorPatterns = Array<string | RegExp | ErrorPattern>;
+
+export type MaxFailuresConfig =
+    | number
+    | {
+          /** Shared limit across all matching errors, tests, retries and browsers. */
+          limit: number;
+          patterns: ErrorPatterns;
+      };
+
 export interface SystemConfig {
     debug: boolean;
     mochaOpts: MochaOpts;
     expectOpts: ExpectOptsConfig;
     ctx: { [name: string]: unknown };
-    patternsOnReject: Array<string | RegExp>;
+    patternsOnReject: ErrorPatterns;
+    maxFailures: MaxFailuresConfig;
     workers: number;
     testsPerWorker: number;
     diffColor: string;

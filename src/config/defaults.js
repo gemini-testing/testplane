@@ -93,6 +93,7 @@ module.exports = {
         interval: 100,
     },
     patternsOnReject: [],
+    maxFailures: Infinity,
     meta: null,
     windowSize: null,
     tempDir: "",

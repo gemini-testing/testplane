@@ -30,7 +30,7 @@ describe("runner/browser-runner", () => {
         const browserPool = opts.browserPool || BrowserPool.create(config);
         const workers = opts.workers || mkWorkers_();
 
-        return BrowserRunner.create(browserId, config, browserPool, workers);
+        return BrowserRunner.create(browserId, config, browserPool, workers, undefined, opts.checkTestError);
     };
 
     const run_ = (opts = {}) => {
@@ -80,6 +80,18 @@ describe("runner/browser-runner", () => {
     afterEach(() => sandbox.restore());
 
     describe("constructor", () => {
+        it("should pass the shared error checker to test runners", async () => {
+            const checkTestError = sandbox.spy();
+            const failedTest = Test.create({ title: "failed" });
+            TestRunner.prototype.run.callsFake(async function () {
+                this._checkTestError(failedTest);
+            });
+
+            await run_({ runner: mkRunner_({ checkTestError }) });
+
+            assert.calledOnceWith(checkTestError, failedTest);
+        });
+
         it("should create suite monitor", () => {
             mkRunner_();
 
