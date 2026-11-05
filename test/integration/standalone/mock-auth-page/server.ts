@@ -2,8 +2,6 @@ import * as http from "http";
 import * as fs from "fs";
 import * as path from "path";
 import * as url from "url";
-import { Connect } from "vite";
-import IncomingMessage = Connect.IncomingMessage;
 
 interface User {
     login: string;
@@ -19,7 +17,7 @@ export class AuthServer {
 
     private readonly port: number = 3000;
     private readonly sessions: Map<string, { login: string; timestamp: number }> = new Map();
-    private server: http.Server<typeof IncomingMessage> | undefined;
+    private server: http.Server | undefined;
 
     public start(): void {
         this.server = http.createServer((req, res) => {

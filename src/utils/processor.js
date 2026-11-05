@@ -35,11 +35,13 @@ process.on("unhandledRejection", reason => {
     ipc.emit(WORKER_UNHANDLED_REJECTION, { error, workerPid: process.pid });
 });
 
-preloadWebdriverIO();
-preloadMochaReader();
+// Mocha may synchronously require ESM dependencies also imported by WebdriverIO.
+// Finish one module graph before starting the other to avoid partial ESM cache entries.
+const preloadModules = preloadWebdriverIO().then(() => preloadMochaReader());
 
-exports.loadModule = (moduleName, cb) => {
+exports.loadModule = async (moduleName, cb) => {
     try {
+        await preloadModules;
         require(moduleName);
     } catch {} // eslint-disable-line no-empty
 
@@ -48,6 +50,7 @@ exports.loadModule = (moduleName, cb) => {
 
 exports.execute = async (moduleName, methodName, args, cb) => {
     try {
+        await preloadModules;
         const result = await require(moduleName)[methodName](...args);
         cb(null, result);
     } catch (err) {
