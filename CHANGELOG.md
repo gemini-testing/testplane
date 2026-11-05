@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.3.7 (2026-11-05)
+
+
+### Bug Fixes
+
+* bunch of selectivity fixes ([#1348](https://github.com/gemini-testing/testplane/issues/1348)) ([56d1ff2](https://github.com/gemini-testing/testplane/commit/56d1ff27d2420c3478e1f3c8b77a082f32494695))
+
 ### 9.3.6 (2026-11-02)
 
 
