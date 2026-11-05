@@ -264,12 +264,30 @@ export interface MochaOpts {
     ui?: string | ((suite: unknown) => void);
 }
 
+export interface ErrorPattern {
+    /** Unique, non-empty pattern name used in error messages. */
+    name: string;
+    pattern: RegExp | ((errorText: string) => boolean);
+}
+
+/** Strings and RegExp preserve the existing patternsOnReject format. */
+export type ErrorPatterns = Array<string | RegExp | ErrorPattern>;
+
+export type MaxFailuresConfig =
+    | number
+    | {
+          /** Shared limit across all matching errors, tests, retries and browsers. */
+          limit: number;
+          patterns: ErrorPatterns;
+      };
+
 export interface SystemConfig {
     debug: boolean;
     mochaOpts: MochaOpts;
     expectOpts: ExpectOptsConfig;
     ctx: { [name: string]: unknown };
-    patternsOnReject: Array<string | RegExp>;
+    patternsOnReject: ErrorPatterns;
+    maxFailures: MaxFailuresConfig;
     workers: number;
     testsPerWorker: number;
     diffColor: string;
@@ -390,18 +408,6 @@ export interface DockerConfig {
     volumes?: string[];
     hosts?: string[];
     [option: string]: unknown;
-}
-
-export interface ExitOnErrorRule {
-    /** Unique, non-empty rule name used in error messages. */
-    name: string;
-    filter: RegExp | ((errorText: string) => boolean);
-    limit: number;
-}
-
-export interface ExitOnErrorConfig {
-    enabled: boolean;
-    filters: ExitOnErrorRule[];
 }
 
 export interface CommonConfig {
@@ -576,7 +582,6 @@ export type ConfigInputData = Partial<PartialCommonConfig> & {
     beforeAll?: HookType;
     afterAll?: HookType;
     profiler?: Partial<ProfilerConfig>;
-    exitOnError?: Partial<ExitOnErrorConfig>;
 };
 
 export type ConfigInput = ConfigInputData | (() => ConfigInputData) | (() => Promise<ConfigInputData>);
@@ -590,7 +595,6 @@ export interface ConfigParsed extends CommonConfig {
     beforeAll?: HookType;
     afterAll?: HookType;
     profiler: ProfilerConfig;
-    exitOnError: ExitOnErrorConfig;
 }
 
 export interface RuntimeConfig {

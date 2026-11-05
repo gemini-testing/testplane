@@ -30,7 +30,35 @@ To prevent incidental fails, Testplane retries a failed test before marking it a
 :warning: Testplane reruns tests in a new browser session to exclude situations when the browser environment is the cause of the failure.
 
 ### Stops on infrastructure errors
-See [Stop a run on matching errors](exit-on-error.md) for configuring named error filters and run-wide failure thresholds.
+Configure `system.maxFailures` to stop the run after a shared number of errors:
+
+```js
+system: {
+    maxFailures: 20, // Stop after any 20 failed attempts.
+}
+```
+
+Use the object form to count only errors matching specific patterns:
+
+```js
+const myPatternsTemplate = [
+    { name: "quota", pattern: /Too Many Requests/i },
+    { name: "access", pattern: text => text.includes("Access denied") },
+];
+
+// In the Testplane config:
+system: {
+    maxFailures: { limit: 20, patterns: myPatternsTemplate },
+}
+```
+
+To stop immediately on the first matching error, use `system.patternsOnReject: myPatternsTemplate`. The same array can be reused in both options. If both are configured, `patternsOnReject` takes priority and stops the run without waiting for `maxFailures`.
+
+All tests, retries and browsers share one counter. Each failed attempt counts once, even if multiple patterns match. Unmatched errors do not count in the object form. The counter resets for each run, and reaching the limit stops the run with a non-zero exit code.
+
+By default, `maxFailures` is `Infinity` (no limit) and `patternsOnReject` is empty. A finite limit must be a positive safe integer; the object form requires both `limit` and `patterns`. An empty `patterns` array matches no errors. No `enabled` flag is needed.
+
+Each named pattern has a unique, non-empty `name` and a `pattern` that is either a RegExp or a synchronous function returning a boolean for the error message. Both options also accept the existing `patternsOnReject` format of strings (regular expression sources) and RegExp. Matching `patternsOnReject` continues to mark the browser session as broken and now also stops the whole run.
 
 ### Executes separate tests
 Sometimes you only need to run specific tests, not all the tests in a set. Testplane makes this possible. You can specify the path to the test file

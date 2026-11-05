@@ -40,8 +40,9 @@ export type {
     AssertViewOpts,
     BrowserDownloadMirrors,
     BrowserDownloadMirrorsInput,
-    ExitOnErrorConfig,
-    ExitOnErrorRule,
+    ErrorPattern,
+    ErrorPatterns,
+    MaxFailuresConfig,
 } from "./config/types";
 export type { ProfilerResultV1 } from "./profiler/schema";
 export type {
