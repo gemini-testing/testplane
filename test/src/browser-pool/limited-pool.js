@@ -2,6 +2,7 @@
 
 const { LimitedPool } = require("src/browser-pool/limited-pool");
 const { CancelledError } = require("src/browser-pool/cancelled-error");
+const { getTestContext, withTestContext } = require("src/utils/test-context");
 const { promiseDelay } = require("../../../src/utils/promise");
 const stubBrowser = require("./util").stubBrowser;
 
@@ -120,6 +121,68 @@ describe("browser-pool/limited-pool", () => {
                 limit: 1,
                 value: 0,
             });
+        });
+    });
+
+    describe("queued test context", () => {
+        const contextA = { testXReqId: "test-a", traceparent: "trace-a" };
+        const contextB = { testXReqId: "test-b", traceparent: "trace-b" };
+        let contexts;
+
+        beforeEach(() => {
+            contexts = [];
+            underlyingPool.getBrowser.callsFake(async config => {
+                await Promise.resolve();
+                contexts.push(getTestContext());
+
+                return stubBrowser(config.id, undefined, {}, config);
+            });
+        });
+
+        for (const highPriority of [false, true]) {
+            it(`should restore the queued context when releasing a browser (highPriority: ${highPriority})`, async () => {
+                const pool = makePool_();
+                const first = await withTestContext(contextA, () => pool.getBrowser(configFor("first")));
+                const second = withTestContext(contextB, () => pool.getBrowser(configFor("second"), { highPriority }));
+                assert.calledOnce(underlyingPool.getBrowser);
+
+                await withTestContext(contextA, async () => {
+                    await pool.freeBrowser(first);
+                    assert.strictEqual(getTestContext(), contextA);
+                });
+                await second;
+
+                assert.deepEqual(contexts, [contextA, contextB]);
+                assert.isNull(getTestContext());
+            });
+        }
+
+        it("should not inherit the releasing test's context when the queued request has none", async () => {
+            const pool = makePool_();
+            const first = await withTestContext(contextA, () => pool.getBrowser(configFor("first")));
+            const second = pool.getBrowser(configFor("second"));
+
+            await withTestContext(contextA, () => pool.freeBrowser(first));
+            await second;
+
+            assert.deepEqual(contexts, [contextA, null]);
+        });
+
+        it("should restore the queued context after the previous browser fails to launch", async () => {
+            const error = new Error("launch failed");
+            underlyingPool.getBrowser.onFirstCall().callsFake(async () => {
+                contexts.push(getTestContext());
+                throw error;
+            });
+            const pool = makePool_();
+            const first = withTestContext(contextA, () => pool.getBrowser(configFor("first")));
+            const second = withTestContext(contextB, () => pool.getBrowser(configFor("second")));
+            assert.calledOnce(underlyingPool.getBrowser);
+
+            await assert.isRejected(first, "launch failed");
+            await second;
+
+            assert.deepEqual(contexts, [contextA, contextB]);
         });
     });
 

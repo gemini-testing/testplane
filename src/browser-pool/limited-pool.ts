@@ -1,6 +1,7 @@
 import debug from "debug";
 import _ from "lodash";
 import yallist from "yallist";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 import { BrowserOpts, Pool, PoolObserver, PoolObserverOperation } from "./types";
 import { CancelledError } from "./cancelled-error";
@@ -16,6 +17,7 @@ export interface LimitedPoolOpts {
 
 interface QueueItem {
     browserConfig: BrowserConfig;
+    runInContext: ReturnType<typeof AsyncLocalStorage.snapshot>;
     opts: {
         force?: boolean;
         version?: string;
@@ -143,6 +145,7 @@ export class LimitedPool implements Pool {
         return new Promise((resolve, reject) => {
             queue.push({
                 browserConfig,
+                runInContext: AsyncLocalStorage.snapshot(),
                 opts,
                 resolve: resolve as QueueItem["resolve"],
                 reject: reject as QueueItem["resolve"],
@@ -174,10 +177,12 @@ export class LimitedPool implements Pool {
             this.log(`has queued requests for ${compositeId}`);
             this.log(`remaining queue length: ${this._requestQueue.length}`);
 
-            queued.waitOperation?.end();
-            this._sampleState(queued.browserConfig.id);
+            queued.runInContext(() => {
+                queued.waitOperation?.end();
+                this._sampleState(queued.browserConfig.id);
 
-            this._newBrowser(queued.browserConfig, queued.opts).then(queued.resolve, queued.reject);
+                this._newBrowser(queued.browserConfig, queued.opts).then(queued.resolve, queued.reject);
+            });
         } else {
             this._launched--;
             this._sampleState(browserConfig.id);
