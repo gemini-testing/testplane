@@ -119,6 +119,16 @@ it("pages", async ({ browser }) => {
 });
 ```
 
+WDIO element arrays are different from native arrays: both `browser.$$(selector)` and the resolved element array provide asynchronous `map`/`forEach` methods. Awaiting those methods is valid and is supported by the checker:
+
+```js
+await browser.$$("a").forEach(async element => {
+    await element.click();
+});
+```
+
+Local promise arrays can also be consumed with `for...of` plus `await`, or `for await...of`; early exits leave the remaining promises outstanding. Promise assimilation is shallow: `await Promise.all([[command()]])` does not await the command in the nested array, nor does returning an array from a `.then` callback.
+
 For operations that are safe to run concurrently, `await Promise.all(items.map(async item => ...))` is supported. Adding `.catch(...)` or `void` alone does not wait for completion and does not suppress the check. `Promise.race` and `Promise.any` transfer ownership to the aggregate, but awaiting that aggregate does **not** guarantee that every input operation has finished.
 
 #### Configuration
@@ -149,7 +159,7 @@ Disabling it skips both the check and loading the analyzer. Existing runtime err
 - Supported test definitions are inline callbacks for the standard `bdd`, `tdd` and `qunit` interfaces, including their per-test hooks and `.only`/`.skip` variants. The check recognizes the callback's browser context, `this.browser`, local aliases, and named imports from Testplane/Mocha. Arbitrary DSL wrappers and callbacks supplied by reference are not test entry points.
 - The selected collection determines the files: a file is checked if it has at least one non-pending, non-disabled test. **The entire selected file is checked**, including tests skipped or excluded by `grep` within that file. Multiple browsers and symlinks do not cause duplicate selected-file analysis.
 - Inline per-test hooks in those files are checked. Separate hook-only files, imported/injected hook bodies and plugin `beforeAll` callbacks are not covered. Hook metadata does not reliably identify the original hook file.
-- The barrier is before `RUNNER_START`, test execution and runner-created browser sessions. Configuration, `INIT`, `beforeAll`, worker/dev-server initialization and top-level test-file code used for discovery may already have run. The analyzer itself never executes test/helper bodies.
+- The barrier is before browser-pool prewarming, `RUNNER_START`, test execution and runner-created browser sessions. Configuration, `INIT`, `beforeAll`, worker/dev-server initialization and top-level test-file code used for discovery may already have run. The analyzer itself never executes test/helper bodies.
 - A TypeChecker supplements known command recognition using available JS inference, JSDoc, declarations and TS types. It reads the nearest `tsconfig.json` when present, otherwise uses built-in defaults. Imports and configured project files may be read for types, but external helper bodies are not recursively checked for missing waits. An imported helper/custom command with a known promise-returning type can be checked at its call site.
 - Missing types, `any`, dynamic names/registrations and untyped external custom commands can hide errors. Known Testplane commands still work without types. Invalid compiler configuration is reported explicitly; this check is not a replacement for `tsc`.
 - Local flow analysis is bounded, not a proof for arbitrary code. Passing a promise to an unknown consumer, storing it in objects or mutable containers, complex closures, correlated alias changes, recursion and implicit exception paths can leave the analysis scope. Transfer to an unknown consumer is **not** proof that it awaits the promise.

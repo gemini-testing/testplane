@@ -24,9 +24,9 @@ async function createFixture(
     );
     const makeSource = (title, content) =>
         template
-            .replace("__MARKER__", JSON.stringify(marker))
-            .replace("__TITLE__", JSON.stringify(title))
-            .replace("__BODY__", content);
+            .replace("__MARKER__", () => JSON.stringify(marker))
+            .replace("__TITLE__", () => JSON.stringify(title))
+            .replace("__BODY__", () => content);
     const good = path.join(dir, "a-good.js");
     const bad = path.join(dir, "z-test" + extension);
     await fs.writeFile(good, makeSource("valid", 'await browser.assertView("valid");'));

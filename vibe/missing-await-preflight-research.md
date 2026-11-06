@@ -1,7 +1,7 @@
 # Предварительная проверка пропущенного await: исследование и проект решения
 
 Дата: 2026-11-06.
-База исследования: `9eb4201b967ca16f6baf8c138169886bb0ed24e6`, Testplane 9.3.6.
+Первичное исследование выполнено на `9eb4201b967ca16f6baf8c138169886bb0ed24e6` (Testplane 9.3.6); это не база итоговой ветки. По исправлению от 2026-11-06 реализация перенесена на `origin/master` (`24b75263d4fddfbb8260f5864409597a54cb7ff9`, Testplane 9.4.0) без коммита обновления зависимостей. Приведённые ниже старые замеры относятся к первоначальной базе; проверка переноса фиксируется в `missing-await-preflight-plan-track.md`.
 Worktree: `/Users/sipayrt/.codex/worktrees/missing-await-preflight/testplane`.
 Ветка: `sp.missing-await-preflight`.
 Статус: вариант AST и расширение проверки согласованы пользователем 2026-11-06.
@@ -147,5 +147,11 @@ Await внешней функции не оправдывает потерянн
 - Реальный CLI: JS/TS/TSX без пользовательских ESLint/tsconfig, точные координаты, exit 1, ноль POST /session, marker в начале каждого test/hook body не создан.
 - API run(TestCollection): реальный валидатор, nodejs/browser modes, isFailed уже в teardown, повторный запуск после исправления проходит. API smoke изолирован дочерним процессом против build для настоящих workers и отсутствия утечки global registry в соседние standalone tests.
 - Чистый tarball consumer: npm install --omit=dev --ignore-scripts с optional dependencies, TS runtime dependency, JS/TS preflight через esbuild fallback, NODE_PATH пуст.
-- Node 24.19.0, 5 свежих процессов на вариант, небольшие файлы без tsconfig: 100 файлов / 1 browser — median 145 ms, peak RSS 232080 KiB; 100 / 3 — 147 ms, 231264 KiB; 1000 / 1 — 354 ms, 320944 KiB; 1000 / 3 — 356 ms, 321216 KiB. Peak RSS всего процесса, не добавочный расход. Число selected-file analyses равно 100/1000; большой пользовательский проект/граф imports может стоить больше. Метрики не являются аппаратно-независимым порогом теста.
-- Общий integration на локальном Chrome 138: 55 passed, 5 screenshot mismatches. Те же пять tests воспроизведены на неизменённом базовом коммите 9eb4201b в отдельном временном checkout (2 passed, 5 failed в screenshot suite). Штатный remote Grid :4444 в окружении отсутствует; эталоны не перезаписывались.
+- Node 24.19.0, 5 свежих процессов на вариант, небольшие файлы без tsconfig: 100 файлов / 1 browser(s) — median 148 ms, peak RSS 234368 KiB; 100 файлов / 3 browser(s) — median 149 ms, peak RSS 235312 KiB; 1000 файлов / 1 browser(s) — median 361 ms, peak RSS 322688 KiB; 1000 файлов / 3 browser(s) — median 366 ms, peak RSS 326128 KiB. Peak RSS всего процесса, не добавочный расход. Selected-file analyses равны 100/1000 независимо от browsers. Большой пользовательский tsconfig/import graph может стоить больше; это не аппаратно-независимый порог.
+- Общий integration на локальном Chrome 138: 57 passed, 5 screenshot mismatches. Те же пять tests воспроизведены на неизменённом базовом коммите 9eb4201b в отдельном временном checkout (2 passed, 5 failed в screenshot suite). Штатный remote Grid :4444 в окружении отсутствует; эталоны не перезаписывались.
+
+## Итог после независимого ревью
+
+Исправлены все семь замечаний: WDIO async map/forEach отделены от native Array, branch-local aliases не снимают обязательства, try/catch сохраняет await/return, известные массивы обходятся с учётом early exits и for-await, function summaries передают identities и форму результата, Promise assimilation не рекурсивна, thenable требует callable then. Добавлены регрессии и для runStep, явных Promise-return annotations и точного сохранения $$ в CLI fixtures.
+
+Финальные проверки Node 22.21.1 и 24.19.0: build + npm test (3855 passing, 1 существующий pending; types/lint pass). Анализатор/валидатор: 180 passing. CLI/API: 14 passing; packaging smoke с чистым consumer повторно прошёл на Node 22. Общий integration: 57 passing и те же 5 screenshot mismatches базового коммита. Второе ревью не подменяло регрессионные тесты: исправления проверены RED→GREEN и полными наборами.

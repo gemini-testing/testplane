@@ -45,18 +45,26 @@ export function merge(states: Array<State | undefined>): State | undefined {
     const present = states.filter((s): s is State => Boolean(s));
     if (!present.length) return undefined;
     const result = clone(present[0]);
+    const imprecise = new Set<ts.CallExpression>();
     for (const state of present.slice(1)) {
         state.pending.forEach(p => result.pending.add(p));
         for (const key of new Set([...result.bindings.keys(), ...state.bindings.keys()])) {
             const a = result.bindings.get(key) ?? value();
             const b = state.bindings.get(key) ?? value();
             if (!same(a, b)) {
-                // Correlated/mutable aliases require relational analysis. Do not guess their ownership.
-                consume(result, a, true);
-                consume(result, b, true);
+                // A branch-local binding going out of scope does not settle its promise.
+                if (result.bindings.has(key) && state.bindings.has(key)) {
+                    allPromises(a).forEach(p => imprecise.add(p));
+                    allPromises(b).forEach(p => imprecise.add(p));
+                }
                 result.bindings.set(key, value());
             }
         }
     }
+    // A changed alias must not erase an obligation still held by a precise binding.
+    const retained = new Set([...result.bindings.values()].flatMap(v => [...allPromises(v)]));
+    imprecise.forEach(p => {
+        if (!retained.has(p)) result.pending.delete(p);
+    });
     return result;
 }

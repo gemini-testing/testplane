@@ -1,6 +1,6 @@
 import ts from "typescript";
 import { createCommandCatalog, elementCommands, elementsCommands, syncCommands } from "./commands";
-import { createSourceProgram, isArrayType, returnsPromise, returnsPromiseArray } from "./type-info";
+import { createSourceProgram, isArrayType, isPromiseType, returnsPromise, returnsPromiseArray } from "./type-info";
 import { allPromises, clone, consume, merge, value } from "./flow";
 import type { Binding, Exit, Flow, FunctionNode, State, Value, ValueKind } from "./flow";
 import type { AnalyzeOptions, MissingAwaitDiagnostic } from "./types";
@@ -12,7 +12,9 @@ interface Frame {
 
 interface FunctionResult {
     promise: boolean;
-    array: boolean;
+    returned: Value;
+    pending: Set<ts.CallExpression>;
+    consumed: Set<ts.CallExpression>;
 }
 
 const isFunction = (node: ts.Node): node is FunctionNode =>
@@ -43,6 +45,17 @@ function unwrap(node: ts.Expression): ts.Expression {
         node = node.expression;
     return node;
 }
+
+function joinedValue(values: Value[]): Value {
+    if (!values.length) return value();
+    return {
+        kind: values.every(v => v.kind === values[0].kind) ? values[0].kind : "unknown",
+        promises: new Set(values.flatMap(v => [...v.promises])),
+        items: values.some(v => v.items) ? values.flatMap(v => v.items ?? []) : undefined,
+    };
+}
+
+const settled = (v: Value): Value => ({ ...v, promises: new Set() });
 
 class Analyzer {
     private readonly checker: ts.TypeChecker;
@@ -166,9 +179,18 @@ class Analyzer {
     }
 
     private analyzeFunction(fn: FunctionNode, captured: State, args: Value[], frame: Frame): FunctionResult {
-        if (!fn.body || this.visiting.has(fn)) return { promise: isAsync(fn), array: false };
+        const signature = this.checker.getSignatureFromDeclaration(fn);
+        const result: FunctionResult = {
+            promise:
+                isAsync(fn) ||
+                Boolean(signature && isPromiseType(this.checker, this.checker.getReturnTypeOfSignature(signature), fn)),
+            returned: value(),
+            pending: new Set(),
+            consumed: new Set(),
+        };
+        if (!fn.body || this.visiting.has(fn)) return result;
         this.visiting.add(fn);
-        const state: State = { bindings: new Map(captured.bindings), pending: new Set() };
+        const state = clone(captured);
         fn.parameters
             .filter(param => param.name.getText(this.source) !== "this")
             .forEach((param, i) =>
@@ -177,16 +199,32 @@ class Analyzer {
         const flow = ts.isBlock(fn.body)
             ? this.block(fn.body.statements, state, frame)
             : { exits: [{ kind: "return" as const, state, value: this.expression(fn.body, state, frame) }] };
-        const result = { promise: isAsync(fn), array: false };
-        for (const exit of flow.exits) {
+        const returns: Value[] = [];
+        const remaining = new Set<ts.CallExpression>();
+        const completions = [
+            ...flow.exits.filter(exit => exit.kind !== "throw"),
+            ...(flow.normal ? [{ kind: "normal" as const, state: flow.normal }] : []),
+        ];
+        for (const exit of completions) {
+            exit.state.pending.forEach(p => remaining.add(p));
             if (exit.kind === "return" && exit.value) {
+                returns.push(exit.value);
                 result.promise ||= exit.value.promises.size > 0;
-                result.array ||= exit.value.kind === "array" && allPromises(exit.value).size > 0;
+                // Return transfers ownership and shape; it does not recursively await containers.
+                allPromises(exit.value).forEach(p => {
+                    if (exit.state.pending.has(p)) result.pending.add(p);
+                });
                 consume(exit.state, exit.value, !frame.root);
             }
-            if (exit.kind !== "throw") exit.state.pending.forEach(node => this.report(node));
+            exit.state.pending.forEach(node => {
+                if (!captured.pending.has(node)) this.report(node);
+            });
         }
-        flow.normal?.pending.forEach(node => this.report(node));
+        if (completions.length)
+            captured.pending.forEach(p => {
+                if (!remaining.has(p)) result.consumed.add(p);
+            });
+        result.returned = joinedValue(returns);
         this.visiting.delete(fn);
         return result;
     }
@@ -222,8 +260,18 @@ class Analyzer {
         } else if (ts.isTryStatement(node)) {
             const tried = this.statement(node.tryBlock, clone(state), frame);
             const thrown = merge(tried.exits.filter(exit => exit.kind === "throw").map(exit => exit.state));
+            // Without explicit throws, exception-entry state is unknown. Do not resurrect
+            // promises already settled by the try (notably a handled rejection of await p).
+            const completed = merge([
+                tried.normal,
+                ...tried.exits.map(exit => {
+                    const finalState = clone(exit.state);
+                    if (exit.kind === "return" && exit.value) consume(finalState, exit.value);
+                    return finalState;
+                }),
+            ]);
             const caught = node.catchClause
-                ? this.statement(node.catchClause.block, thrown ?? clone(state), frame)
+                ? this.statement(node.catchClause.block, thrown ?? completed ?? clone(state), frame)
                 : undefined;
             let flow: Flow = {
                 normal: merge([tried.normal, caught?.normal]),
@@ -246,9 +294,22 @@ class Analyzer {
                 flow = { normal, exits };
             }
             return flow;
+        } else if (ts.isForOfStatement(node)) {
+            const items = this.expression(node.expression, state, frame);
+            if (items.kind === "array" && items.items) return this.arrayLoop(node, items.items, state, frame);
+            const item = items.kind === "elements" ? value("element") : value();
+            this.bindLoopItem(node, item, state);
+            const body = this.statement(node.statement, clone(state), frame);
+            return {
+                normal: merge([
+                    state,
+                    body.normal,
+                    ...body.exits.filter(e => e.kind === "break" || e.kind === "continue").map(e => e.state),
+                ]),
+                exits: body.exits.filter(e => e.kind === "return" || e.kind === "throw"),
+            };
         } else if (
             ts.isForStatement(node) ||
-            ts.isForOfStatement(node) ||
             ts.isForInStatement(node) ||
             ts.isWhileStatement(node) ||
             ts.isDoStatement(node)
@@ -260,7 +321,7 @@ class Analyzer {
                     else this.expression(node.initializer, state, frame);
                 }
                 if (node.condition) this.expression(node.condition, state, frame);
-            } else if (ts.isForOfStatement(node) || ts.isForInStatement(node)) {
+            } else if (ts.isForInStatement(node)) {
                 const items = this.expression(node.expression, state, frame);
                 if (ts.isVariableDeclarationList(node.initializer)) {
                     const item = items.kind === "elements" ? value("element") : (items.items?.[0] ?? value());
@@ -303,6 +364,34 @@ class Analyzer {
         return { normal: state, exits: [] };
     }
 
+    private bindLoopItem(node: ts.ForOfStatement, item: Value, state: State): void {
+        if (node.awaitModifier) {
+            consume(state, item);
+            item = settled(item);
+        }
+        if (ts.isVariableDeclarationList(node.initializer))
+            node.initializer.declarations.forEach(d => this.bind(d.name, item, state));
+        else if (ts.isIdentifier(node.initializer)) this.bind(node.initializer, item, state);
+    }
+
+    private arrayLoop(node: ts.ForOfStatement, items: Value[], state: State, frame: Frame): Flow {
+        let normal: State | undefined = state;
+        const breaks: State[] = [];
+        const exits: Exit[] = [];
+        for (const item of items) {
+            if (!normal) break;
+            this.bindLoopItem(node, item, normal);
+            const body = this.statement(node.statement, normal, frame);
+            breaks.push(...body.exits.filter(exit => exit.kind === "break").map(exit => exit.state));
+            exits.push(...body.exits.filter(exit => exit.kind === "return" || exit.kind === "throw"));
+            normal = merge([
+                body.normal,
+                ...body.exits.filter(exit => exit.kind === "continue").map(exit => exit.state),
+            ]);
+        }
+        return { normal: merge([normal, ...breaks]), exits };
+    }
+
     private declarations(list: ts.VariableDeclarationList, state: State, frame: Frame): void {
         list.declarations.forEach(d =>
             this.bind(d.name, d.initializer ? this.expression(d.initializer, state, frame) : value(), state),
@@ -339,11 +428,10 @@ class Analyzer {
         if (ts.isArrayLiteralExpression(node))
             return {
                 ...value("array"),
-                items: node.elements.map(el =>
-                    ts.isSpreadElement(el)
-                        ? this.expression(el.expression, state, frame)
-                        : this.expression(el, state, frame),
-                ),
+                items: node.elements.flatMap(el => {
+                    const item = this.expression(ts.isSpreadElement(el) ? el.expression : el, state, frame);
+                    return ts.isSpreadElement(el) && item.items ? item.items : [item];
+                }),
             };
         if (ts.isObjectLiteralExpression(node)) {
             for (const property of node.properties) {
@@ -446,6 +534,16 @@ class Analyzer {
         visit(fn);
     }
 
+    private transfer(result: FunctionResult, state: State): void {
+        result.consumed.forEach(p => state.pending.delete(p));
+        result.pending.forEach(p => state.pending.add(p));
+    }
+
+    private adoptedPromise(node: ts.CallExpression, label: string, returned: Value, state: State): Value {
+        consume(state, returned);
+        return { ...returned, promises: this.promise(node, label, state).promises };
+    }
+
     private call(node: ts.CallExpression, state: State, frame: Frame): Value {
         const prop = member(unwrap(node.expression));
         const receiver = prop
@@ -462,17 +560,39 @@ class Analyzer {
                 (!decl || decl.getSourceFile().isDeclarationFile) &&
                 ["all", "allSettled", "race", "any", "resolve"].includes(name!)
             ) {
-                args.forEach(arg => consume(state, arg, name !== "resolve"));
-                return this.promise(node, `Promise.${name}`, state);
+                if (name === "resolve") return this.adoptedPromise(node, "Promise.resolve", args[0] ?? value(), state);
+                const entries = args[0]?.items ?? [];
+                entries.forEach(item => consume(state, item));
+                const returned =
+                    name === "all"
+                        ? { ...value("array"), items: entries.map(settled) }
+                        : name === "race" || name === "any"
+                          ? joinedValue(entries.map(settled))
+                          : value();
+                return this.adoptedPromise(node, `Promise.${name}`, returned, state);
             }
         }
 
         if (name && ["then", "catch", "finally"].includes(name) && receiver.promises.size) {
-            args.forEach(arg => {
-                if (arg.fn) this.callback(arg.fn, state, frame);
+            const returned: Value[] = [];
+            args.forEach((arg, i) => {
+                if (!arg.fn) return;
+                const result = this.callback(
+                    arg.fn,
+                    state,
+                    frame,
+                    name === "then" && i === 0 ? [settled(receiver)] : [],
+                );
+                this.transfer(result, state);
+                consume(state, result.returned);
+                returned.push(settled(result.returned));
             });
             consume(state, receiver);
-            return this.promise(node, name, state);
+            const shape =
+                name === "finally" || !returned.length
+                    ? settled(receiver)
+                    : joinedValue(name === "catch" ? [settled(receiver), ...returned] : returned);
+            return this.adoptedPromise(node, name, shape, state);
         }
 
         if (
@@ -482,34 +602,51 @@ class Analyzer {
             (["array", "elements"].includes(receiver.kind) || isArrayType(this.checker, prop.object))
         ) {
             const fn = args[0]?.fn;
+            const enhanced = receiver.kind === "elements";
+            const inputs = enhanced ? [value("element")] : (receiver.items ?? [value()]);
+            const items: Value[] = [];
             let async = false;
             if (fn) {
-                async = this.callback(fn, state, frame, [
-                    receiver.kind === "elements" ? value("element") : (receiver.items?.[0] ?? value()),
-                ]).promise;
-                this.escapeCallback(fn, state);
+                for (const input of inputs) {
+                    const result = this.callback(fn, state, frame, [input]);
+                    this.transfer(result, state);
+                    async ||= result.promise;
+                    const item = result.promise
+                        ? this.adoptedPromise(node, name, result.returned, state)
+                        : result.returned;
+                    items.push(item);
+                }
             } else if (node.arguments[0]) {
-                const signatures = this.checker.getSignaturesOfType(
-                    this.checker.getTypeAtLocation(node.arguments[0]),
-                    ts.SignatureKind.Call,
-                );
-                async = signatures.some(signature => {
-                    const type = this.checker.getReturnTypeOfSignature(signature);
-                    return Boolean(type.getProperty("then"));
-                });
+                async = this.checker
+                    .getSignaturesOfType(this.checker.getTypeAtLocation(node.arguments[0]), ts.SignatureKind.Call)
+                    .some(signature =>
+                        isPromiseType(
+                            this.checker,
+                            this.checker.getReturnTypeOfSignature(signature),
+                            node.arguments[0],
+                        ),
+                    );
+                if (async) items.push(this.promise(node, name, state));
             }
-            if (async) {
-                if (name === "forEach") {
+            if (enhanced) {
+                // Both ChainablePromiseArray and resolved WDIO ElementArray use async iterators.
+                consume(state, receiver);
+                items.forEach(item => consume(state, item));
+                const returned = name === "map" ? { ...value("array"), items: items.map(settled) } : value();
+                return this.adoptedPromise(node, name, returned, state);
+            }
+            if (name === "forEach") {
+                if (async) {
                     this.report(
                         node,
                         name,
                         "Array.forEach does not await async callbacks. Use for...of with await or await Promise.all(array.map(...)).",
                     );
-                    return value();
+                    items.forEach(item => consume(state, item));
                 }
-                return { ...value("array"), items: [this.promise(node, name, state)] };
+                return value();
             }
-            return name === "map" ? value("array") : value();
+            return { ...value("array"), items };
         }
 
         if (name && ["browser", "element"].includes(receiver.kind)) {
@@ -535,6 +672,12 @@ class Analyzer {
                 elementCommands.has(name) ||
                 elementsCommands.has(name)
             ) {
+                if (name === "runStep" && args[1]?.fn) {
+                    const result = this.callback(args[1].fn, state, frame);
+                    this.transfer(result, state);
+                    consume(state, receiver);
+                    return this.adoptedPromise(node, name, result.returned, state);
+                }
                 if (!["execute", "executeAsync"].includes(name))
                     args.forEach(arg => {
                         if (arg.fn) this.callback(arg.fn, state, frame);
@@ -553,8 +696,12 @@ class Analyzer {
             return name === "perform" ? this.promise(node, "perform", state) : value("action");
         }
 
-        let result: FunctionResult | undefined;
-        if (receiver.fn) result = this.callback(receiver.fn, state, frame, args);
+        if (receiver.fn) {
+            const result = this.callback(receiver.fn, state, frame, args);
+            this.transfer(result, state);
+            const label = name ?? node.expression.getText(this.source);
+            return result.promise ? this.adoptedPromise(node, label, result.returned, state) : result.returned;
+        }
         args.forEach(arg => {
             if (arg.fn) {
                 this.callback(arg.fn, state, frame);
@@ -564,8 +711,8 @@ class Analyzer {
             consume(state, arg, true);
         });
         const label = name ?? node.expression.getText(this.source);
-        if (result?.promise || returnsPromise(this.checker, node)) return this.promise(node, label, state);
-        if (result?.array || returnsPromiseArray(this.checker, node))
+        if (returnsPromise(this.checker, node)) return this.promise(node, label, state);
+        if (returnsPromiseArray(this.checker, node))
             return { ...value("array"), items: [this.promise(node, label, state)] };
         return value();
     }

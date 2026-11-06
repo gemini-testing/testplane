@@ -4,8 +4,56 @@ import path from "node:path";
 import { analyzeMissingAwait } from "../../../../src/test-reader/await-check/analyze";
 import { createTypeProgram } from "../../../../src/test-reader/await-check/type-info";
 
+const reviewCases: Array<[string, string[]]> = [
+    ['const p = browser.url("/"); try { return p; } catch {}', []],
+    ['try { return browser.url("/"); } catch {}', []],
+    ['if (flag) { const p = browser.url("/"); }', ["url"]],
+    ['const p = browser.url("/"); await browser.runStep("step", async () => { await p; });', []],
+    ['await browser.runStep("step", () => [browser.url("/")]);', ["url"]],
+    ['const ps = await browser.runStep("step", () => [browser.url("/")]); await Promise.all(ps);', []],
+    ['const ps = [browser.url("/"), browser.assertView("a")]; for await (const p of ps) { break; }', ["assertView"]],
+    ['await browser.$$("a").map(async el => await el.click());', []],
+    ['const els = await browser.$$("a"); await els.forEach(async el => await el.click());', []],
+    ['browser.$$("a").map(async el => await el.click());', ["map"]],
+    ['const els = await browser.$$("a"); els.forEach(async el => await el.click());', ["forEach"]],
+    ['await browser.$$("a").map(async el => { el.click(); });', ["click"]],
+    ['const p = browser.url("/"); if (flag) { const q = p; }', ["url"]],
+    ['const p = browser.url("/"); if (flag) { const q = p; } else { const r = p; }', ["url"]],
+    ['const p = browser.url("/"); if (flag) { const q = p; await q; }', ["url"]],
+    ['const p = browser.url("/"); if (flag) { const q = p; await q; } else { const r = p; await r; }', []],
+    ['const p = browser.url("/"); if (flag) { const q = p; } await p;', []],
+    ['const p = browser.url("/"); try { await p; } catch {}', []],
+    ['try { browser.url("/"); } catch {}', ["url"]],
+    ['const p = browser.url("/"); try { throw Error(); } catch {}', ["url"]],
+    ['try { await browser.assertView("a"); } catch { browser.url("/"); }', ["url"]],
+    ['const ps = [browser.url("/")]; for (const p of ps) { await p; }', []],
+    ['const ps = [browser.url("/"), browser.assertView("a")]; for (const p of ps) { await p; }', []],
+    ['const ps = [browser.url("/"), browser.assertView("a")]; for await (const p of ps) {}', []],
+    ['const ps = [browser.url("/"), browser.assertView("a")]; for (const p of ps) { await p; break; }', ["assertView"]],
+    [
+        'const ps = [browser.url("/"), browser.assertView("a")]; for (const p of ps) { await p; return; }',
+        ["assertView"],
+    ],
+    ['const p = browser.url("/"); await Promise.resolve().then(() => p);', []],
+    ['const p = browser.url("/"); await Promise.resolve().then(async () => { await p; });', []],
+    ['const p = browser.url("/"); await Promise.resolve().then(() => { p; });', ["url"]],
+    ['const ps = [browser.url("/")]; await Promise.all(ps.map(p => p));', []],
+    ['const ps = [browser.url("/"), browser.assertView("a")]; await Promise.all(ps.map(p => p));', []],
+    ['await Promise.all([[browser.url("/")]]);', ["url"]],
+    ['await Promise.resolve().then(() => [browser.url("/")]);', ["url"]],
+    ['const ps = await Promise.resolve().then(() => [browser.url("/")]); await Promise.all(ps);', []],
+    ['const helper = () => [browser.url("/")]; await Promise.all(helper());', []],
+    ['const ps = [browser.url("/")]; await Promise.all([...ps]);', []],
+    ['const ps = [browser.url("/")]; await Promise.all(ps.map(p => [p]));', ["url"]],
+    ['const p = browser.url("/"); function helper() {} helper(p);', ["url"]],
+];
+
 describe("missing await coverage", () => {
     const cases: Array<[string, string[]]> = [
+        ...reviewCases.map(([body, expected]): [string, string[]] => [
+            `it("x", async ({browser}) => { ${body} });`,
+            expected,
+        ]),
         ["it('x', function () { this.browser.assertView('x'); });", ["assertView"]],
         ["it('x', async ctx => { const bro = ctx.browser; bro.url('/'); });", ["url"]],
         ["it('x', async ({browser: bro}) => { bro['assertView']('x'); });", ["assertView"]],
@@ -129,6 +177,28 @@ describe("missing await type information", function () {
         fs.writeFileSync(config, JSON.stringify({ compilerOptions: { moduleDetection: "legacy" } }));
         const program = createTypeProgram([file, helper], sources, config);
         assert.deepEqual(analyzeMissingAwait(source, { file, program }), []);
+    });
+    for (const [body, expected] of reviewCases) {
+        it(`should analyze review regression with production types: ${body}`, () => {
+            assert.deepEqual(analyze(`it("x", async ({browser}) => { ${body} });`, ".js"), expected);
+        });
+    }
+    it("should not mistake a non-callable then property for an async callback", () => {
+        const source = "declare const cb: (n: number) => {then: string}; it('x', () => { [1].forEach(cb); });";
+        assert.deepEqual(analyzeMissingAwait(source, { file: "/test.ts" }), []);
+        assert.deepEqual(analyze(source), []);
+    });
+    it("should preserve a local helper's declared promise return type", () => {
+        assert.deepEqual(
+            analyze("function helper(): Promise<void> { return unknownConsumer(); } it('x', () => { helper(); });"),
+            ["helper"],
+        );
+    });
+    it("should preserve a known callback's declared promise return type", () => {
+        assert.deepEqual(
+            analyze("function cb(): Promise<void> { return unknownConsumer(); } it('x', () => { [1].forEach(cb); });"),
+            ["forEach"],
+        );
     });
     it("should detect an imported async helper without a tsconfig", () => {
         assert.deepEqual(analyze("import {helper, sync} from './helper'; it('x', () => { helper(); sync(); });"), [

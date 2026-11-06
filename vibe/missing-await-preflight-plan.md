@@ -10,11 +10,11 @@
 
 Анализатор → его тесты → диагностика и файловый валидатор → их тесты → конфигурация и барьер запуска → тесты интеграции раннера → сквозные проверки → документация и финальная проверка.
 
-Все команды выполнять из корня отдельного worktree `/Users/sipayrt/.codex/worktrees/missing-await-preflight/testplane` на ветке `sp.missing-await-preflight`. Исходная база: `9eb4201b967ca16f6baf8c138169886bb0ed24e6`. Перед исполнением создать `vibe/missing-await-preflight-plan-track.md` с [ ]/[X] для восьми этапов. Не менять основной checkout и не выполнять arc-команды: это Git-репозиторий.
+Все команды выполнять из корня отдельного worktree `/Users/sipayrt/.codex/worktrees/missing-await-clean/testplane` на ветке `sp.missing-await-preflight`. База: актуальный `origin/master`, `24b75263d4fddfbb8260f5864409597a54cb7ff9` (Testplane 9.4.0). Ветку разработки зависимостей не использовать как базу. Перед исполнением создать `vibe/missing-await-preflight-plan-track.md` с [ ]/[X] для восьми этапов. Не менять основной checkout и не выполнять arc-команды: это Git-репозиторий.
 
 ## Общие условия реализации
 
-- Node.js >=22.12.0 из package.json; контрольный прогон также на Node 24 из .nvmrc.
+- Node.js >=22 из package.json; контрольный прогон также на Node 24 из .nvmrc.
 - Не исполнять исходники в анализаторе; не создавать браузер; создавать TypeScript Program/TypeChecker без emit и без запуска пользовательского кода.
 - Не переносить INIT/beforeAll/discovery относительно существующих публичных событий.
 - Не обещать проверку до запуска workers/dev-server: барьер находится перед RUNNER_START.
@@ -171,12 +171,12 @@
 **Что добавить/реализовать:**
 
 - Добавить system.checkMissingAwait:boolean, default true через options.boolean("checkMissingAwait"), с обычными config/env/CLI overrides.
-- В MainRunner.run до RUNNER_START, внутри try/finally, выполнить validateTestCollection. Динамически импортировать анализатор только при включённой проверке.
-- Не выставлять runned=true до успешного preflight: addTestToRun во время ожидания проверки возвращает false. После успешной проверки сохранить прежний порядок RUNNER_START → BEGIN → execution.
-- На TestPreflightError до finally один раз синхронно эмитить MasterEvents.ERROR с тем же объектом ошибки. В Testplane._handleError добавить раннюю ветку для TestPreflightError: вызвать _fail() и вернуть управление без halt, логирования и таймера. Так END/RUNNER_END наблюдают isFailed() === true.
-- На diagnostic не вызывать RUNNER_START/BEGIN/_runTests, не создавать BrowserRunner; дать finally выполнить END/RUNNER_END/workersRegistry.end ровно один раз. Не добавлять TEST_FAIL/TEST_BEGIN/retry.
+- В MainRunner.run до browserPool.prewarm и RUNNER_START, внутри try, выполнить validateTestCollection. Динамически импортировать анализатор только при включённой проверке.
+- Не выставлять runned=true до успешного preflight: addTestToRun во время ожидания проверки возвращает false. После успешной проверки сохранить порядок browserPool.prewarm → RUNNER_START → BEGIN → execution.
+- На TestPreflightError до cleanup один раз синхронно эмитить MasterEvents.ERROR с тем же объектом ошибки. В Testplane._handleError добавить раннюю ветку для TestPreflightError: вызвать _fail() и вернуть управление без halt, логирования и таймера. Так END/RUNNER_END наблюдают isFailed() === true.
+- На diagnostic не вызывать browserPool.prewarm/RUNNER_START/BEGIN/_runTests, не создавать BrowserRunner; сохранить cleanup master: browserPool[Symbol.asyncDispose] → END → RUNNER_END → workersRegistry.end, включая существующие таймауты и сохранение первичной ошибки. Не добавлять TEST_FAIL/TEST_BEGIN/retry.
 - Сохранять первичный TestPreflightError при вторичной ошибке workersRegistry.end: вторичную записать logger.warn, наружу бросить первичную. Для остальных видов ошибок не менять прежнюю политику.
-- В Testplane._run после завершения finally раннера перехватить только TestPreflightError вокруг runner.run: вызвать halt(error, 0, false), затем throw той же ошибки. Это выполняет EXIT/закрытие Vite после orderly cleanup; failed-state установлен раньше через ERROR. Остальные ошибки сохраняют прежний путь. Не вызывать process.exit в библиотечном API.
+- В Testplane._run после завершения cleanup раннера перехватить только TestPreflightError вокруг runner.run: вызвать halt(error, 0, false), затем throw той же ошибки. Это выполняет EXIT/закрытие Vite после orderly cleanup; failed-state установлен раньше через ERROR. Остальные ошибки сохраняют прежний путь. Не вызывать process.exit в библиотечном API.
 - Не проверять отдельно TestReader: run(paths) и run(TestCollection) должны проходить общий барьер, а list-tests/readTests оставаться discovery-only.
 - Не вводить файловый кэш между run; не менять динамический addTestToRun после старта, явно оставленный вне контракта.
 - Обновить makeConfigStub так, чтобы default новой опции соответствовал production; existing runner tests должны явно stub валидатор, а не обращаться к вымышленным файлам.
@@ -192,7 +192,7 @@
 **Примеры и документация:**
 
 - `src/config/options-builder.js` — boolean parsing.
-- `src/runner/index.ts` — finally после RUNNER_START failure.
+- `src/runner/index.ts` — cleanup browser pool, событий и workers после ошибки runner.
 - `src/testplane.ts` — существующий halt(error, timeout, logError).
 - `docs/events/init.md`, `docs/events/runner-start.md`, `docs/events/runner-end.md` — события.
 
@@ -278,7 +278,7 @@
 - Рекомендовать optional typed ESLint как дополнительный слой; примеры конфигурации привязать к версии линтера, не копировать недоступный в 6.12.0 projectService/checkThenables.
 - Обновить programmatic API: rejection с diagnostics, isFailed=true уже в END/RUNNER_END; discovery-only readTests. Документировать, что при preflight failure RUNNER_START не вызывается, но RUNNER_END выполняется для cleanup.
 - В release notes отметить default-on поведение и необходимость исправить выявленные ошибки/отключить проверку для неподдерживаемого проекта.
-- Выполнить проверки на Node >=22.12 и 24; отметить все внешние ограничения прогонов, не записывать неисполненный тест как passed.
+- Выполнить проверки на Node 22 и 24; отметить все внешние ограничения прогонов, не записывать неисполненный тест как passed.
 
 **Файлы:**
 

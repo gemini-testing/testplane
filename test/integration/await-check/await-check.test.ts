@@ -64,6 +64,8 @@ describe("missing-await preflight integration", function () {
         { body: 'const p = browser.assertView("plane"); await p;' },
         { body: 'return browser.assertView("plane");' },
         { body: 'await Promise.all(["a"].map(async name => browser.assertView(name)));' },
+        { body: 'await browser.$$("a").map(async el => await el.click());' },
+        { body: 'const p = browser.assertView("plane"); await Promise.resolve().then(() => p);' },
         { checkMissingAwait: false },
     ]) {
         it(`should reach RUNNER_START for ${JSON.stringify(options)}`, async () => {
