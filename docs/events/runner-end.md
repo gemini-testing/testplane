@@ -4,6 +4,8 @@
 
 The `RUNNER_END` event is triggered after the test is executed and before all workers are finished. The event handler can be asynchronous: in this case, all workers will be finished only after the _Promise_ returned by the event handler is resolved.
 
+When missing-await preflight fails, `RUNNER_END` is still emitted for cleanup even though `RUNNER_START` and test execution have not occurred. Handlers must tolerate resources that were never opened. `testplane.isFailed()` is already `true`; no artificial failed-test event is added to the statistics. Errors in cleanup do not replace the original preflight diagnostic.
+
 ## Subscription {#subscription}
 
 ```javascript

@@ -24,6 +24,7 @@ function makeConfigStub(opts = {}) {
         configPath: "some-default-config-path",
         resetCursor: true,
         system: {
+            checkMissingAwait: true,
             mochaOpts: {},
             expectOpts: {},
             patternsOnReject: [],

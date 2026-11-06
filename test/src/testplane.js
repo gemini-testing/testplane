@@ -19,6 +19,7 @@ const { MainRunner } = require("src/runner");
 const { ViteServer } = require("src/runner/browser-env/vite/server");
 const { makeConfigStub } = require("../utils");
 const { BROWSER_TEST_RUN_ENV, NODEJS_TEST_RUN_ENV } = require("src/constants/config");
+const { TestPreflightError } = require("src/errors/test-preflight-error");
 const { promiseDelay } = require("../../src/utils/promise");
 
 describe("testplane", () => {
@@ -163,6 +164,26 @@ describe("testplane", () => {
         beforeEach(() => {
             sandbox.stub(TestCollection.prototype, "getBrowsers").returns([]);
             sandbox.stub(Testplane.prototype, "halt");
+        });
+
+        it("should mark preflight failure before teardown and reject without duplicate logging", async () => {
+            const testplane = await mkTestplane_();
+            const error = new TestPreflightError([]);
+            const states = [];
+            testplane.on(RunnerEvents.END, () => states.push(testplane.isFailed()));
+            testplane.on(RunnerEvents.RUNNER_END, () => states.push(testplane.isFailed()));
+            mkRunner_(async runner => {
+                runner.emit(RunnerEvents.ERROR, error);
+                assert.notCalled(testplane.halt);
+                runner.emit(RunnerEvents.END);
+                await runner.emitAndWait(RunnerEvents.RUNNER_END);
+                throw error;
+            });
+            const actual = await testplane.run().catch(e => e);
+            assert.strictEqual(actual, error);
+            assert.deepEqual(states, [true, true]);
+            assert.calledOnceWith(testplane.halt, error, 0, false);
+            assert.notCalled(loggerErrorStub);
         });
 
         it("should create runner", async () => {

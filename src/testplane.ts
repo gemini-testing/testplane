@@ -26,6 +26,7 @@ import { TagFilter } from "./utils/cli";
 import { ViteServer } from "./runner/browser-env/vite/server";
 import { getGlobalFilesToRemove, initGlobalFilesToRemove } from "./globalFilesToRemove";
 import { TestsTracker, formatTrackedTests, getTestsByWorkerPid } from "./runner/tests-tracker";
+import { TestPreflightError } from "./errors/test-preflight-error";
 import { UnhandledRejectionError } from "./errors/unhandled-rejection-error";
 import { ProfilerSanitizer } from "./profiler/sanitize";
 import type { SourceRef } from "./profiler/schema";
@@ -295,9 +296,17 @@ export class Testplane extends BaseTestplane {
             { name: "Read tests" },
             () => this._readTests(testPaths, { browsers, sets, grep, tag, replMode, keepBrowserMode }),
         );
-        await this._profiler.runtime.withSpan("testplane.phase.execution", { name: "Execute tests" }, () =>
-            runner.run(collection, RunnerStats.create(this), { shouldDisableSelectivity }),
-        );
+        try {
+            await this._profiler.runtime.withSpan("testplane.phase.execution", { name: "Execute tests" }, () =>
+                runner.run(collection, RunnerStats.create(this), { shouldDisableSelectivity }),
+            );
+        } catch (error) {
+            if (error instanceof TestPreflightError) {
+                // Workers and RUNNER_END have already completed; no forced-exit timer or duplicate log.
+                this.halt(error, 0, false);
+            }
+            throw error;
+        }
 
         if (!shouldDisableSelectivity) {
             const [updateResult, clearResult] = await this._profiler.runtime.withSpan(
@@ -446,6 +455,11 @@ export class Testplane extends BaseTestplane {
     }
 
     private _handleError(err: ErrorWithWorkerPid): void {
+        if (err instanceof TestPreflightError) {
+            // Teardown plugins must observe failure before the runner emits END/RUNNER_END.
+            this._fail();
+            return;
+        }
         if (err && err.workerPid && this.testsTracker) {
             const allTests = this.testsTracker.getAllTests();
             const relevantTests = getTestsByWorkerPid(allTests, err.workerPid);

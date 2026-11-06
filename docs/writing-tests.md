@@ -5,6 +5,9 @@
 ### Contents
 
 - [Arguments](#arguments)
+- [Missing await checks](#missing-await-checks)
+  - [Configuration](#configuration)
+  - [Scope and limitations](#scope-and-limitations)
 - [Hooks](#hooks)
 - [Skip](#skip)
 - [Only](#only)
@@ -71,6 +74,87 @@ it('some test', async function() {
     // Do some actions and asserts
 });
 ```
+
+### Missing await checks
+
+Testplane checks for missing `await` **before executing the initial test collection**. The check is enabled by default for JavaScript and TypeScript; it does not require ESLint or a `tsconfig.json`.
+
+For example, this test stops the run with `TestPreflightError`, a nonzero CLI exit code, and the file, line, column and source snippet:
+
+```js
+it("plane", async ({ browser }) => {
+    browser.assertView("plane"); // Missing await
+});
+```
+
+Wait for the operation, or return its promise when it is the last operation:
+
+```js
+it("plane", async ({ browser }) => {
+    await browser.assertView("plane");
+});
+
+it("plane", ({ browser }) => {
+    return browser.assertView("plane");
+});
+```
+
+The check follows known browser/element commands, promise chains, local saved promises and aliases, and ordinary branches. Saving a promise is not enough: it must be awaited or returned on every analyzed normal exit.
+
+```js
+it("plane", async ({ browser }) => {
+    const screenshot = browser.assertView("plane");
+    if (condition) await screenshot; // The other branch leaves it unawaited
+});
+```
+
+It also reports async callbacks passed to a recognized `Array.forEach`, and unused promise arrays produced by `map`. `await array.forEach(async ...)` and `await array.map(async ...)` do not wait for those callbacks. Prefer a sequential loop for browser commands:
+
+```js
+it("pages", async ({ browser }) => {
+    for (const url of ["/first", "/second"]) {
+        await browser.url(url);
+        await browser.assertView(url);
+    }
+});
+```
+
+For operations that are safe to run concurrently, `await Promise.all(items.map(async item => ...))` is supported. Adding `.catch(...)` or `void` alone does not wait for completion and does not suppress the check. `Promise.race` and `Promise.any` transfer ownership to the aggregate, but awaiting that aggregate does **not** guarantee that every input operation has finished.
+
+#### Configuration
+
+`system.checkMissingAwait` is a boolean, defaulting to `true`. Disable it explicitly for a project that uses unsupported source formats or test definitions:
+
+```js
+module.exports = {
+    system: {
+        checkMissingAwait: false,
+    },
+    // Other Testplane options
+};
+```
+
+Equivalent overrides:
+
+```bash
+TESTPLANE_SYSTEM_CHECK_MISSING_AWAIT=false npx testplane
+npx testplane --system-check-missing-await false
+```
+
+Disabling it skips both the check and loading the analyzer. Existing runtime error handling remains enabled.
+
+#### Scope and limitations
+
+- Supported sources: `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`. Parsing uses the bundled TypeScript compiler. Syntax it cannot parse, unreadable files, missing source paths and unsupported Mocha UIs produce explicit analysis errors, not a successful check.
+- Supported test definitions are inline callbacks for the standard `bdd`, `tdd` and `qunit` interfaces, including their per-test hooks and `.only`/`.skip` variants. The check recognizes the callback's browser context, `this.browser`, local aliases, and named imports from Testplane/Mocha. Arbitrary DSL wrappers and callbacks supplied by reference are not test entry points.
+- The selected collection determines the files: a file is checked if it has at least one non-pending, non-disabled test. **The entire selected file is checked**, including tests skipped or excluded by `grep` within that file. Multiple browsers and symlinks do not cause duplicate selected-file analysis.
+- Inline per-test hooks in those files are checked. Separate hook-only files, imported/injected hook bodies and plugin `beforeAll` callbacks are not covered. Hook metadata does not reliably identify the original hook file.
+- The barrier is before `RUNNER_START`, test execution and runner-created browser sessions. Configuration, `INIT`, `beforeAll`, worker/dev-server initialization and top-level test-file code used for discovery may already have run. The analyzer itself never executes test/helper bodies.
+- A TypeChecker supplements known command recognition using available JS inference, JSDoc, declarations and TS types. It reads the nearest `tsconfig.json` when present, otherwise uses built-in defaults. Imports and configured project files may be read for types, but external helper bodies are not recursively checked for missing waits. An imported helper/custom command with a known promise-returning type can be checked at its call site.
+- Missing types, `any`, dynamic names/registrations and untyped external custom commands can hide errors. Known Testplane commands still work without types. Invalid compiler configuration is reported explicitly; this check is not a replacement for `tsc`.
+- Local flow analysis is bounded, not a proof for arbitrary code. Passing a promise to an unknown consumer, storing it in objects or mutable containers, complex closures, correlated alias changes, recursion and implicit exception paths can leave the analysis scope. Transfer to an unknown consumer is **not** proof that it awaits the promise.
+- `run(TestCollection)` is checked too, using its source files; a programmatically replaced callback may differ from that source. Tests added after the barrier, generated code without usable source and transpiled async state machines are outside the guarantee. Locations refer to the actual analyzed file, not an original source recovered through source maps.
+- `readTests` and discovery-only commands do not run this validation. Successful preflight does not prove that all asynchronous work will finish with the test; keep runtime safeguards and, where applicable, typed linting.
 
 ### Hooks
 
@@ -290,12 +374,12 @@ it('some test', async ({ browser }) => {
     // Scroll 1000 px down
     await browser.execute(() => window.scrollTo(0, 1000));
     // Screen the viewport
-    await browser.assertView('plain'); 
+    await browser.assertView('plain');
 
     // Click the button
     await browser.$('.button').click();
     // Screen the viewport with custom options
-    await browser.assertView('clicked', { ignoreDiffPixelCount: 5 }); 
+    await browser.assertView('clicked', { ignoreDiffPixelCount: 5 });
 });
 ```
 
@@ -318,14 +402,14 @@ it('some test', async ({ browser }) => {
 Parameters:
 
 - state (required) `String` – state name; should be unique within one test
-- selector (optional, can be skipped) `String|String[]` – DOM-node selector that you need to capture. If not specified or skipped, will be set to `body` and the following options will be automatically added to opts: 
+- selector (optional, can be skipped) `String|String[]` – DOM-node selector that you need to capture. If not specified or skipped, will be set to `body` and the following options will be automatically added to opts:
     ```
     {
         allowViewportOverflow: true,
         compositeImage: false,
         captureElementFromTop: false
     }
-    ``` 
+    ```
 
     So, assertView without `selector` parameter will take a screenshot of the current viewport.
 

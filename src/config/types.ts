@@ -266,6 +266,8 @@ export interface MochaOpts {
 
 export interface SystemConfig {
     debug: boolean;
+    /** Check for missing awaits before executing the initial test collection. Default: true. */
+    checkMissingAwait: boolean;
     mochaOpts: MochaOpts;
     expectOpts: ExpectOptsConfig;
     ctx: { [name: string]: unknown };

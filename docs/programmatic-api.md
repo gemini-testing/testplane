@@ -227,9 +227,13 @@ Available parameters:
     * **sets** (optional) `String[]`– Sets to run tests in.
     * **grep** (optional) `RegExp` – Pattern that defines which tests to run.
 
+With `system.checkMissingAwait` enabled (the default), `run` validates the initial collection before executing tests. This also applies to `run(TestCollection)`. A validation failure rejects the returned promise with an error named `TestPreflightError`, rather than returning `false`. The error has a `diagnostics` array with `code`, `file`, `message` and, when available, 1-based `line`/`column`; missing-await entries also include `command`. Its `stack` and `snippet` include the source report. The error class is not a public package export; consumers can check its name.
+
+`isFailed()` is already `true` in `END`/`RUNNER_END` handlers after a preflight failure. `RUNNER_START` and test events are not emitted, but cleanup still runs, including `RUNNER_END` and worker shutdown. Cleanup failures do not replace the preflight diagnostic. See [check scope and disabling](./writing-tests.md#missing-await-checks).
+
 ### addTestToRun
 
-Adds test to the current run. Returns `false` if the current run has already ended or has been cancelled. Otherwise returns `true`. Example:
+Adds test to the current run. It does not accept tests while preflight is in progress; dynamically added tests after the barrier are outside that check. Returns `false` if the current run has already ended or has been cancelled. Otherwise returns `true`. Example:
 
 ```js
 // create testplane instance
@@ -258,6 +262,8 @@ await testplane.readTests(testPaths, options);
     * **replMode** (optional) `{enabled: boolean; beforeTest: boolean; onFail: boolean;}` - [Test development mode using REPL](https://testplane.io/docs/v8/command-line/#repl). When reading the tests, it checks that only one test is running in one browser.
     * **runnableOpts** (optional):
         * **saveLocations** (optional) `Boolean` - flag to save `location` (`line` and `column`) to suites and tests. Allows to determine where the suite or test is declared in the file.
+
+`readTests` performs discovery only: it does not run missing-await validation. Validation happens when the collection is passed to `run`.
 
 ### isFailed
 

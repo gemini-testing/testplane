@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { TestPreflightError } from "../errors/test-preflight-error";
 import * as eventsUtils from "../events/utils";
 import * as temp from "../temp";
 import * as pool from "../browser-pool";
@@ -116,11 +117,14 @@ export class MainRunner extends RunnableEmitter {
     }
 
     async run(testCollection: TestCollection, stats: RunnerStats, opts?: RunnerRunOptions): Promise<void> {
-        this.runned = true;
-
         let failed = false;
         let runError: unknown;
         try {
+            if (this.config.system.checkMissingAwait) {
+                const { validateTestCollection } = await import("../test-reader/await-check");
+                await validateTestCollection(testCollection, { mochaUi: this.config.system.mochaOpts.ui });
+            }
+            this.runned = true;
             const browserConfigs = testCollection.getBrowsers().map(browserId => this.config.forBrowser(browserId));
             await this.browserPool?.prewarm(browserConfigs);
             await this.emitAndWait(MasterEvents.RUNNER_START, this);
@@ -129,6 +133,13 @@ export class MainRunner extends RunnableEmitter {
         } catch (error) {
             failed = true;
             runError = error;
+            if (error instanceof TestPreflightError) {
+                try {
+                    this.emit(MasterEvents.ERROR, error);
+                } catch (listenerError) {
+                    logger.warn(listenerError);
+                }
+            }
         }
 
         const cleanups: Array<[string, () => unknown]> = [
