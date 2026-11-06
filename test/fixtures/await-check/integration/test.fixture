@@ -1,0 +1,9 @@
+const fs = require("node:fs");
+const mark = () => fs.writeFileSync(__MARKER__, "executed");
+beforeEach(function () {
+    mark();
+});
+it(__TITLE__, async function ({ browser }) {
+    mark();
+    __BODY__
+});

@@ -40,6 +40,8 @@ const rootSection = section(
         system: section({
             debug: options.boolean("debug"),
 
+            checkMissingAwait: options.boolean("checkMissingAwait"),
+
             mochaOpts: options.optionalObject("mochaOpts"),
 
             expectOpts: options.optionalObject("expectOpts"),
@@ -289,7 +291,10 @@ const parseOptions = root(rootSection, { envPrefix: ENV_PREFIXES });
 module.exports = ({ env, ...config }) => {
     const normalizedEnv = { ...env };
 
-    for (const envName of Object.values(BROWSER_DOWNLOAD_MIRRORS_ENV_VARS)) {
+    for (const envName of [
+        ...Object.values(BROWSER_DOWNLOAD_MIRRORS_ENV_VARS),
+        ...ENV_PREFIXES.map(prefix => `${prefix}system_check_missing_await`.toUpperCase()),
+    ]) {
         if (Object.prototype.hasOwnProperty.call(env, envName)) {
             normalizedEnv[envName.toLowerCase()] = env[envName];
         }

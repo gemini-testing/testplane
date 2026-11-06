@@ -11,6 +11,7 @@ const { BrowserRunner } = require("src/runner/browser-runner");
 const { Test } = require("src/test-reader/test-object");
 const { TestCollection } = require("src/test-collection");
 const { makeConfigStub } = require("../../utils");
+const { TestPreflightError } = require("src/errors/test-preflight-error");
 const { promiseDelay } = require("../../../src/utils/promise");
 
 describe("NodejsEnvRunner", () => {
@@ -21,6 +22,7 @@ describe("NodejsEnvRunner", () => {
     let prewarm;
     let disposePool;
     let logger;
+    let validateTestCollection;
 
     const mkWorkers_ = () => {
         return {
@@ -106,7 +108,9 @@ describe("NodejsEnvRunner", () => {
         sandbox.stub(BrowserRunner.prototype, "addTestToRun").resolves();
         sandbox.stub(BrowserRunner.prototype, "waitTestsCompletion").resolves();
 
+        validateTestCollection = sandbox.stub().resolves();
         Runner = proxyquire("src/runner", {
+            "../test-reader/await-check": { validateTestCollection },
             "../browser-pool": BrowserPool,
             "../browser/cdp/selectivity/runner": { SelectivityRunner },
             "../utils/logger": logger,
@@ -114,6 +118,100 @@ describe("NodejsEnvRunner", () => {
     });
 
     afterEach(() => sandbox.restore());
+
+    describe("missing-await preflight", () => {
+        const mkRunner = () => {
+            const config = makeConfigStub();
+            config.system.checkMissingAwait = true;
+            const runner = new Runner(config);
+            runner.init();
+            return runner;
+        };
+        it("should keep execution and dynamic additions behind the validation barrier", async () => {
+            let release;
+            validateTestCollection.returns(
+                new Promise(resolve => {
+                    release = resolve;
+                }),
+            );
+            const runner = mkRunner();
+            const start = sandbox.spy();
+            runner.on(RunnerEvents.RUNNER_START, start);
+            const running = runner.run(mkTestCollection_([mkTest_()]), sinon.createStubInstance(RunnerStats));
+            try {
+                await promiseDelay(0);
+                assert.calledOnce(validateTestCollection);
+                assert.notCalled(start);
+                assert.notCalled(prewarm);
+                assert.notCalled(BrowserRunner.create);
+                assert.isFalse(runner.addTestToRun(mkTest_(), "chrome"));
+            } finally {
+                release();
+                await running;
+            }
+            assert.calledOnce(start);
+            assert.callOrder(validateTestCollection, prewarm, start);
+        });
+        it("should report preflight failure before cleanup and never schedule tests", async () => {
+            const error = new TestPreflightError([]);
+            validateTestCollection.rejects(error);
+            const runner = mkRunner();
+            const events = [];
+            [RunnerEvents.ERROR, RunnerEvents.END, RunnerEvents.RUNNER_END].forEach(event =>
+                runner.on(event, () => events.push(event)),
+            );
+            const start = sandbox.spy();
+            runner.on(RunnerEvents.RUNNER_START, start);
+            const actual = await runner.run(mkTestCollection_(), sinon.createStubInstance(RunnerStats)).catch(e => e);
+            assert.strictEqual(actual, error);
+            assert.deepEqual(events, [RunnerEvents.ERROR, RunnerEvents.END, RunnerEvents.RUNNER_END]);
+            assert.notCalled(start);
+            assert.notCalled(prewarm);
+            assert.notCalled(BrowserRunner.create);
+            assert.calledOnce(disposePool);
+            assert.callOrder(disposePool, WorkersRegistry.prototype.end);
+            assert.calledOnce(WorkersRegistry.prototype.end);
+        });
+        it("should preserve the diagnostic when worker cleanup fails", async () => {
+            const error = new TestPreflightError([]);
+            validateTestCollection.rejects(error);
+            WorkersRegistry.prototype.end.rejects(new Error("cleanup failed"));
+            const actual = await mkRunner()
+                .run(mkTestCollection_(), sinon.createStubInstance(RunnerStats))
+                .catch(e => e);
+            assert.strictEqual(actual, error);
+        });
+        it("should preserve the diagnostic when browser pool cleanup fails", async () => {
+            const error = new TestPreflightError([]);
+            validateTestCollection.rejects(error);
+            disposePool.rejects(new Error("pool cleanup failed"));
+            const actual = await mkRunner()
+                .run(mkTestCollection_(), sinon.createStubInstance(RunnerStats))
+                .catch(e => e);
+            assert.strictEqual(actual, error);
+            assert.notCalled(prewarm);
+            assert.calledOnce(WorkersRegistry.prototype.end);
+        });
+        it("should preserve the diagnostic and clean up when an error listener throws", async () => {
+            const error = new TestPreflightError([]);
+            const listenerError = new Error("listener failed");
+            validateTestCollection.rejects(error);
+            const runner = mkRunner().on(RunnerEvents.ERROR, () => {
+                throw listenerError;
+            });
+            const actual = await runner.run(mkTestCollection_(), sinon.createStubInstance(RunnerStats)).catch(e => e);
+            assert.strictEqual(actual, error);
+            assert.calledWith(logger.warn, listenerError);
+            assert.notCalled(prewarm);
+            assert.callOrder(disposePool, WorkersRegistry.prototype.end);
+        });
+        it("should bypass validation when disabled", async () => {
+            const config = makeConfigStub();
+            config.system.checkMissingAwait = false;
+            await run_({ config });
+            assert.notCalled(validateTestCollection);
+        });
+    });
 
     describe("prewarming", () => {
         it("should prewarm selected browser configs before RUNNER_START", async () => {

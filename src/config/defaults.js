@@ -80,6 +80,7 @@ module.exports = {
     takeScreenshotOnFailsMode: "fullpage",
     reporters: ["flat"],
     debug: false,
+    checkMissingAwait: true,
     parallelLimit: Infinity,
     sessionsPerBrowser: 1,
     testsPerSession: Infinity,

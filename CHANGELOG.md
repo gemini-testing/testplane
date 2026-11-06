@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Unreleased
+
+### Features
+
+- Check JS/TS tests for missing `await` before the initial collection starts, with source locations and aggregated diagnostics. Includes local saved-promise flow, async array callbacks and available helper/custom-command types. The new `system.checkMissingAwait` option defaults to `true`: fix reported errors or disable it for unsupported projects. See [scope and configuration](./docs/writing-tests.md#missing-await-checks).
+- Emit `RUNNER_END` with failed state on preflight failure, even if `RUNNER_START` was not reached, so plugins can clean up safely.
+
 ## 9.4.0 (2026-11-05)
 
 

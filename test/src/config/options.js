@@ -206,6 +206,28 @@ describe("config options", () => {
     });
 
     describe("system", () => {
+        describe("checkMissingAwait", () => {
+            it("should enable preflight by default", () => assert.isTrue(parse_().system.checkMissingAwait));
+            it("should accept explicit disabling", () => {
+                assert.isFalse(parse_({ options: { system: { checkMissingAwait: false } } }).system.checkMissingAwait);
+            });
+            it("should reject non-boolean settings", () => {
+                assert.throws(() => parse_({ options: { system: { checkMissingAwait: "yes" } } }), "must be a boolean");
+            });
+            for (const name of [
+                "TESTPLANE_SYSTEM_CHECK_MISSING_AWAIT",
+                "testplane_system_check_missing_await",
+                "HERMIONE_SYSTEM_CHECK_MISSING_AWAIT",
+                "hermione_system_check_missing_await",
+            ]) {
+                it(`should support ${name}`, () =>
+                    assert.isFalse(parse_({ env: { [name]: "false" } }).system.checkMissingAwait));
+            }
+            it("should support the CLI override", () => {
+                assert.isFalse(parse_({ argv: ["--system-check-missing-await", "false"] }).system.checkMissingAwait);
+            });
+        });
+
         describe("debug", () => {
             it("should throw error if debug is not a boolean", async () => {
                 const readConfig = _.set({}, "system.debug", "String");
