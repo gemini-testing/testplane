@@ -41,6 +41,7 @@ export class InstructionsList {
         files.forEach(file => {
             const instructions = this.#fileInstructions.get(file) || [];
             instructions.forEach(fn => fn(ctx));
+            ctx.treeBuilder.assertNoPendingTraps(file);
         });
     }
 }

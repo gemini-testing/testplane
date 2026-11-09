@@ -54,6 +54,14 @@ export class TreeBuilder {
         return this;
     }
 
+    assertNoPendingTraps(file: string): void {
+        if (this.#traps.length > 0) {
+            throw new Error(
+                `Unused test directives in file "${file}": each directive must be followed by a test or suite in the same file.`,
+            );
+        }
+    }
+
     #applyTraps(obj: Test | Suite): void {
         this.#traps.forEach(trap => trap(obj));
         this.#traps = [];
