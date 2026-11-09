@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.4.1 (2026-11-09)
+
+
+### Bug Fixes
+
+* reject unused directives at test file boundaries ([0201179](https://github.com/gemini-testing/testplane/commit/02011798bd94e6d367821f504500ba4eace38bf8))
+
 ## 9.4.0 (2026-11-05)
 
 
