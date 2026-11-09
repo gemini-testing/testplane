@@ -96,6 +96,10 @@ class TreeBuilderDecorator {
         return this;
     }
 
+    assertNoPendingTraps(file) {
+        this.#treeBuilder.assertNoPendingTraps(file);
+    }
+
     addTestFilter(fn) {
         this.#treeBuilder.addTestFilter(fn);
 
