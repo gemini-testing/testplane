@@ -6,12 +6,17 @@ import { Config } from "../config";
 import { Browser } from "../browser/browser";
 import { LimitedPool } from "./limited-pool";
 import { CancelledError } from "./cancelled-error";
+import { BrowserConfig } from "../config/browser-config";
 
 export class PerBrowserLimitedPool implements Pool {
     log: debug.Debugger;
     private _browserPools: Record<string, LimitedPool>;
 
-    constructor(underlyingPool: Pool, config: Config, observer?: PoolObserver) {
+    constructor(
+        private readonly underlyingPool: Pool,
+        config: Config,
+        observer?: PoolObserver,
+    ) {
         this.log = debug("testplane:pool:per-browser-limited");
 
         const ids = config.getBrowserIds();
@@ -26,10 +31,11 @@ export class PerBrowserLimitedPool implements Pool {
         );
     }
 
-    getBrowser(id: string, opts?: object): Promise<Browser> {
+    getBrowser(browserConfig: BrowserConfig, opts?: object): Promise<Browser> {
+        const { id } = browserConfig;
         this.log(`request ${id} with opts: ${JSON.stringify(opts)}`);
 
-        return this._browserPools[id].getBrowser(id, opts);
+        return this._browserPools[id].getBrowser(browserConfig, opts);
     }
 
     freeBrowser(browser: Browser, opts?: object): Promise<void> {
@@ -41,5 +47,16 @@ export class PerBrowserLimitedPool implements Pool {
     cancel(error: Error = new CancelledError()): void {
         this.log("cancel");
         forEach(this._browserPools, pool => pool.cancel(error));
+    }
+
+    prewarm(browserConfigs: BrowserConfig[]): Promise<void> {
+        return this.underlyingPool.prewarm(browserConfigs);
+    }
+
+    async [Symbol.asyncDispose](): Promise<void> {
+        await Promise.all([
+            ...Object.values(this._browserPools).map(pool => pool[Symbol.asyncDispose]()),
+            this.underlyingPool[Symbol.asyncDispose](),
+        ]);
     }
 }

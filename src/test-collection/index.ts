@@ -233,8 +233,7 @@ export class TestCollection {
 
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const { format } = require(path.resolve(__dirname, "./formatters", formatterType)) as
-            | typeof import("./formatters/list")
-            | typeof import("./formatters/tree");
+            typeof import("./formatters/list") | typeof import("./formatters/tree");
         return format(this);
     }
 }

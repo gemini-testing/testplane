@@ -19,12 +19,15 @@ export const create = function (
 ): BrowserPool {
     const observer: PoolObserver | undefined = profiler.isEnabled() ? new ProfilerPoolObserver(profiler) : undefined;
     let pool: BasicPool | CachingPool | PerBrowserLimitedPool | LimitedPool = BasicPool.create(
-        config,
+        {
+            browserDownloadMirrors: config.browserDownloadMirrors,
+            areLocalWdDebugLogsEnabled: config.system.debug,
+        },
         emitter,
         observer,
     );
 
-    pool = new CachingPool(pool, config, observer);
+    pool = new CachingPool(pool, observer);
     pool = new PerBrowserLimitedPool(pool, config, observer);
 
     if (_.isFinite(config.system.parallelLimit)) {

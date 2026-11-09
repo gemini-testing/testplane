@@ -29,7 +29,7 @@ describe("cli/commands/install-deps", () => {
     const mkBrowser_ = (browserName: string, browserVersion: string): Config["browsers"][string] =>
         ({
             desiredCapabilities: { browserName, browserVersion },
-        } as Config["browsers"][string]);
+        }) as Config["browsers"][string];
 
     const enableProfiler_ = (): ProfilerManager => {
         const profiler = new ProfilerManager(

@@ -15,6 +15,10 @@ describe("attachToBrowser", () => {
             constructor() {
                 this.system = { debug: false };
             }
+
+            forBrowser(id) {
+                return { id, desiredCapabilities: { browserName: id } };
+            }
         }
 
         class ExistingBrowserStub {
@@ -22,20 +26,22 @@ describe("attachToBrowser", () => {
                 this.publicAPI = { overwriteCommand: sandbox.stub() };
                 this.init = existingBrowserInitStub;
             }
+
+            async [Symbol.asyncDispose]() {}
         }
 
         const { attachToBrowser } = proxyquire("src/browser/standalone/attachToBrowser", {
             "../../image": { initImage: initImageStub },
             "../../config": { Config: ConfigStub },
-            "./../existing-browser": { ExistingBrowser: ExistingBrowserStub },
-            "./../calibrator": { Calibrator: class CalibratorStub {} },
+            "../existing-browser": { ExistingBrowser: ExistingBrowserStub },
+            "../calibrator": { Calibrator: class CalibratorStub {} },
             "../../events": {
                 AsyncEmitter: class AsyncEmitterStub {
                     on() {}
                 },
                 MasterEvents: { ADD_FILE_TO_REMOVE: "addFileToRemove" },
             },
-            "./../types": { BrowserName: { CHROME: "chrome" } },
+            "../types": { BrowserName: { CHROME: "chrome" } },
             "../../utils/browser": { getNormalizedBrowserName: sandbox.stub().returns("chrome") },
         });
 

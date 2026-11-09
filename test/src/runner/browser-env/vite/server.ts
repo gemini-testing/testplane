@@ -34,7 +34,7 @@ describe("runner/browser-env/vite/server", () => {
             },
             httpServer: {} as Vite.ViteDevServer["httpServer"],
             ...opts,
-        } as Vite.ViteDevServer);
+        }) as Vite.ViteDevServer;
 
     const mkConfig_ = (opts?: Partial<Config>): Config => makeConfigStub(opts) as Config;
     const mkConfigWithVite_ = (options: BrowserTestRunEnvOptions = {}): Config => {

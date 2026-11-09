@@ -19,16 +19,16 @@ function evalQuery(query: string): boolean {
                 ($2 === "cm"
                     ? 0.3937 * 96
                     : $2 === "em" || $2 === "rem"
-                    ? 16
-                    : $2 === "in" || $2 === "dppx"
-                    ? 96
-                    : $2 === "mm"
-                    ? (0.3937 * 96) / 10
-                    : $2 === "pc"
-                    ? (12 * 96) / 72
-                    : $2 === "pt"
-                    ? 96 / 72
-                    : 1)
+                      ? 16
+                      : $2 === "in" || $2 === "dppx"
+                        ? 96
+                        : $2 === "mm"
+                          ? (0.3937 * 96) / 10
+                          : $2 === "pc"
+                            ? (12 * 96) / 72
+                            : $2 === "pt"
+                              ? 96 / 72
+                              : 1)
             ).toString();
         });
     // @ts-expect-error global might be present in old browsers

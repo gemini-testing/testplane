@@ -72,7 +72,7 @@ export default (browser: Browser): void => {
                                         cookie.sameSite && session.isBidi
                                             ? cookie.sameSite.toLowerCase()
                                             : cookie.sameSite,
-                                } as WebdriverCookie),
+                                }) as WebdriverCookie,
                         ),
                     );
                 }

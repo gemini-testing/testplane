@@ -237,17 +237,18 @@ export const ceilCoords = <T extends NumericShape>(value: T): T => {
     return result as T;
 };
 
-type CssToDevice<T> = T extends Rect<infer S, "css">
-    ? Rect<S, "device">
-    : T extends YBand<infer S, "css">
-    ? YBand<S, "device">
-    : T extends XBand<infer S, "css">
-    ? XBand<S, "device">
-    : T extends Size<"css">
-    ? Size<"device">
-    : T extends Point<infer S, "css">
-    ? Point<S, "device">
-    : never;
+type CssToDevice<T> =
+    T extends Rect<infer S, "css">
+        ? Rect<S, "device">
+        : T extends YBand<infer S, "css">
+          ? YBand<S, "device">
+          : T extends XBand<infer S, "css">
+            ? XBand<S, "device">
+            : T extends Size<"css">
+              ? Size<"device">
+              : T extends Point<infer S, "css">
+                ? Point<S, "device">
+                : never;
 
 export const fromCssToDevice = <
     T extends Size<"css"> | Point<Space, "css"> | Rect<Space, "css"> | YBand<Space, "css"> | XBand<Space, "css">,

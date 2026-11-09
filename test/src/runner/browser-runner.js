@@ -1,8 +1,7 @@
 "use strict";
 
 const proxyquire = require("proxyquire");
-const BrowserAgent = require("src/runner/browser-agent");
-const BrowserPool = require("src/browser-pool");
+const { BrowserAgent } = require("src/runner/browser-agent");
 const { create } = require("src/runner/test-runner");
 const TestRunner = require("src/runner/test-runner/insistant-test-runner");
 const { TestCollection } = require("src/test-collection");
@@ -27,7 +26,7 @@ describe("runner/browser-runner", () => {
     const mkRunner_ = (opts = {}) => {
         const browserId = opts.browserId || "defaultBro";
         const config = opts.config || makeConfigStub();
-        const browserPool = opts.browserPool || BrowserPool.create(config);
+        const browserPool = opts.browserPool || {};
         const workers = opts.workers || mkWorkers_();
 
         return BrowserRunner.create(browserId, config, browserPool, workers);
@@ -66,8 +65,7 @@ describe("runner/browser-runner", () => {
         sandbox.stub(SuiteMonitor.prototype, "testEnd");
         sandbox.stub(SuiteMonitor.prototype, "testRetry");
 
-        const browserAgent = Object.create(BrowserAgent.prototype);
-        browserAgent.browserId = "default-bro-id";
+        const browserAgent = BrowserAgent.create({ browserConfig: { id: "default-bro-id" } });
         sandbox.stub(BrowserAgent, "create").returns(browserAgent);
 
         stubTestCollection_([Test.create({ title: "defaultTitle" })]);

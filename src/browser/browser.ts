@@ -1,48 +1,28 @@
-import crypto from "crypto";
-import { RequestOptions } from "https";
 import _ from "lodash";
 
 import { SAVE_HISTORY_MODE } from "../constants/config";
-import { X_REQUEST_ID_DELIMITER } from "../constants/browser";
 import * as history from "./history";
 import { enhanceStacktraces } from "./stacktrace";
 import { getBrowserCommands, getElementCommands } from "./history/commands";
 import addRunStepCommand from "./commands/runStep";
-import { Config } from "../config";
 import { AsyncEmitter } from "../events";
 import { BrowserConfig } from "../config/browser-config";
 import type { Callstack } from "./history/callstack";
-import type { WdProcess, WebdriverPool } from "../browser-pool/webdriver-pool";
 import { noopProfilerRuntime } from "../profiler/runtime/noop";
 import type { ProfilerRuntimeLike } from "../profiler/runtime/types";
-
-const CUSTOM_SESSION_OPTS = [
-    "outputDir",
-    "agent",
-    "headers",
-    "transformRequest",
-    "transformResponse",
-    "strictSSL",
-    // cloud service opts
-    "user",
-    "key",
-    "region",
-];
 
 export type BrowserOpts = {
     id: string;
     version?: string;
     state?: Record<string, unknown>;
     emitter: AsyncEmitter;
-    wdPool?: WebdriverPool;
     profiler?: ProfilerRuntimeLike;
 };
 
 export type BrowserState = {
-    testXReqId?: string;
-    traceparent?: string;
     isBroken?: boolean;
     isLastTestFailed?: boolean;
+    isRetained?: boolean;
 };
 
 export type CustomCommand = { name: string; elementScope: boolean };
@@ -50,13 +30,10 @@ export type CustomCommand = { name: string; elementScope: boolean };
 export class Browser {
     protected _emitter: AsyncEmitter;
     protected _config: BrowserConfig;
-    protected _debug: boolean;
     protected _session: WebdriverIO.Browser | null;
     protected _callstackHistory: Callstack | null;
     protected _state: BrowserState;
     protected _customCommands: Set<CustomCommand>;
-    protected _wdPool?: WebdriverPool;
-    protected _wdProcess: WdProcess | null;
     protected _exitError?: Error;
     protected _profiler: ProfilerRuntimeLike;
     /** This Promise is awaited after test is finished. Can be used for cleanup.
@@ -65,31 +42,20 @@ export class Browser {
     id: string;
     version?: string;
 
-    static create<T extends Browser>(
-        this: new (config: Config, opts: BrowserOpts) => T,
-        config: Config,
-        opts: BrowserOpts,
-    ): T {
-        return new this(config, opts);
-    }
-
-    constructor(config: Config, opts: BrowserOpts) {
+    constructor(config: BrowserConfig, opts: BrowserOpts) {
         this.id = opts.id;
         this.version = opts.version;
 
-        this._config = config.forBrowser(this.id);
-        this._debug = config.system.debug;
+        this._config = config;
         this._session = null;
         this._callstackHistory = null;
         this._snapshotsPromiseRef = { current: Promise.resolve() };
-        this._wdProcess = null;
         this._state = {
             ...opts.state,
             isBroken: false,
             isLastTestFailed: false,
         };
         this._customCommands = new Set();
-        this._wdPool = opts.wdPool;
         this._emitter = opts.emitter;
         this._profiler = opts.profiler ?? noopProfilerRuntime;
     }
@@ -138,35 +104,6 @@ export class Browser {
         session.addCommand("extendOptions", opts => {
             _.extend(session.options, opts);
         });
-    }
-
-    protected _getSessionOptsFromConfig(optNames = CUSTOM_SESSION_OPTS): Record<string, unknown> {
-        return optNames.reduce((options: Record<string, unknown>, optName) => {
-            if (optName === "transformRequest") {
-                options[optName] = (req: RequestOptions): RequestOptions => {
-                    if (!_.isNull(this._config[optName])) {
-                        req = this._config[optName](req);
-                    }
-
-                    const requestHeaders = req.headers as Record<string, string>;
-
-                    if (!requestHeaders["X-Request-ID"]) {
-                        requestHeaders["X-Request-ID"] = `${
-                            this.state.testXReqId
-                        }${X_REQUEST_ID_DELIMITER}${crypto.randomUUID()}`;
-                    }
-                    if (!requestHeaders["traceparent"] && this.state.traceparent) {
-                        requestHeaders["traceparent"] = this.state.traceparent;
-                    }
-
-                    return req;
-                };
-            } else if (!_.isNull(this._config[optName as keyof BrowserConfig])) {
-                options[optName] = this._config[optName as keyof BrowserConfig];
-            }
-
-            return options;
-        }, {});
     }
 
     protected _startCollectingCustomCommands(): void {

@@ -8,25 +8,26 @@ describe("browser-pool/caching-pool", () => {
     const sandbox = sinon.createSandbox();
 
     let underlyingPool;
+    let browserConfigs;
+
+    const configFor = id => (browserConfigs[id] ||= { id, testsPerSession: Infinity });
 
     const poolWithReuseLimits_ = limits => {
-        const config = {
-            getBrowserIds: sinon.stub().returns(Object.keys(limits)),
-            forBrowser: id => {
-                return {
-                    testsPerSession: limits[id],
-                };
-            },
-        };
+        for (const [id, testsPerSession] of Object.entries(limits)) {
+            configFor(id).testsPerSession = testsPerSession;
+        }
 
-        return new CachingPool(underlyingPool, config, {});
+        return new CachingPool(underlyingPool);
     };
 
     const makePool_ = () => poolWithReuseLimits_({ bro: Infinity });
 
     beforeEach(() => {
+        browserConfigs = {};
         underlyingPool = {
-            getBrowser: sinon.stub().callsFake((id, opts) => Promise.resolve(stubBrowser(id, opts.version))),
+            getBrowser: sinon
+                .stub()
+                .callsFake((config, opts) => Promise.resolve(stubBrowser(config.id, opts.version, {}, config))),
             freeBrowser: sinon.stub().returns(Promise.resolve()),
             finalizeBrowsers: sinon.stub().returns(Promise.resolve()),
             cancel: sinon.stub(),
@@ -47,34 +48,34 @@ describe("browser-pool/caching-pool", () => {
         it("should create new browser when requested first time", () => {
             const pool = makePool_();
 
-            return pool.getBrowser("bro", opts).then(() => {
-                assert.calledOnceWith(underlyingPool.getBrowser, "bro", opts);
+            return pool.getBrowser(configFor("bro"), opts).then(() => {
+                assert.calledOnceWith(underlyingPool.getBrowser, configFor("bro"), opts);
             });
         });
 
         it("should return same browser as returned by underlying pool", () => {
             const browser = stubBrowser("bro");
-            underlyingPool.getBrowser.withArgs("bro", opts).returns(Promise.resolve(browser));
+            underlyingPool.getBrowser.withArgs(configFor("bro"), opts).returns(Promise.resolve(browser));
 
             return makePool_()
-                .getBrowser("bro", opts)
+                .getBrowser(configFor("bro"), opts)
                 .then(bro => assert.equal(bro, browser));
         });
 
         it("should not reset new browser", () => {
             const browser = stubBrowser();
-            underlyingPool.getBrowser.withArgs("bro", opts).returns(Promise.resolve(browser));
+            underlyingPool.getBrowser.withArgs(configFor("bro"), opts).returns(Promise.resolve(browser));
 
             return makePool_()
-                .getBrowser("bro", opts)
+                .getBrowser(configFor("bro"), opts)
                 .then(() => assert.notCalled(browser.reset));
         });
 
         it("should create and launch new browser if there is free browser with different id", () => {
             underlyingPool.getBrowser
-                .withArgs("first")
+                .withArgs(configFor("first"))
                 .returns(Promise.resolve(stubBrowser("first", opts.version)))
-                .withArgs("second")
+                .withArgs(configFor("second"))
                 .returns(Promise.resolve(stubBrowser("second", opts.version)));
 
             const pool = poolWithReuseLimits_({
@@ -83,28 +84,32 @@ describe("browser-pool/caching-pool", () => {
             });
 
             return pool
-                .getBrowser("first", opts)
+                .getBrowser(configFor("first"), opts)
                 .then(browser => pool.freeBrowser(browser))
-                .then(() => pool.getBrowser("second", opts))
-                .then(() => assert.calledWith(underlyingPool.getBrowser, "second", opts));
+                .then(() => pool.getBrowser(configFor("second"), opts))
+                .then(() => assert.calledWith(underlyingPool.getBrowser, configFor("second"), opts));
         });
 
         it("should not quit browser when freed", () => {
-            underlyingPool.getBrowser.withArgs("bro", opts).returns(Promise.resolve(stubBrowser("bro", opts.version)));
+            underlyingPool.getBrowser
+                .withArgs(configFor("bro"), opts)
+                .returns(Promise.resolve(stubBrowser("bro", opts.version)));
             const pool = makePool_();
 
             return pool
-                .getBrowser("bro", opts)
+                .getBrowser(configFor("bro"), opts)
                 .then(browser => pool.freeBrowser(browser, { force: false }))
                 .then(() => assert.notCalled(underlyingPool.freeBrowser));
         });
 
         it("should quit browser when there are no more requests", () => {
-            underlyingPool.getBrowser.withArgs("bro", opts).returns(Promise.resolve(stubBrowser("bro", opts.version)));
+            underlyingPool.getBrowser
+                .withArgs(configFor("bro"), opts)
+                .returns(Promise.resolve(stubBrowser("bro", opts.version)));
             const pool = makePool_();
 
             return pool
-                .getBrowser("bro", opts)
+                .getBrowser(configFor("bro"), opts)
                 .then(browser => pool.freeBrowser(browser, { force: true }))
                 .then(() => assert.calledOnce(underlyingPool.freeBrowser));
         });
@@ -116,30 +121,30 @@ describe("browser-pool/caching-pool", () => {
                 browser = stubBrowser("bro", opts.version);
                 pool = makePool_();
 
-                pool.getBrowser("bro", opts);
+                pool.getBrowser(configFor("bro"), opts);
                 underlyingPool.getBrowser.reset();
 
                 return pool.freeBrowser(browser);
             });
 
             it("should not create second instance", () => {
-                return pool.getBrowser("bro", opts).then(() => assert.notCalled(underlyingPool.getBrowser));
+                return pool.getBrowser(configFor("bro"), opts).then(() => assert.notCalled(underlyingPool.getBrowser));
             });
 
             it("should reset the browser", () => {
-                return pool.getBrowser("bro", opts).then(() => assert.calledOnce(browser.reset));
+                return pool.getBrowser(configFor("bro"), opts).then(() => assert.calledOnce(browser.reset));
             });
 
             describe("when reset failed", () => {
                 it("should fail to get browser", () => {
                     browser.reset.returns(Promise.reject("some-error"));
-                    return assert.isRejected(pool.getBrowser("bro", opts), /some-error/);
+                    return assert.isRejected(pool.getBrowser(configFor("bro"), opts), /some-error/);
                 });
 
                 it("should put browser back", () => {
                     browser.reset.returns(Promise.reject());
 
-                    return pool.getBrowser("bro", opts).catch(() => {
+                    return pool.getBrowser(configFor("bro"), opts).catch(() => {
                         assert.calledOnce(underlyingPool.freeBrowser);
                         assert.calledWith(underlyingPool.freeBrowser, browser);
                     });
@@ -149,7 +154,7 @@ describe("browser-pool/caching-pool", () => {
                     browser.reset.returns(Promise.reject("reset-error"));
                     underlyingPool.freeBrowser.rejects(new Error("free-error"));
 
-                    return assert.isRejected(pool.getBrowser("bro", opts), /reset-error/);
+                    return assert.isRejected(pool.getBrowser(configFor("bro"), opts), /reset-error/);
                 });
             });
         });
@@ -162,40 +167,40 @@ describe("browser-pool/caching-pool", () => {
                 secondBrowser = stubBrowser("bro", opts.version);
                 pool = makePool_();
 
-                pool.getBrowser("bro", opts);
+                pool.getBrowser(configFor("bro"), opts);
 
                 return Promise.all([pool.freeBrowser(firstBrowser), pool.freeBrowser(secondBrowser)]);
             });
 
             it("should return last browser in cache on first getBrowser", () => {
-                return assert.becomes(pool.getBrowser("bro", opts), secondBrowser);
+                return assert.becomes(pool.getBrowser(configFor("bro"), opts), secondBrowser);
             });
 
             it("should return first browser on second getBrowser", () => {
                 return pool
-                    .getBrowser("bro", opts)
-                    .then(() => assert.becomes(pool.getBrowser("bro", opts), firstBrowser));
+                    .getBrowser(configFor("bro"), opts)
+                    .then(() => assert.becomes(pool.getBrowser(configFor("bro"), opts), firstBrowser));
             });
 
             it("should launch new session when there are no free browsers left", () => {
                 return pool
-                    .getBrowser("bro", opts)
-                    .then(() => pool.getBrowser("bro", opts))
-                    .then(() => pool.getBrowser("bro", opts))
-                    .then(() => assert.calledWith(underlyingPool.getBrowser, "bro", opts));
+                    .getBrowser(configFor("bro"), opts)
+                    .then(() => pool.getBrowser(configFor("bro"), opts))
+                    .then(() => pool.getBrowser(configFor("bro"), opts))
+                    .then(() => assert.calledWith(underlyingPool.getBrowser, configFor("bro"), opts));
             });
         });
 
         describe("when there is reuse limit", () => {
             const launchAndFree_ = (pool, id) => {
-                return pool.getBrowser(id, opts).then(browser => pool.freeBrowser(browser));
+                return pool.getBrowser(configFor(id), opts).then(browser => pool.freeBrowser(browser));
             };
 
             it("should launch only one session within the reuse limit", () => {
                 underlyingPool.getBrowser.returns(Promise.resolve(stubBrowser("bro", opts.version)));
                 const pool = poolWithReuseLimits_({ bro: 2 });
                 return launchAndFree_(pool, "bro")
-                    .then(() => pool.getBrowser("bro", opts))
+                    .then(() => pool.getBrowser(configFor("bro"), opts))
                     .then(() => assert.calledOnce(underlyingPool.getBrowser));
             });
 
@@ -208,7 +213,7 @@ describe("browser-pool/caching-pool", () => {
                 const pool = poolWithReuseLimits_({ bro: 2 });
                 return launchAndFree_(pool, "bro")
                     .then(() => launchAndFree_(pool, "bro"))
-                    .then(() => pool.getBrowser("bro", opts))
+                    .then(() => pool.getBrowser(configFor("bro"), opts))
                     .then(() => assert.calledTwice(underlyingPool.getBrowser));
             });
 
@@ -220,7 +225,7 @@ describe("browser-pool/caching-pool", () => {
                     .returns(Promise.resolve(stubBrowser("browserId", opts.version)));
                 const pool = poolWithReuseLimits_({ browserId: 1 });
                 return launchAndFree_(pool, "browserId")
-                    .then(() => pool.getBrowser("browserId", opts))
+                    .then(() => pool.getBrowser(configFor("browserId"), opts))
                     .then(() => assert.calledTwice(underlyingPool.getBrowser));
             });
 
@@ -235,10 +240,10 @@ describe("browser-pool/caching-pool", () => {
 
             it("should cache browser with different id even if the first one is over limit", () => {
                 underlyingPool.getBrowser
-                    .withArgs("first")
+                    .withArgs(configFor("first"))
                     .returns(Promise.resolve(stubBrowser("first", opts.version)));
 
-                const createSecondBrowser = underlyingPool.getBrowser.withArgs("second", opts);
+                const createSecondBrowser = underlyingPool.getBrowser.withArgs(configFor("second"), opts);
                 createSecondBrowser.returns(Promise.resolve(stubBrowser("second", opts.version)));
 
                 const pool = poolWithReuseLimits_({
@@ -248,7 +253,7 @@ describe("browser-pool/caching-pool", () => {
                 return launchAndFree_(pool, "first")
                     .then(() => launchAndFree_(pool, "second"))
                     .then(() => launchAndFree_(pool, "first"))
-                    .then(() => pool.getBrowser("second", opts))
+                    .then(() => pool.getBrowser(configFor("second"), opts))
                     .then(() => assert.calledOnce(createSecondBrowser));
             });
         });
@@ -285,7 +290,7 @@ describe("browser-pool/caching-pool", () => {
             };
 
             return pool
-                .getBrowser("bro", { version: "10.1" })
+                .getBrowser(configFor("bro"), { version: "10.1" })
                 .then(browser => pool.freeBrowser(browser, freeOpts))
                 .then(() => assert.notCalled(underlyingPool.freeBrowser));
         });

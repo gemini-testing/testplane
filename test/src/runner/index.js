@@ -18,6 +18,9 @@ describe("NodejsEnvRunner", () => {
     let BrowserPool;
     let Runner;
     let SelectivityRunner;
+    let prewarm;
+    let disposePool;
+    let logger;
 
     const mkWorkers_ = () => {
         return {
@@ -68,8 +71,17 @@ describe("NodejsEnvRunner", () => {
         return runner.run(opts.testCollection || mkTestCollection_([mkTest_()]), stats);
     };
 
+    const mkPool_ = (overrides = {}) => ({
+        cancel: sandbox.spy(),
+        prewarm,
+        [Symbol.asyncDispose]: disposePool,
+        ...overrides,
+    });
+
     beforeEach(() => {
-        BrowserPool = { create: sinon.stub().returns({ cancel: sandbox.spy() }) };
+        disposePool = sandbox.stub().resolves();
+        prewarm = sandbox.stub().resolves();
+        BrowserPool = { create: sinon.stub().returns(mkPool_()) };
 
         const createSelectivityRunnerStub = (mainRunner, config, runTestFn) => ({
             startTestCheckToRun: (...args) => runTestFn(...args),
@@ -87,6 +99,8 @@ describe("NodejsEnvRunner", () => {
 
         sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: () => {} });
         sandbox.stub(TestCollection.prototype);
+        TestCollection.prototype.getBrowsers.returns([]);
+        logger = { warn: sandbox.stub(), error: sandbox.stub() };
 
         sandbox.spy(BrowserRunner, "create");
         sandbox.stub(BrowserRunner.prototype, "addTestToRun").resolves();
@@ -95,11 +109,64 @@ describe("NodejsEnvRunner", () => {
         Runner = proxyquire("src/runner", {
             "../browser-pool": BrowserPool,
             "../browser/cdp/selectivity/runner": { SelectivityRunner },
-            "../utils/logger": { warn: sandbox.stub() },
+            "../utils/logger": logger,
         }).MainRunner;
     });
 
     afterEach(() => sandbox.restore());
+
+    describe("prewarming", () => {
+        it("should prewarm selected browser configs before RUNNER_START", async () => {
+            const config = makeConfigStub({ browsers: ["chrome", "firefox", "remote"] });
+            TestCollection.prototype.getBrowsers.returns(["chrome", "firefox"]);
+            const onStart = sandbox.spy();
+            const runner = new Runner(config).on(RunnerEvents.RUNNER_START, onStart);
+
+            await run_({ runner });
+
+            assert.calledOnceWithExactly(prewarm, [config.forBrowser("chrome"), config.forBrowser("firefox")]);
+            assert.callOrder(prewarm, onStart, BrowserRunner.create);
+        });
+
+        it("should await prewarming before starting the runner", async () => {
+            let finish;
+            prewarm.returns(
+                new Promise(resolve => {
+                    finish = resolve;
+                }),
+            );
+            const onStart = sandbox.spy();
+            const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_START, onStart);
+            const pending = run_({ runner });
+
+            await Promise.resolve();
+            assert.notCalled(onStart);
+            finish();
+            await pending;
+            assert.calledOnce(onStart);
+        });
+
+        it("should clean up and propagate a prewarming failure without starting browsers", async () => {
+            const error = new Error("image preparation failed");
+            prewarm.rejects(error);
+            const onStart = sandbox.spy();
+            const onEnd = sandbox.spy();
+            const runner = new Runner(makeConfigStub())
+                .on(RunnerEvents.RUNNER_START, onStart)
+                .on(RunnerEvents.RUNNER_END, onEnd);
+
+            assert.strictEqual(await run_({ runner }).catch(err => err), error);
+            assert.notCalled(onStart);
+            assert.notCalled(BrowserRunner.create);
+            assert.callOrder(disposePool, onEnd, WorkersRegistry.prototype.end);
+        });
+
+        it("should pass an empty selection to the pool", async () => {
+            await run_();
+
+            assert.calledOnceWithExactly(prewarm, []);
+        });
+    });
 
     describe("constructor", () => {
         it("should init temp with dir from config", () => {
@@ -302,7 +369,7 @@ describe("NodejsEnvRunner", () => {
 
         it("should create browser runners with the same browser pool", async () => {
             const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
-            const pool = Object.create(null);
+            const pool = mkPool_();
 
             BrowserPool.create.returns(pool);
 
@@ -620,10 +687,123 @@ describe("NodejsEnvRunner", () => {
         });
     });
 
+    describe("cleanup after a runner error", () => {
+        it("should finish runner cleanup and preserve the original error when pool disposal fails", async () => {
+            const error = new Error("runner failed");
+            const onEnd = sandbox.spy();
+            const runner = new Runner(makeConfigStub())
+                .on(RunnerEvents.RUNNER_START, () => Promise.reject(error))
+                .on(RunnerEvents.RUNNER_END, onEnd);
+            disposePool.rejects(new Error("pool cleanup failed"));
+
+            const result = await run_({ runner }).catch(err => err);
+
+            assert.calledOnce(disposePool);
+            assert.deepEqual(
+                {
+                    runnerEnded: onEnd.calledOnce,
+                    workersEnded: WorkersRegistry.prototype.end.calledOnce,
+                    error: result,
+                },
+                { runnerEnded: true, workersEnded: true, error },
+            );
+        });
+
+        it("should bound stalled pool, hooks and worker cleanup and preserve the original error", async () => {
+            const clock = sandbox.useFakeTimers();
+            const error = new Error("runner failed");
+            const runner = new Runner(makeConfigStub())
+                .on(RunnerEvents.RUNNER_START, () => Promise.reject(error))
+                .on(RunnerEvents.RUNNER_END, () => new Promise(() => {}));
+            WorkersRegistry.prototype.end.returns(new Promise(() => {}));
+            disposePool.returns(new Promise(() => {}));
+            let completed = false;
+            const result = run_({ runner }).catch(err => {
+                completed = true;
+                return err;
+            });
+
+            await clock.tickAsync(9999);
+            assert.isFalse(completed);
+            assert.notCalled(WorkersRegistry.prototype.end);
+            await clock.tickAsync(1);
+            assert.calledOnce(disposePool);
+            assert.notCalled(WorkersRegistry.prototype.end);
+            await clock.tickAsync(10000);
+            assert.calledOnce(WorkersRegistry.prototype.end);
+            await clock.tickAsync(10000);
+
+            assert.strictEqual(await result, error);
+            assert.calledThrice(logger.warn);
+            assert.match(logger.warn.firstCall.args[0].message, /browser pool/);
+            assert.match(logger.warn.secondCall.args[0].message, /RUNNER_END handlers/);
+            assert.match(logger.warn.thirdCall.args[0].message, /workers/);
+            assert.isEmpty(clock.timers);
+        });
+
+        it("should continue cleanup after synchronous errors and keep the original error", async () => {
+            const error = new Error("runner failed");
+            const runner = new Runner(makeConfigStub())
+                .on(RunnerEvents.RUNNER_START, () => Promise.reject(error))
+                .on(RunnerEvents.END, () => {
+                    throw new Error("END failed");
+                });
+            WorkersRegistry.prototype.end.throws(new Error("workers failed"));
+            disposePool.rejects(new Error("pool cleanup failed"));
+
+            assert.strictEqual(await run_({ runner }).catch(err => err), error);
+            assert.calledThrice(logger.warn);
+            assert.calledOnce(disposePool);
+        });
+
+        it("should finish cleanup and propagate pool disposal errors after a successful run", async () => {
+            const error = new Error("pool cleanup failed");
+            const onEnd = sandbox.spy();
+            const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_END, onEnd);
+            disposePool.rejects(error);
+
+            assert.strictEqual(await run_({ runner }).catch(err => err), error);
+            assert.callOrder(disposePool, onEnd, WorkersRegistry.prototype.end);
+        });
+
+        it("should still emit RUNNER_END and stop workers when an END listener throws", async () => {
+            const error = new Error("END failed");
+            const onEnd = sandbox.spy();
+            const runner = new Runner(makeConfigStub())
+                .on(RunnerEvents.END, () => {
+                    throw error;
+                })
+                .on(RunnerEvents.RUNNER_END, onEnd);
+
+            assert.strictEqual(await run_({ runner }).catch(err => err), error);
+            assert.calledOnce(onEnd);
+            assert.calledOnce(WorkersRegistry.prototype.end);
+        });
+
+        it("should not limit RUNNER_END handlers after a successful run", async () => {
+            const clock = sandbox.useFakeTimers();
+            const onEndFinished = sandbox.spy();
+            const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_END, async () => {
+                await promiseDelay(20000);
+                onEndFinished();
+            });
+            const result = run_({ runner });
+
+            await clock.tickAsync(10000);
+            assert.notCalled(WorkersRegistry.prototype.end);
+            await clock.tickAsync(10000);
+            await result;
+
+            assert.callOrder(onEndFinished, WorkersRegistry.prototype.end);
+            assert.notCalled(logger.warn);
+            assert.isEmpty(clock.timers);
+        });
+    });
+
     describe("addTestToRun", () => {
         it("should create new browser runner if there is no active one", async () => {
             const config = makeConfigStub({ browser: ["bro1"] });
-            const pool = {};
+            const pool = mkPool_();
             BrowserPool.create.returns(pool);
 
             const workers = mkWorkers_();
@@ -667,7 +847,7 @@ describe("NodejsEnvRunner", () => {
 
         beforeEach(() => {
             cancelStub = sandbox.stub();
-            BrowserPool.create.returns({ cancel: cancelStub });
+            BrowserPool.create.returns(mkPool_({ cancel: cancelStub }));
 
             sandbox.stub(BrowserRunner.prototype, "cancel");
         });

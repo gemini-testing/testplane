@@ -306,15 +306,7 @@ export type CDPNetworkResourceType =
 
 /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-ConnectionType */
 export type CDPNetworkConnectionType =
-    | "none"
-    | "cellular2g"
-    | "cellular3g"
-    | "cellular4g"
-    | "bluetooth"
-    | "ethernet"
-    | "wifi"
-    | "wimax"
-    | "other";
+    "none" | "cellular2g" | "cellular3g" | "cellular4g" | "bluetooth" | "ethernet" | "wifi" | "wimax" | "other";
 
 /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-CookieSameSite */
 export type CDPNetworkCookieSameSite = "Strict" | "Lax" | "None";

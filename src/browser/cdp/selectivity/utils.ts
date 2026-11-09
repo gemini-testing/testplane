@@ -1,5 +1,6 @@
 import { sortedLastIndex, memoize } from "lodash";
 import { TraceMap, eachMapping, type EncodedSourceMap } from "@jridgewell/trace-mapping";
+import { createHash } from "node:crypto";
 import fs from "fs";
 import path from "path";
 import { URL } from "url";
@@ -57,15 +58,38 @@ export const fetchTextWithBrowserFallback = async (
     // At first, trying to fetch sourceMaps directly from the node.js
     // Then falling back to do it via browser (if Testplane has no direct network access to it, for example)
     try {
-        return await fetch(url).then(r => r.text());
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            // Release the connection without buffering a potentially large error body.
+            await response.body?.cancel().catch(() => {});
+            throw new Error(`HTTP ${response.status} while fetching "${url}"`);
+        }
+
+        return await response.text();
     } catch {
         return runtime
-            .evaluate<string>(sessionId, {
-                expression: `fetch("${url.replaceAll('"', '\\"')}").then(r => r.text())`,
+            .evaluate<unknown>(sessionId, {
+                expression: `fetch(${JSON.stringify(url)}).then(r => {
+                    if (!r.ok) throw new Error("HTTP " + r.status);
+                    return r.text();
+                })`,
                 awaitPromise: true,
                 returnByValue: true,
             })
-            .then(r => r.result.value);
+            .then(response => {
+                if (response.exceptionDetails) {
+                    throw new Error(`Browser fetch failed for "${url}": ${JSON.stringify(response.exceptionDetails)}`);
+                }
+
+                const value = response.result?.value;
+
+                if (typeof value !== "string") {
+                    throw new Error(`Browser fetch failed for "${url}": expected text response`);
+                }
+
+                return value;
+            });
     }
 };
 
@@ -102,15 +126,40 @@ const getSourceLineOffsetArray = (source: string): number[] => {
     return offsetToLine;
 };
 
+const getSourceMapRangesCacheKey = (...inputs: Array<string | null | undefined>): string => {
+    const version = "source-map-ranges:v2:";
+    const hash = createHash("sha256").update(version);
+    const chunkSize = 64 * 1024;
+
+    for (const input of inputs) {
+        if (typeof input !== "string") {
+            hash.update(input === null ? "null:" : "undefined:");
+            continue;
+        }
+
+        hash.update(`string:${input.length}:`);
+        // Hash raw UTF-16 code units, including lone surrogates. Bound temporary encoding buffers,
+        // without splitting surrogate pairs into lossy UTF-8 replacement characters.
+        for (let offset = 0; offset < input.length; offset += chunkSize) {
+            hash.update(input.slice(offset, offset + chunkSize), "utf16le");
+        }
+    }
+
+    // fs-cache hashes string keys again using ASCII, so pass a small ASCII digest, not the input texts.
+    return version + hash.digest("hex");
+};
+
 export const parseSourceMapRanges = async (
     source: string,
     sourceMaps: string,
     sourceRoot: string,
 ): Promise<ParsedSourceMapRanges> => {
+    // Offsets depend on the generated source layout, and resolved filenames depend on the sourceRoot override.
+    const cacheKey = getSourceMapRangesCacheKey(source, sourceMaps, sourceRoot);
     let jsonCachedResult: ParsedSourceMapRanges | null = null;
 
     try {
-        const cachedResult = await getCachedSelectivityFile(CacheType.SourceMapParseResult, sourceMaps);
+        const cachedResult = await getCachedSelectivityFile(CacheType.SourceMapParseResult, cacheKey);
         jsonCachedResult = cachedResult ? JSON.parse(cachedResult) : null;
     } catch {} // eslint-disable-line no-empty
 
@@ -148,7 +197,7 @@ export const parseSourceMapRanges = async (
         lastRecordedSource = mappingSource;
     });
 
-    setCachedSelectivityFile(CacheType.SourceMapParseResult, sourceMaps, JSON.stringify(result)).catch(() => {});
+    setCachedSelectivityFile(CacheType.SourceMapParseResult, cacheKey, JSON.stringify(result)).catch(() => {});
 
     return result;
 };
@@ -182,9 +231,10 @@ export const extractSourceFilesDeps = (
                 continue;
             }
 
-            // Ignore full-file wrapper
+            // Ignore full-file wrappers, counting unique originals rather than source-map transitions.
+            // Interleaved mappings such as beta.jsx -> shared.jsx -> beta.jsx still describe two files.
             if (range.startOffset <= offset[0] && range.endOffset >= offset[offset.length - 1]) {
-                const filesCount = filename.reduce((acc, val) => acc + (val ? 1 : 0), 0);
+                const filesCount = new Set(filename.filter(Boolean)).size;
 
                 if (filesCount > 2) {
                     continue;
@@ -281,16 +331,15 @@ export const transformSourceDependencies = (
         typedResultSet: Set<string>,
         reason: SelectivityDependencyReason,
     ): void => {
-        dependency = decodeURIComponent(softFileURLToPath(dependency));
+        const fileUrlPath = softFileURLToPath(dependency);
+
+        // fileURLToPath already decodes URL escapes. Ordinary paths retain one decode.
+        dependency = fileUrlPath !== dependency ? fileUrlPath : decodeURIComponent(dependency);
 
         const protocol = getProtocol(dependency);
-
-        if (protocol) {
-            warnUnsupportedProtocol(protocol, dependency);
-            return;
-        }
-
-        const initialDependencyRelativePath = path.posix.relative(path.posix.resolve(), path.posix.resolve(dependency));
+        const initialDependencyRelativePath = protocol
+            ? dependency
+            : path.posix.relative(path.posix.resolve(), path.posix.resolve(dependency));
         const mapDependencyPathResult = mapDependencyPathFn
             ? mapDependencyPathFn({
                   scope,
@@ -305,6 +354,15 @@ export const transformSourceDependencies = (
 
         const dependencyRelativePath =
             mapDependencyPathResult === true ? initialDependencyRelativePath : mapDependencyPathResult;
+        const mappedProtocol = protocol ? getProtocol(dependencyRelativePath) : null;
+
+        // URI originals can be mapped explicitly to real local files before suppression.
+        // An identity mapper (or a URI-to-URI mapper) has not supplied a physical dependency.
+        if (mappedProtocol) {
+            warnUnsupportedProtocol(mappedProtocol, dependencyRelativePath);
+            return;
+        }
+
         const nodeModulesLabelPos = dependencyRelativePath.indexOf(nodeModulesLabel);
 
         if (nodeModulesLabelPos === -1) {

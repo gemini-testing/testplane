@@ -76,7 +76,7 @@ async function waitForSelectorsToSettleInBrowser(
             let setTimeoutSource = "";
             try {
                 setTimeoutSource = typeof setTimeout === "function" ? Function.prototype.toString.call(setTimeout) : "";
-            } catch {
+            } catch (_err) {
                 return { success: false };
             }
 

@@ -1,4 +1,6 @@
 import { Command } from "@gemini-testing/commander";
+import { availableParallelism } from "os";
+import createDebug from "debug";
 import _ from "lodash";
 import fs from "fs-extra";
 import { Stats as RunnerStats } from "./stats";
@@ -27,6 +29,10 @@ import { TestsTracker, formatTrackedTests, getTestsByWorkerPid } from "./runner/
 import { UnhandledRejectionError } from "./errors/unhandled-rejection-error";
 import { ProfilerSanitizer } from "./profiler/sanitize";
 import type { SourceRef } from "./profiler/schema";
+import { DOCKER_GRID_URL } from "./constants/config";
+import { getDockerCpuCount } from "./browser-backend/docker/engine";
+
+const debug = createDebug("testplane:run");
 
 interface RunOpts {
     browsers: string[];
@@ -77,8 +83,10 @@ interface RunnableOpts {
     saveHookLocations?: boolean;
 }
 
-export interface ReadTestsOpts
-    extends Pick<RunOpts, "tag" | "browsers" | "sets" | "grep" | "replMode" | "keepBrowserMode"> {
+export interface ReadTestsOpts extends Pick<
+    RunOpts,
+    "tag" | "browsers" | "sets" | "grep" | "replMode" | "keepBrowserMode"
+> {
     silent: boolean;
     ignore: string | string[];
     failed: FailedListItem[];
@@ -249,6 +257,22 @@ export class Testplane extends BaseTestplane {
             () => this._startServersIfNeeded(),
         );
         await this._emitInitEventOnce();
+
+        if (this._config.system.parallelLimit === Infinity && !RuntimeConfig.getInstance().local) {
+            const browserIds = this._config.getBrowserIds();
+            if (
+                browserIds.length > 0 &&
+                browserIds.every(id => this._config.forBrowser(id).gridUrl === DOCKER_GRID_URL)
+            ) {
+                const localCpus = availableParallelism();
+                const dockerCpus = await getDockerCpuCount();
+                const cpus = Math.min(localCpus, dockerCpus ?? localCpus);
+                this._config.system.parallelLimit = Math.max(1, Math.floor((cpus * 5) / 4));
+                debug(
+                    `All browsers use Docker: applying parallelLimit=${this._config.system.parallelLimit} based on ${cpus} available CPUs (local: ${localCpus}, Docker: ${dockerCpus ?? "unavailable"}). Set system.parallelLimit to override.`,
+                );
+            }
+        }
 
         this._profiler.runtime.withSpan(
             "testplane.phase.runner-init",

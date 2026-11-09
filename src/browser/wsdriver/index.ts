@@ -108,10 +108,13 @@ export class WSDriverRequestAgent {
         const wsdriverSupportedVersions = sessionCaps["se:wsdriverVersion"].split(", ").map(Number).filter(Boolean);
 
         const requestTimeout = browserConfig.httpTimeout;
-        const supportedVersions = wsdriverSupportedVersions.reduce((acc, val) => {
-            acc[val] = true;
-            return acc;
-        }, {} as Record<number, boolean>);
+        const supportedVersions = wsdriverSupportedVersions.reduce(
+            (acc, val) => {
+                acc[val] = true;
+                return acc;
+            },
+            {} as Record<number, boolean>,
+        );
         const clientSupportedCompressionTypes = ["zstd" in process.versions ? "zstd" : null, "gzip"].filter(
             Boolean,
         ) as Array<(typeof WSD_COMPRESSION_TYPE)[keyof typeof WSD_COMPRESSION_TYPE]>;
@@ -274,8 +277,7 @@ export class WSDriverRequestAgent {
             }
 
             result = (await this._wsConnection.makeRequest(requestId, requestMessage).catch((err: WsError) => err)) as
-                | IncomingWsDriverMessage
-                | WsError;
+                IncomingWsDriverMessage | WsError;
 
             if (result instanceof WSDriverRequestTimeoutError) {
                 const requestError = new Error(result.message);

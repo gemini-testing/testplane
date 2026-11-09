@@ -17,8 +17,8 @@ module.exports = class BrowserPool {
         this._calibrator = new Calibrator();
     }
 
-    async getBrowser({ browserId, browserVersion, sessionId, sessionCaps, sessionOpts, state }) {
-        const browser = ExistingBrowser.create(this._config, {
+    async getBrowser({ browserId, browserVersion, sessionId, sessionCaps, sessionOpts, cdpAvailable, state }) {
+        const browser = ExistingBrowser.create(this._config.forBrowser(browserId), {
             id: browserId,
             version: browserVersion,
             state,
@@ -27,7 +27,7 @@ module.exports = class BrowserPool {
         });
 
         try {
-            await browser.init({ sessionId, sessionCaps, sessionOpts }, this._calibrator);
+            await browser.init({ sessionId, sessionCaps, sessionOpts, cdpAvailable }, this._calibrator);
 
             await this._emitter.emitAndWait(WorkerEvents.NEW_BROWSER, browser.publicAPI, {
                 browserId: browser.id,
@@ -40,16 +40,18 @@ module.exports = class BrowserPool {
                 throw error;
             }
 
-            browser.markAsBroken({ stubBrowserCommands: true });
-            this.freeBrowser(browser);
+            browser.markAsBroken({ stubBrowserCommands: Boolean(browser.publicAPI) });
+            await this.freeBrowser(browser);
 
             throw Object.assign(error, { meta: browser.meta });
         }
     }
 
-    freeBrowser(browser) {
-        ipc.emit(`worker.${browser.sessionId}.freeBrowser`, browser.state);
-
-        browser.quit();
+    async freeBrowser(browser) {
+        try {
+            await browser[Symbol.asyncDispose]();
+        } finally {
+            ipc.emit(`worker.${browser.sessionId}.freeBrowser`, browser.state);
+        }
     }
 };
