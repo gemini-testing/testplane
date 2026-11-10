@@ -38,8 +38,21 @@ function browserIsPageReady(): { ready: boolean; reason?: string; pendingResourc
 
     var waitingForResourceUrls = Object.create(null) as Record<string, true>;
 
+    // CSS value may contain several urls, e.g. multi-layer background: url("a.png"), url("b.png")
+    function addResourceUrlsFromCssValue(cssValue: string): void {
+        var cssUrlRegExp = /url\(\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|([^"'()\s]+))\s*\)/g;
+        var urlMatch: RegExpExecArray | null;
+
+        while ((urlMatch = cssUrlRegExp.exec(cssValue))) {
+            var resourceUrl = (urlMatch[1] || urlMatch[2] || urlMatch[3] || "").replace(/\\(.)/g, "$1");
+
+            if (resourceUrl && resourceUrl.indexOf("data:") !== 0 && resourceUrl.charAt(0) !== "#") {
+                waitingForResourceUrls[resourceUrl] = true;
+            }
+        }
+    }
+
     var nodesWithInlineStylesWithUrl = document.querySelectorAll<HTMLElement>('[style*="url("]');
-    var styleWithUrlRegExp = /^url\((?:"(.*)"|'(.*)')\)$/;
 
     for (var nodeIndex = 0; nodeIndex < nodesWithInlineStylesWithUrl.length; nodeIndex++) {
         var node = nodesWithInlineStylesWithUrl.item(nodeIndex);
@@ -54,20 +67,11 @@ function browserIsPageReady(): { ready: boolean; reason?: string; pendingResourc
             var inlineRuleName = node.style.item(i);
             var inlineRuleValue = node.style[inlineRuleName as keyof CSSStyleDeclaration] as string;
 
-            if (
-                !inlineRuleValue ||
-                (inlineRuleValue.indexOf('url("') !== 0 && inlineRuleValue.indexOf("url('") !== 0)
-            ) {
+            if (!inlineRuleValue || inlineRuleValue.indexOf("url(") === -1) {
                 continue;
             }
 
-            var computedStyleValue = getComputedStyle(node).getPropertyValue(inlineRuleName);
-            var match = styleWithUrlRegExp.exec(computedStyleValue);
-            var resourceUrl = match && (match[1] || match[2]);
-
-            if (resourceUrl && resourceUrl.indexOf("data:") !== 0) {
-                waitingForResourceUrls[resourceUrl] = true;
-            }
+            addResourceUrlsFromCssValue(getComputedStyle(node).getPropertyValue(inlineRuleName));
         }
     }
 
@@ -95,7 +99,7 @@ function browserIsPageReady(): { ready: boolean; reason?: string; pendingResourc
                     var cssRuleName = cssStyleRule.style.item(i);
                     var cssRuleValue = cssStyleRule.style[cssRuleName as keyof CSSStyleDeclaration] as string;
 
-                    if (!cssRuleValue || (cssRuleValue.indexOf('url("') !== 0 && cssRuleValue.indexOf("url('") !== 0)) {
+                    if (!cssRuleValue || cssRuleValue.indexOf("url(") === -1) {
                         continue;
                     }
 
@@ -119,14 +123,9 @@ function browserIsPageReady(): { ready: boolean; reason?: string; pendingResourc
                         nodeStylesIndex < displayedNodeElementsStyles.length;
                         nodeStylesIndex++
                     ) {
-                        var nodeStyles = displayedNodeElementsStyles[nodeStylesIndex];
-                        var computedStyleValue = nodeStyles.getPropertyValue(cssRuleName);
-                        var match = styleWithUrlRegExp.exec(computedStyleValue);
-                        var resourceUrl = match && (match[1] || match[2]);
-
-                        if (resourceUrl && resourceUrl.indexOf("data:") !== 0) {
-                            waitingForResourceUrls[resourceUrl] = true;
-                        }
+                        addResourceUrlsFromCssValue(
+                            displayedNodeElementsStyles[nodeStylesIndex].getPropertyValue(cssRuleName),
+                        );
                     }
                 }
             }

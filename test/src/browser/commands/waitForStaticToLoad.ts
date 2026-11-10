@@ -312,4 +312,183 @@ describe('"waitForStaticToLoad" command', () => {
             "Timed out waiting for page to load in 150ms. Several resources are still not loaded:\n- image1.jpg",
         );
     });
+
+    describe("in-page resources detection", () => {
+        type FakeImage = { src: string; onload: (() => void) | null; onerror: (() => void) | null };
+
+        const globalKeys = ["document", "window", "getComputedStyle", "Image"] as const;
+        let originalGlobals: Record<string, unknown>;
+        let performanceEntries: Array<{ name: string }>;
+        let createdImages: FakeImage[];
+
+        const mkStyle_ = (props: Record<string, string>): Record<string, unknown> => ({
+            ...props,
+            length: Object.keys(props).length,
+            item: (i: number) => Object.keys(props)[i],
+            getPropertyValue: (name: string) => props[name] || "",
+        });
+
+        const mkNode_ = (inlineStyle: Record<string, string>, computedStyle: Record<string, string>): unknown => ({
+            clientWidth: 10,
+            clientHeight: 10,
+            style: mkStyle_(inlineStyle),
+            computedStyle: mkStyle_(computedStyle),
+        });
+
+        const mkList_ = <T>(items: T[]): { length: number; item: (i: number) => T } => ({
+            length: items.length,
+            item: (i: number) => items[i],
+        });
+
+        const setupPage_ = ({
+            inlineNodes = [] as unknown[],
+            cssRules = [] as Array<{ selectorText: string; style: Record<string, string>; nodes: unknown[] }>,
+        } = {}): void => {
+            const g = global as unknown as Record<string, unknown>;
+
+            g.document = {
+                readyState: "complete",
+                currentScript: null,
+                fonts: { status: "loaded" },
+                images: mkList_([]),
+                styleSheets: mkList_([
+                    {
+                        cssRules: mkList_(
+                            cssRules.map(rule => ({ selectorText: rule.selectorText, style: mkStyle_(rule.style) })),
+                        ),
+                    },
+                ]),
+                querySelectorAll: (selector: string): ReturnType<typeof mkList_> => {
+                    if (selector === 'link[rel="stylesheet"]') {
+                        return mkList_([]);
+                    }
+
+                    if (selector === '[style*="url("]') {
+                        return mkList_(inlineNodes);
+                    }
+
+                    const rule = cssRules.find(r => r.selectorText === selector);
+
+                    return mkList_(rule ? rule.nodes : []);
+                },
+            };
+            g.window = {
+                performance: { getEntriesByType: () => performanceEntries },
+            };
+            g.getComputedStyle = (node: { computedStyle: unknown }): unknown => node.computedStyle;
+            g.Image = function (this: FakeImage): void {
+                this.src = "";
+                this.onload = null;
+                this.onerror = null;
+                createdImages.push(this);
+            };
+        };
+
+        const initBrowserWithRealExecute_ = async (): Promise<Session> => {
+            const session = mkSessionStub_();
+            session.execute.callsFake((fn: (...args: unknown[]) => unknown, ...args: unknown[]) =>
+                Promise.resolve(fn(...args)),
+            );
+
+            await initBrowser_({ session });
+
+            return session;
+        };
+
+        beforeEach(() => {
+            const g = global as unknown as Record<string, unknown>;
+
+            originalGlobals = {};
+            globalKeys.forEach(key => (originalGlobals[key] = g[key]));
+            performanceEntries = [];
+            createdImages = [];
+        });
+
+        afterEach(() => {
+            const g = global as unknown as Record<string, unknown>;
+
+            globalKeys.forEach(key => (g[key] = originalGlobals[key]));
+        });
+
+        it("should wait for each url of multi-layer background from inline styles separately", async () => {
+            setupPage_({
+                inlineNodes: [
+                    mkNode_(
+                        { backgroundImage: "url('/a.png'), url('/b.png')" },
+                        { backgroundImage: 'url("http://h/a.png"), url("http://h/b.png")' },
+                    ),
+                ],
+            });
+            const session = await initBrowserWithRealExecute_();
+
+            const promise = session.waitForStaticToLoad({ timeout: 100, interval: 50 });
+            await clock.tickAsync(150);
+
+            assert.deepEqual(await promise, {
+                ready: false,
+                reason: "Resources are not loaded",
+                pendingResources: ["http://h/a.png", "http://h/b.png"],
+            });
+        });
+
+        it("should wait for each url of multi-layer background from stylesheets separately", async () => {
+            setupPage_({
+                cssRules: [
+                    {
+                        selectorText: ".card",
+                        style: { backgroundImage: "linear-gradient(red, blue), url(/a.png), url(/b.png)" },
+                        nodes: [
+                            mkNode_(
+                                {},
+                                {
+                                    backgroundImage:
+                                        'linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255)), url("http://h/a.png"), url("http://h/b.png")',
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            });
+            const session = await initBrowserWithRealExecute_();
+
+            const promise = session.waitForStaticToLoad({ timeout: 100, interval: 50 });
+            await clock.tickAsync(150);
+
+            assert.deepEqual(await promise, {
+                ready: false,
+                reason: "Resources are not loaded",
+                pendingResources: ["http://h/a.png", "http://h/b.png"],
+            });
+        });
+
+        it("should be ready when every url of multi-layer background is loaded", async () => {
+            performanceEntries = [{ name: "http://h/a.png" }, { name: "http://h/b.png" }];
+            setupPage_({
+                inlineNodes: [
+                    mkNode_(
+                        { backgroundImage: 'url("/a.png"), url("/b.png")' },
+                        { backgroundImage: 'url("http://h/a.png"), url("http://h/b.png")' },
+                    ),
+                ],
+            });
+            const session = await initBrowserWithRealExecute_();
+
+            assert.deepEqual(await session.waitForStaticToLoad({ timeout: 100, interval: 50 }), { ready: true });
+        });
+
+        it("should skip data urls inside multi-layer background", async () => {
+            performanceEntries = [{ name: "http://h/a.png" }];
+            setupPage_({
+                inlineNodes: [
+                    mkNode_(
+                        { backgroundImage: 'url("data:image/png;base64,AAAA"), url("/a.png")' },
+                        { backgroundImage: 'url("data:image/png;base64,AAAA"), url("http://h/a.png")' },
+                    ),
+                ],
+            });
+            const session = await initBrowserWithRealExecute_();
+
+            assert.deepEqual(await session.waitForStaticToLoad({ timeout: 100, interval: 50 }), { ready: true });
+        });
+    });
 });
