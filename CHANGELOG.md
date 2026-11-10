@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.4.2 (2026-11-10)
+
+
+### Bug Fixes
+
+* handle disappearing iframes during screenshot preparation ([8c0ef5d](https://github.com/gemini-testing/testplane/commit/8c0ef5dcb2747cf1be48e665a95086454766e92b))
+
 ### 9.4.1 (2026-11-09)
 
 
