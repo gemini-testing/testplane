@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.4.3 (2026-11-10)
+
+
+### Bug Fixes
+
+* parse each url of bg in waitForStaticToLoad ([#1360](https://github.com/gemini-testing/testplane/issues/1360)) ([9734278](https://github.com/gemini-testing/testplane/commit/97342787c3306ab361c9f36931d1efd90feaa4dc))
+
 ### 9.4.2 (2026-11-10)
 
 
