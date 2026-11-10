@@ -20,12 +20,35 @@ function provideRootDefault(name) {
 
 exports.getTopLevel = () => {
     return buildBrowserOptions(provideRootDefault, {
+        docker: option({
+            defaultValue: provideRootDefault("docker"),
+            parseEnv: JSON.parse,
+            parseCli: JSON.parse,
+            validate: value => utils.assertOptionalObject(value, "docker"),
+            map: value => value && _.defaults({}, value, defaults.docker),
+        }),
         desiredCapabilities: optionsBuilder(provideRootDefault).optionalObject("desiredCapabilities"),
     });
 };
 
 exports.getPerBrowser = () => {
     return buildBrowserOptions(provideTopLevelDefault, {
+        docker: option({
+            defaultValue: provideTopLevelDefault("docker"),
+            parseEnv: JSON.parse,
+            parseCli: JSON.parse,
+            validate: value => utils.assertOptionalObject(value, "docker"),
+            map: (value, config) => {
+                const inherited = _.pick(config.docker, [
+                    "selenoidImage",
+                    "platform",
+                    "selenoidPlatform",
+                    "socketPath",
+                ]);
+
+                return value && _.defaults({}, value, inherited, defaults.docker);
+            },
+        }),
         desiredCapabilities: option({
             defaultValue: defaults.desiredCapabilities,
             parseEnv: JSON.parse,
@@ -250,7 +273,7 @@ function buildBrowserOptions(defaultFactory, extra) {
                     capabilities &&
                     Boolean(
                         (capabilities.platformName && capabilities.platformName.match(/Android/i)) ||
-                            (capabilities.browserName && capabilities.browserName.match(/Android/i)),
+                        (capabilities.browserName && capabilities.browserName.match(/Android/i)),
                     );
 
                 return isAndroid ? "viewport" : value;

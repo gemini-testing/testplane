@@ -17,6 +17,7 @@ import WorkersRegistry from "../utils/workers-registry";
 import PromiseGroup from "./promise-group";
 import { TestCollection } from "../test-collection";
 import * as logger from "../utils/logger";
+import { promiseTimeout } from "../utils/promise";
 import { Config } from "../config";
 import type { runTest, cancel } from "../worker";
 import type { Stats as RunnerStats } from "../stats";
@@ -25,6 +26,8 @@ import { Test } from "../types";
 import { SelectivityRunner } from "../browser/cdp/selectivity/runner";
 import { noopProfilerRuntime } from "../profiler/runtime/noop";
 import type { ProfilerRuntimeLike } from "../profiler/runtime/types";
+
+const FAILURE_CLEANUP_TIMEOUT = 10_000;
 
 interface WorkerMethods {
     runTest: typeof runTest;
@@ -115,14 +118,51 @@ export class MainRunner extends RunnableEmitter {
     async run(testCollection: TestCollection, stats: RunnerStats, opts?: RunnerRunOptions): Promise<void> {
         this.runned = true;
 
+        let failed = false;
+        let runError: unknown;
         try {
+            const browserConfigs = testCollection.getBrowsers().map(browserId => this.config.forBrowser(browserId));
+            await this.browserPool?.prewarm(browserConfigs);
             await this.emitAndWait(MasterEvents.RUNNER_START, this);
             this.emit(MasterEvents.BEGIN);
             await this._runTests(testCollection, opts);
-        } finally {
-            this.emit(MasterEvents.END);
-            await this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn);
-            await this.workersRegistry.end();
+        } catch (error) {
+            failed = true;
+            runError = error;
+        }
+
+        const cleanups: Array<[string, () => unknown]> = [
+            ["browser pool", (): Promise<void> | undefined => this.browserPool?.[Symbol.asyncDispose]()],
+            ["END handlers", (): boolean => this.emit(MasterEvents.END)],
+            [
+                "RUNNER_END handlers",
+                (): Promise<unknown> => this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn),
+            ],
+            ["workers", (): Promise<void> => this.workersRegistry.end()],
+        ];
+        const errors: unknown[] = [];
+
+        for (const [name, cleanup] of cleanups) {
+            try {
+                const pending = Promise.resolve().then(cleanup);
+                await (failed
+                    ? promiseTimeout(
+                          pending,
+                          FAILURE_CLEANUP_TIMEOUT,
+                          `Timed out waiting for ${name} cleanup after a runner error (${FAILURE_CLEANUP_TIMEOUT} ms)`,
+                      )
+                    : pending);
+            } catch (error) {
+                errors.push(error);
+            }
+        }
+
+        if (failed) {
+            errors.forEach(error => logger.warn(error));
+            throw runError;
+        } else if (errors.length > 0) {
+            errors.slice(1).forEach(error => logger.warn(error));
+            throw errors[0];
         }
     }
 

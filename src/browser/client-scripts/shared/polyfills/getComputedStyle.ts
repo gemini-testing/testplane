@@ -13,26 +13,26 @@ function getComputedStylePixel(element: Element, property: string, fontSize?: nu
     fontSize = !fontSize
         ? fontSize
         : /%|em/.test(suffix) && element.parentElement
-        ? getComputedStylePixel(element.parentElement, "fontSize", null)
-        : 16;
+          ? getComputedStylePixel(element.parentElement, "fontSize", null)
+          : 16;
     const rootSize =
         property === "fontSize" ? fontSize : /width/i.test(property) ? element.clientWidth : element.clientHeight;
 
     return suffix === "%"
         ? (size / 100) * (rootSize as number)
         : suffix === "cm"
-        ? size * 0.3937 * 96
-        : suffix === "em"
-        ? size * (fontSize as number)
-        : suffix === "in"
-        ? size * 96
-        : suffix === "mm"
-        ? (size * 0.3937 * 96) / 10
-        : suffix === "pc"
-        ? (size * 12 * 96) / 72
-        : suffix === "pt"
-        ? (size * 96) / 72
-        : size;
+          ? size * 0.3937 * 96
+          : suffix === "em"
+            ? size * (fontSize as number)
+            : suffix === "in"
+              ? size * 96
+              : suffix === "mm"
+                ? (size * 0.3937 * 96) / 10
+                : suffix === "pc"
+                  ? (size * 12 * 96) / 72
+                  : suffix === "pt"
+                    ? (size * 96) / 72
+                    : size;
 }
 
 function setShortStyleProperty(style: CSSStyleDeclaration, property: string & keyof CSSStyleDeclaration): void {
@@ -47,10 +47,10 @@ function setShortStyleProperty(style: CSSStyleDeclaration, property: string & ke
         style[t] === style[r] && style[t] === style[b] && style[t] === style[l]
             ? [style[t]]
             : style[t] === style[b] && style[l] === style[r]
-            ? [style[t], style[r]]
-            : style[l] === style[r]
-            ? [style[t], style[r], style[b]]
-            : [style[t], style[r], style[b], style[l]]
+              ? [style[t], style[r]]
+              : style[l] === style[r]
+                ? [style[t], style[r], style[b]]
+                : [style[t], style[r], style[b], style[l]]
     ).join(" ");
 }
 

@@ -190,9 +190,9 @@ export const filterExtraStackFrames = (error: Error): Error => {
         const isWdioUtilsFrame = (frame: StackFrame): boolean => {
             return Boolean(
                 frame.fileName &&
-                    (frame.fileName.includes("/node_modules/@testplane/wdio-utils/") ||
-                        frame.fileName.includes("/gemini-testing/webdriverio/packages/src/monad.ts") ||
-                        frame.fileName.includes("/gemini-testing/webdriverio/packages/src/shim.ts")),
+                (frame.fileName.includes("/node_modules/@testplane/wdio-utils/") ||
+                    frame.fileName.includes("/gemini-testing/webdriverio/packages/src/monad.ts") ||
+                    frame.fileName.includes("/gemini-testing/webdriverio/packages/src/shim.ts")),
             );
         };
 

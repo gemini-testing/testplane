@@ -17,6 +17,7 @@ describe("worker/browser-agent", () => {
                     sessionId: "100-500",
                     sessionCaps: "some-caps",
                     sessionOpts: "some-opts",
+                    cdpAvailable: false,
                     state: {},
                 })
                 .returns({ some: "browser" });
@@ -26,6 +27,7 @@ describe("worker/browser-agent", () => {
                 sessionId: "100-500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
+                cdpAvailable: false,
                 state: {},
             });
 
@@ -40,6 +42,7 @@ describe("worker/browser-agent", () => {
                     sessionId: "100-500",
                     sessionCaps: "some-caps",
                     sessionOpts: "some-opts",
+                    cdpAvailable: false,
                     state: {},
                 })
                 .returns({ some: "browser" });
@@ -49,6 +52,7 @@ describe("worker/browser-agent", () => {
                 sessionId: "100-500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
+                cdpAvailable: false,
                 state: {},
             });
 

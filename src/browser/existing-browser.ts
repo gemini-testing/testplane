@@ -9,10 +9,12 @@ import { ClientBridge } from "./client-bridge";
 import * as history from "./history";
 import * as logger from "../utils/logger";
 import { WEBDRIVER_PROTOCOL } from "../constants/config";
+import { AsyncCleanupStack } from "../utils/async-cleanup-stack";
+import { getSessionOptsFromConfig } from "../utils/session-opts";
 import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 import { isSupportIsolation } from "../utils/browser";
 import { isRunInNodeJsEnv } from "../utils/config";
-import { Config } from "../config";
+import { getTestContext } from "../utils/test-context";
 import { Image } from "../image";
 import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
@@ -21,6 +23,7 @@ import { Page } from "puppeteer-core";
 import { CDP } from "./cdp";
 import { WSDriverRequestAgent } from "./wsdriver";
 import type * as browserSideUtilsImplementation from "./client-scripts/browser-utils/implementation";
+import { BrowserConfig } from "../config/browser-config";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -70,7 +73,7 @@ export const getActivePuppeteerPage = async (session: WebdriverIO.Browser): Prom
     return pages[pages.length - 1];
 };
 
-export class ExistingBrowser extends Browser {
+export class ExistingBrowser extends Browser implements AsyncDisposable {
     protected _camera: Camera;
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
@@ -78,8 +81,15 @@ export class ExistingBrowser extends Browser {
     protected _cdp: CDP | null = null;
     protected _wsDriver: WSDriverRequestAgent | null = null;
     protected _tags: Set<string> = new Set();
+    private _cleanup = new AsyncCleanupStack();
+    private _initializing: Promise<this> | null = null;
+    private _closing: Promise<void> | null = null;
 
-    constructor(config: Config, opts: BrowserOpts) {
+    static create(config: BrowserConfig, opts: BrowserOpts): ExistingBrowser {
+        return new ExistingBrowser(config, opts);
+    }
+
+    constructor(config: BrowserConfig, opts: BrowserOpts) {
         super(config, opts);
 
         this._camera = Camera.create(this._config.screenshotMode, () => this._takeScreenshot());
@@ -87,18 +97,24 @@ export class ExistingBrowser extends Browser {
         this._meta = this._initMeta();
     }
 
-    async init({ sessionId, sessionCaps, sessionOpts }: SessionOptions, calibrator: Calibrator): Promise<this> {
-        this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
+    init(session: SessionOptions, calibrator: Calibrator): Promise<this> {
+        if (this._closing) return Promise.reject(new Error("Browser attachment is disposed"));
+        this._initializing ??= this._attach(session, calibrator);
+        return this._initializing;
+    }
 
-        const cdpPromise = CDP.create(this).then(cdp => {
-            this._cdp = cdp;
-        });
+    private async _attach(
+        { sessionId, sessionCaps, sessionOpts, cdpAvailable }: SessionOptions,
+        calibrator: Calibrator,
+    ): Promise<this> {
+        await using cleanup = this._cleanup;
+        this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
+        this._cdp = cdpAvailable === false ? null : await CDP.create(this);
+        if (this._cdp) this._cleanup.adopt(this._cdp, cdp => cdp.close());
 
         if (!isRunInNodeJsEnv(this._config)) {
             this._startCollectingCustomCommands();
         }
-
-        const isolationPromise = cdpPromise.then(() => this._performIsolation({ sessionCaps, sessionOpts }));
 
         this._extendStacktrace();
         this._addSteps();
@@ -115,7 +131,7 @@ export class ExistingBrowser extends Browser {
             async () => {
                 this._addCommands();
 
-                await isolationPromise;
+                await this._performIsolation({ sessionCaps, sessionOpts });
 
                 this._callstackHistory?.clear();
 
@@ -142,6 +158,7 @@ export class ExistingBrowser extends Browser {
             },
         );
 
+        this._cleanup = cleanup.move();
         return this;
     }
 
@@ -157,10 +174,20 @@ export class ExistingBrowser extends Browser {
         }
     }
 
-    quit(): void {
-        this._cdp?.close();
-        this._wsDriver?.close();
-        this._meta = this._initMeta();
+    quit(): Promise<void> {
+        this._closing ??= (async (): Promise<void> => {
+            await this._initializing?.catch(() => null);
+            try {
+                await this._cleanup.disposeAsync();
+            } finally {
+                this._meta = this._initMeta();
+            }
+        })();
+        return this._closing;
+    }
+
+    [Symbol.asyncDispose](): Promise<void> {
+        return this.quit();
     }
 
     open(url: string): Promise<WebdriverIO.Request | string | void> {
@@ -240,7 +267,7 @@ export class ExistingBrowser extends Browser {
         const opts: AttachOptions = {
             sessionId,
             ...sessionOpts,
-            ...this._getSessionOptsFromConfig(OPTIONAL_SESSION_OPTS),
+            ...getSessionOptsFromConfig(this._config, OPTIONAL_SESSION_OPTS),
             ...detectedSessionEnvFlags,
             ...this._config.sessionEnvFlags,
             options: sessionOpts,
@@ -258,6 +285,7 @@ export class ExistingBrowser extends Browser {
                     headers: sessionOpts.headers as Record<string, string>,
                     browserConfig: this._config,
                 });
+                this._cleanup.adopt(this._wsDriver, driver => driver.close());
 
                 opts.customWdRequestAgent = this._wsDriver;
             }
@@ -267,11 +295,12 @@ export class ExistingBrowser extends Browser {
     }
 
     protected _initMeta(): Record<string, unknown> {
+        const context = getTestContext();
         return {
             pid: process.pid,
             browserVersion: this.version,
-            testXReqId: this.state.testXReqId,
-            traceparent: this.state.traceparent,
+            testXReqId: context?.testXReqId ?? null,
+            traceparent: context?.traceparent ?? null,
             ...this._config.meta,
         };
     }

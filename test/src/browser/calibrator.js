@@ -2,6 +2,7 @@
 
 const path = require("path");
 const fs = require("fs");
+const timers = require("node:timers/promises");
 const { Image } = require("src/image");
 const { Calibrator } = require("src/browser/calibrator");
 const { CoreError } = require("src/browser/core-error");
@@ -27,10 +28,21 @@ describe("calibrator", () => {
         return image;
     };
 
+    const mkBlankImage = () => {
+        const image = sinon.createStubInstance(Image);
+        image.getSize.returns({ width: 10, height: 10 });
+        image.getRGB.resolves({ R: 255, G: 255, B: 255 });
+        image.save.resolves();
+        return image;
+    };
+
+    afterEach(() => sinon.restore());
+
     beforeEach(() => {
         browser = mkBrowser();
 
         sinon.stub(browser);
+        sinon.stub(timers, "setTimeout").resolves();
         browser.evalScript.returns(Promise.resolve({ innerWidth: 984 })); // width of viewport in test image
         browser.open.returns(Promise.resolve());
 
@@ -72,6 +84,7 @@ describe("calibrator", () => {
         assert.calledOnce(browser.open);
         assert.calledOnce(browser.evalScript);
         assert.calledOnce(browser.captureViewportImage);
+        assert.notCalled(timers.setTimeout);
     });
 
     it("should return cached result second time", async () => {
@@ -86,10 +99,45 @@ describe("calibrator", () => {
         assert.match(result.viewportArea.left, 2);
     });
 
-    it("should fail on broken calibration page", () => {
+    [false, true].forEach(hasICCPChunk => {
+        it(`should retry a blank screenshot until the marker appears (iCCP: ${hasICCPChunk})`, async () => {
+            setScreenshot("calibrate.png");
+            const blankImage = mkBlankImage();
+            blankImage._hasICCPChunk = hasICCPChunk;
+            browser.captureViewportImage.onFirstCall().resolves(blankImage);
+
+            const result = await calibrator.calibrate(browser);
+
+            assert.calledTwice(browser.captureViewportImage);
+            assert.calledOnceWithExactly(timers.setTimeout, 100);
+            assert.callOrder(browser.captureViewportImage, timers.setTimeout);
+            assert.calledOnce(browser.open);
+            assert.calledOnce(browser.evalScript);
+            assert.notCalled(blankImage.save);
+            assert.equal(result.viewportArea.top, 2);
+            assert.equal(result.viewportArea.left, 2);
+        });
+    });
+
+    it("should stop after 10 attempts and save the last screenshot", async () => {
+        const firstImage = mkBlankImage();
+        const lastImage = mkBlankImage();
+        browser.captureViewportImage.resolves(firstImage);
+        browser.captureViewportImage.onCall(9).resolves(lastImage);
+
+        await assert.isRejected(calibrator.calibrate(browser), CoreError);
+
+        assert.callCount(browser.captureViewportImage, 10);
+        assert.callCount(timers.setTimeout, 9);
+        assert.alwaysCalledWithExactly(timers.setTimeout, 100);
+        assert.notCalled(firstImage.save);
+        assert.calledWith(lastImage.save, path.join(require("os").tmpdir(), "testplane-calibration-page.png"));
+    });
+
+    it("should fail on broken calibration page", async () => {
         setScreenshot("calibrate-broken.png");
 
-        return assert.isRejected(calibrator.calibrate(browser), CoreError);
+        await assert.isRejected(calibrator.calibrate(browser), CoreError);
     });
 
     describe("when image has iCCP chunk", () => {
@@ -113,7 +161,7 @@ describe("calibrator", () => {
         it("should use the color at the center of the image as the marker search color", async () => {
             const image = setScreenshot("calibrate.png");
             // Color profile shifts the rendered marker color away from the hardcoded green
-            const markerColor = { R: 50, G: 100, B: 150 };
+            const markerColor = { R: 174, G: 248, B: 77 };
             const markerLeft = 1;
             const markerTop = 4;
             const markerRight = 9;

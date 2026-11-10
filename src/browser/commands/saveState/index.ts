@@ -54,7 +54,7 @@ export default (browser: ExistingBrowser): void => {
                             ({
                                 ...cookie,
                                 sameSite: cookie.sameSite ? _.startCase(cookie.sameSite) : cookie.sameSite,
-                            } as Cookie),
+                            }) as Cookie,
                     );
                 }
 
@@ -110,7 +110,7 @@ export default (browser: ExistingBrowser): void => {
                             ({
                                 ...cookie,
                                 sameSite: cookie.sameSite ? _.startCase(cookie.sameSite) : cookie.sameSite,
-                            } as Cookie),
+                            }) as Cookie,
                     );
                 }
 

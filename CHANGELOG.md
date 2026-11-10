@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.4.1 (2026-11-09)
+
+
+### Bug Fixes
+
+* reject unused directives at test file boundaries ([0201179](https://github.com/gemini-testing/testplane/commit/02011798bd94e6d367821f504500ba4eace38bf8))
+
+## 9.4.0 (2026-11-05)
+
+
+### Features
+
+* implement "docker" gridUrl to run browsers inside local docker containers ([#1338](https://github.com/gemini-testing/testplane/issues/1338)) ([2386ece](https://github.com/gemini-testing/testplane/commit/2386ecef678fe0faa77b362db0d7b34191c70c4c))
+
+### 9.3.7 (2026-11-05)
+
+
+### Bug Fixes
+
+* bunch of selectivity fixes ([#1348](https://github.com/gemini-testing/testplane/issues/1348)) ([56d1ff2](https://github.com/gemini-testing/testplane/commit/56d1ff27d2420c3478e1f3c8b77a082f32494695))
+
+### 9.3.6 (2026-11-02)
+
+
+### Bug Fixes
+
+* use full catch statement to support chrome 57 ([#1353](https://github.com/gemini-testing/testplane/issues/1353)) ([9a17310](https://github.com/gemini-testing/testplane/commit/9a173101bdae4994cb62be347df499a042f360e9))
+
+### 9.3.5 (2026-11-02)
+
+### 9.3.4 (2026-10-20)
+
+
+### Bug Fixes
+
+* abort timed-out WebSocket connections safely ([241ecd3](https://github.com/gemini-testing/testplane/commit/241ecd3bf93cb1ab1973ac9933a9653a530a8012))
+
+### 9.3.3 (2026-10-14)
+
+
+### Bug Fixes
+
+* fix DPR bug for oopif by calculating pixel ratio based on screenshot size ([#1331](https://github.com/gemini-testing/testplane/issues/1331)) ([63bf133](https://github.com/gemini-testing/testplane/commit/63bf1331afaedcd7d37790d742901bdaf7f4ea08))
+
 ### 9.3.2 (2026-10-07)
 
 ### 9.3.1 (2026-09-28)

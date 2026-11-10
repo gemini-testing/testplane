@@ -1,6 +1,6 @@
 "use strict";
 
-const BrowserAgent = require("src/runner/browser-agent");
+const { BrowserAgent } = require("src/runner/browser-agent");
 const { BasicPool } = require("src/browser-pool/basic-pool");
 
 describe("runner/browser-agent", () => {
@@ -11,7 +11,7 @@ describe("runner/browser-agent", () => {
         version = version || "some.default.version";
         pool = pool || Object.create(BasicPool.prototype);
 
-        return BrowserAgent.create({ id, version, pool });
+        return BrowserAgent.create({ browserConfig: { id }, version, pool });
     }
 
     function mkBrowser_(opts = {}) {
@@ -44,7 +44,7 @@ describe("runner/browser-agent", () => {
         it("should request browser associated with agent", async () => {
             await mkAgent_({ id: "bro" }).getBrowser();
 
-            assert.calledOnceWith(BasicPool.prototype.getBrowser, "bro");
+            assert.calledOnceWith(BasicPool.prototype.getBrowser, { id: "bro" });
         });
 
         it("should request browser with passed options", async () => {
@@ -99,7 +99,7 @@ describe("runner/browser-agent", () => {
             await browserAgent.getBrowser({ some: "opt" });
             await browserAgent.getBrowser({ some: "opt" });
 
-            assert.alwaysCalledWith(BasicPool.prototype.getBrowser, "bro", { some: "opt", version: "100.500" });
+            assert.alwaysCalledWith(BasicPool.prototype.getBrowser, { id: "bro" }, { some: "opt", version: "100.500" });
         });
     });
 

@@ -1,21 +1,26 @@
+import { createHash } from "crypto";
 import { Config } from "../../config";
-import { NewBrowser } from "./../new-browser";
-import { ExistingBrowser } from "./../existing-browser";
-import { Calibrator } from "./../calibrator";
+import { BrowserConfig } from "../../config/browser-config";
+import { ExistingBrowser } from "../existing-browser";
+import { Calibrator } from "../calibrator";
 import { AsyncEmitter, MasterEvents } from "../../events";
-import { BrowserName, type W3CBrowserName } from "./../types";
+import { BrowserName, type W3CBrowserName } from "../types";
 import { getNormalizedBrowserName } from "../../utils/browser";
 import { LOCAL_GRID_URL } from "../../constants/config";
-import { WebdriverPool } from "../../browser-pool/webdriver-pool";
+import { acquireStandalonePool } from "./pool";
+import { AsyncCleanupStack } from "../../utils/async-cleanup-stack";
 import type { StandaloneBrowserOptionsInput } from "./types";
 import fs from "fs-extra";
 import { hasGlobalFilesToRemove } from "../../globalFilesToRemove";
-
-const webdriverPool = new WebdriverPool();
+import { initImage } from "../../image";
 
 export async function launchBrowser(
     options: StandaloneBrowserOptionsInput = {},
-): Promise<WebdriverIO.Browser & { getDriverPid?: () => number | undefined }> {
+): Promise<WebdriverIO.Browser & AsyncDisposable & { getDriverPid?: () => number | null }> {
+    await initImage();
+
+    await using startup = new AsyncCleanupStack();
+    let cleanup = startup;
     const desiredCapabilities = options.desiredCapabilities || {};
 
     const browserName = desiredCapabilities.browserName || BrowserName.CHROME;
@@ -36,6 +41,7 @@ export async function launchBrowser(
             ...desiredCapabilities,
         },
         gridUrl: options.gridUrl || LOCAL_GRID_URL,
+        docker: options.docker,
         baseUrl: options.baseUrl,
         headless: options.headless !== undefined ? options.headless : true,
         pageLoadTimeout: options.pageLoadTimeout,
@@ -54,13 +60,21 @@ export async function launchBrowser(
     };
 
     const filesToRemove: string[] = [];
+    startup.defer(async () => {
+        if (filesToRemove.length > 0 && !hasGlobalFilesToRemove()) {
+            await Promise.all(filesToRemove.map(path => fs.remove(path)));
+        }
+    });
 
     const config = new Config({
+        system: options.system,
         browserDownloadMirrors: options.browserDownloadMirrors,
         browsers: {
             [browserName]: browserConfig,
         },
     });
+    const sessionConfig = new BrowserConfig(config.forBrowser(browserName));
+    sessionConfig.id = getBrowserId(sessionConfig);
 
     if (!process.env.WDIO_LOG_LEVEL) {
         process.env.WDIO_LOG_LEVEL = config.system.debug ? "trace" : "error";
@@ -72,21 +86,27 @@ export async function launchBrowser(
         filesToRemove.push(path);
     });
 
-    const newBrowser = new NewBrowser(config, {
-        id: browserName,
-        version: desiredCapabilities.browserVersion,
-        emitter,
-        wdPool: webdriverPool,
-    });
+    const { pool } = startup.use(
+        await acquireStandalonePool({
+            browserDownloadMirrors: config.browserDownloadMirrors,
+            areLocalWdDebugLogsEnabled: config.system.debug,
+        }),
+    );
+    const newBrowser = startup.adopt(
+        await pool.getBrowser(sessionConfig, {
+            version: desiredCapabilities.browserVersion,
+        }),
+        browser => pool.freeBrowser(browser),
+    );
 
-    await newBrowser.init();
-
-    const existingBrowser = new ExistingBrowser(config, {
-        id: browserName,
-        version: desiredCapabilities.browserVersion,
-        emitter,
-        state: {},
-    });
+    const existingBrowser = startup.use(
+        new ExistingBrowser(sessionConfig, {
+            id: sessionConfig.id,
+            version: desiredCapabilities.browserVersion,
+            emitter,
+            state: {},
+        }),
+    );
 
     const calibrator = new Calibrator();
 
@@ -95,6 +115,7 @@ export async function launchBrowser(
     await existingBrowser.init(
         {
             sessionId: session.sessionId,
+            cdpAvailable: newBrowser.cdpAvailable,
             sessionCaps: session.capabilities,
             sessionOpts: {
                 capabilities: session.capabilities,
@@ -104,16 +125,29 @@ export async function launchBrowser(
         calibrator,
     );
 
-    existingBrowser.publicAPI.overwriteCommand("deleteSession", async function () {
-        await existingBrowser.quit();
-        await newBrowser.kill();
-
-        if (filesToRemove.length > 0 && !hasGlobalFilesToRemove()) {
-            await Promise.all(filesToRemove.map(path => fs.remove(path)));
-        }
-    });
-
+    let closing: Promise<void> | null = null;
+    const close = (): Promise<void> => (closing ??= cleanup.disposeAsync());
+    existingBrowser.publicAPI.overwriteCommand("deleteSession", close);
+    Object.defineProperty(existingBrowser.publicAPI, Symbol.asyncDispose, { value: close });
     existingBrowser.publicAPI.addCommand("getDriverPid", () => newBrowser.getDriverPid());
 
-    return existingBrowser.publicAPI;
+    cleanup = startup.move();
+
+    return existingBrowser.publicAPI as WebdriverIO.Browser & AsyncDisposable;
+}
+
+function getBrowserId(config: BrowserConfig): string {
+    const capabilities = config.desiredCapabilities;
+    const version = capabilities?.browserVersion || (capabilities as { version?: string } | null)?.version || "default";
+    const data = JSON.stringify([capabilities?.browserName, version, config.docker], (_key, value: unknown): unknown =>
+        value && typeof value === "object" && !Array.isArray(value)
+            ? Object.fromEntries(
+                  Object.keys(value)
+                      .sort()
+                      .map(key => [key, (value as Record<string, unknown>)[key]]),
+              )
+            : value,
+    );
+
+    return createHash("sha256").update(data).digest("hex");
 }

@@ -1,6 +1,6 @@
 "use strict";
 
-const BrowserAgent = require("src/runner/browser-agent");
+const { BrowserAgent } = require("src/runner/browser-agent");
 const HighPriorityBrowserAgent = require("src/runner/test-runner/high-priority-browser-agent");
 
 describe("runner/test-runner/high-priority-browser-agent", () => {

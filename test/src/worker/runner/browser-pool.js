@@ -28,10 +28,11 @@ describe("worker/browser-pool", () => {
     const stubBrowser = opts => {
         const bro = _.defaults(opts || {}, {
             state: { isBroken: false },
+            publicAPI: {},
         });
 
         bro.init = sandbox.stub().resolves();
-        bro.quit = sandbox.stub();
+        bro[Symbol.asyncDispose] = sandbox.stub().resolves();
         bro.markAsBroken = sandbox.stub();
 
         return bro;
@@ -53,7 +54,7 @@ describe("worker/browser-pool", () => {
 
             await browserPool.getBrowser({ browserId: "bro-id", browserVersion: "1.0", state: {} });
 
-            assert.calledOnceWith(ExistingBrowser.create, config, {
+            assert.calledOnceWith(ExistingBrowser.create, config.forBrowser("bro-id"), {
                 id: "bro-id",
                 version: "1.0",
                 state: {},
@@ -70,11 +71,12 @@ describe("worker/browser-pool", () => {
                 sessionId: "100-500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
+                cdpAvailable: false,
             });
 
             assert.calledOnceWith(
                 browser.init,
-                { sessionId: "100-500", sessionCaps: "some-caps", sessionOpts: "some-opts" },
+                { sessionId: "100-500", sessionCaps: "some-caps", sessionOpts: "some-opts", cdpAvailable: false },
                 sinon.match.instanceOf(Calibrator),
             );
         });
@@ -173,14 +175,28 @@ describe("worker/browser-pool", () => {
             assert.calledOnceWith(ipc.emit, "worker.100500.freeBrowser", { foo: "bar" });
         });
 
-        it("should quit from browser", async () => {
+        it("should dispose the browser attachment", async () => {
             const browserPool = createPool();
             ExistingBrowser.create.returns(stubBrowser());
 
             const browser = await browserPool.getBrowser({ browserId: "bro-id" });
-            browserPool.freeBrowser(browser);
+            await browserPool.freeBrowser(browser);
 
-            assert.calledOnce(browser.quit);
+            assert.calledOnce(browser[Symbol.asyncDispose]);
+        });
+
+        it("should notify the master even when attachment cleanup fails", async () => {
+            const browser = stubBrowser({ sessionId: "100500" });
+            const error = new Error("attachment cleanup failed");
+            browser[Symbol.asyncDispose].rejects(error);
+
+            assert.strictEqual(
+                await createPool()
+                    .freeBrowser(browser)
+                    .catch(err => err),
+                error,
+            );
+            assert.calledOnceWith(ipc.emit, "worker.100500.freeBrowser", browser.state);
         });
     });
 });

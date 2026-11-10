@@ -75,6 +75,7 @@ function makeConfigStub(opts = {}) {
 
 function makeBrowserConfigStub(opts = {}, browserId) {
     return {
+        id: browserId,
         baseUrl: opts.baseUrl,
         retry: opts.retry,
         shouldRetry: opts.shouldRetry,

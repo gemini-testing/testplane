@@ -31,7 +31,7 @@ const removeDomainFromCookies = (loginState: SaveStateData): void => {
                 process.exit(1);
             }, TIMEOUT).unref();
 
-            let browser: WebdriverIO.Browser & { getDriverPid?: () => number | undefined };
+            let browser: Awaited<ReturnType<typeof launchBrowser>>;
 
             let loginState: SaveStateData;
             let status: WebdriverIO.Element;

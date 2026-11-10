@@ -2,7 +2,7 @@ import SkippedTestRunner from "./skipped-test-runner";
 import InsistantTestRunner from "./insistant-test-runner";
 import { Config } from "../../config";
 import type { Test } from "../../types";
-import type BrowserAgent from "../browser-agent";
+import type { BrowserAgent } from "../browser-agent";
 import type { ProfilerRuntimeLike } from "../../profiler/runtime/types";
 
 export type TestRunner = SkippedTestRunner | InsistantTestRunner;

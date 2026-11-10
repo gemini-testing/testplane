@@ -261,18 +261,21 @@ export class SelectivityRunner {
     }
 
     async _saveSelectivityReport(): Promise<void> {
-        const browserReportPaths = Object.keys(this._stats).reduce((acc, browserId) => {
-            const reportPath =
-                process.env.TESTPLANE_SELECTIVITY_REPORT_PATH ||
-                this._config.forBrowser(browserId).selectivity.reportPath;
+        const browserReportPaths = Object.keys(this._stats).reduce(
+            (acc, browserId) => {
+                const reportPath =
+                    process.env.TESTPLANE_SELECTIVITY_REPORT_PATH ||
+                    this._config.forBrowser(browserId).selectivity.reportPath;
 
-            if (reportPath) {
-                acc[reportPath] ||= [];
-                acc[reportPath].push(browserId);
-            }
+                if (reportPath) {
+                    acc[reportPath] ||= [];
+                    acc[reportPath].push(browserId);
+                }
 
-            return acc;
-        }, {} as Record<string, string[]>);
+                return acc;
+            },
+            {} as Record<string, string[]>,
+        );
 
         const promises = await Promise.allSettled(
             Object.keys(browserReportPaths).map(async reportPath => {

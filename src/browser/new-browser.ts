@@ -1,383 +1,91 @@
-import { URLSearchParams } from "url";
-import URI from "urijs";
-import { isBoolean, assign, isEmpty, set } from "lodash";
-import { remote } from "@testplane/webdriverio";
-import type { Capabilities } from "@testplane/wdio-types";
-
-import { Browser, BrowserOpts } from "./browser";
-import signalHandler from "../signal-handler";
+import { Browser, type BrowserOpts } from "./browser";
+import type { BrowserBackendClient } from "../browser-backend";
+import { AsyncCleanupStack } from "../utils/async-cleanup-stack";
 import { warn } from "../utils/logger";
-import { getNormalizedBrowserName } from "../utils/browser";
-import { getInstance } from "../config/runtime-config";
-import { LOCAL_GRID_URL, W3C_CAPABILITIES, VENDOR_CAPABILITIES } from "../constants/config";
-import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
-import { BrowserName, type W3CBrowserName } from "./types";
 
-export type VendorSpecificCapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
-export type HeadlessBrowserOptions = Partial<
-    Record<
-        W3CBrowserName,
-        {
-            capabilityName: VendorSpecificCapabilityName;
-            getArgs: (headlessMode: BrowserConfig["headless"]) => string[];
-        }
-    >
->;
-const DEFAULT_PORT = 4444;
-const INTERNET_EXPLORER_BROWSER_NAME = "internet explorer";
-const WEBDRIVER_CLASSIC_CAPABILITY = "wdio:enforceWebDriverClassic";
+export class NewBrowser extends Browser implements AsyncDisposable {
+    private _cleanup = new AsyncCleanupStack();
+    private _closing: Promise<void> | null = null;
+    private _forceClose = true;
 
-const headlessBrowserOptions: HeadlessBrowserOptions = {
-    [BrowserName.CHROME]: {
-        capabilityName: "goog:chromeOptions",
-        getArgs: (headlessMode: BrowserConfig["headless"]): string[] => {
-            const headlessValue = isBoolean(headlessMode) ? "headless" : `headless=${headlessMode}`;
-
-            return [headlessValue, "disable-gpu"];
-        },
-    },
-    [BrowserName.CHROMEHEADLESSSHELL]: {
-        capabilityName: "goog:chromeOptions",
-        getArgs: (headlessMode: BrowserConfig["headless"]): string[] => {
-            const headlessValue = isBoolean(headlessMode) ? "headless" : `headless=${headlessMode}`;
-
-            return [headlessValue, "disable-gpu"];
-        },
-    },
-    [BrowserName.FIREFOX]: {
-        capabilityName: "moz:firefoxOptions",
-        getArgs: (): string[] => ["-headless"],
-    },
-    [BrowserName.EDGE]: {
-        capabilityName: "ms:edgeOptions",
-        getArgs: (): string[] => ["--headless"],
-    },
-};
-
-export class NewBrowser extends Browser {
-    private _rootConfig: Config;
-    private _onExit: (err?: Error) => Promise<void> = async () => {};
-    private _initPromise: Promise<this> | null = null;
-    private _quitPromise: Promise<void> | null = null;
-    private _cleanupPromise: Promise<void> | null = null;
-    private _shouldKillWebdriver = false;
-
-    constructor(config: Config, opts: BrowserOpts) {
+    private constructor(
+        config: BrowserConfig,
+        opts: BrowserOpts,
+        private readonly _backend: BrowserBackendClient,
+    ) {
         super(config, opts);
-
-        this._rootConfig = config;
-        this._onExit = async (err?: Error): Promise<void> => await this.quit(err);
-        signalHandler.on("exit", this._onExit);
     }
 
-    init(): Promise<this> {
-        this._initPromise ??= this._init();
+    static async create(config: BrowserConfig, backend: BrowserBackendClient, opts: BrowserOpts): Promise<NewBrowser> {
+        await using cleanup = new AsyncCleanupStack();
 
-        return this._initPromise;
+        const browser = new NewBrowser(config, opts, backend);
+        browser._session = cleanup.adopt(
+            await backend.startSession(config, {
+                browserVersionOverride: opts.version ?? null,
+            }),
+            session => backend.deleteSession(session, { force: browser._forceClose }),
+        );
+
+        browser._addCommands();
+        browser.restoreHttpTimeout();
+        await browser._setPageLoadTimeout();
+
+        browser._forceClose = false;
+        browser._cleanup = cleanup.move();
+
+        return browser;
     }
 
-    private async _init(): Promise<this> {
-        try {
-            this._session = await this._createSession();
+    get cdpAvailable(): boolean {
+        return this._backend.isCdpAvailable?.(this._session!) ?? true;
+    }
 
-            this._addCommands();
-            this.restoreHttpTimeout();
-            await this._setPageLoadTimeout();
-
-            return this;
-        } catch (error) {
-            await this.kill();
-
-            throw error;
-        }
+    getDriverPid(): number | null {
+        return this._backend.getDriverPid?.(this._session!) ?? null;
     }
 
     reset(): Promise<void> {
         return Promise.resolve();
     }
 
-    quit(err?: Error): Promise<void> {
-        if (this._quitPromise) {
-            return this._quitPromise;
+    quit(error: Error | null = null): Promise<void> {
+        if (error) {
+            this._exitError ??= error;
         }
 
-        this._exitError = err;
-        signalHandler.off("exit", this._onExit);
-        this._quitPromise = this._quit();
+        this._closing ??= this._cleanup.disposeAsync();
 
-        return this._quitPromise;
+        return this._closing;
     }
 
-    private async _quit(): Promise<void> {
-        try {
-            await this._initPromise;
-        } catch {
-            return;
+    async kill(): Promise<void> {
+        this._forceClose = true;
+
+        if (this._closing) {
+            // Graceful cleanup already started: prevent the driver from being reused.
+            await this._backend.deleteSession(this._session!, { force: true });
         }
 
-        await this._cleanup({ canReuseWebdriver: true });
+        await this.quit();
     }
 
-    kill(): Promise<void> {
-        return this._cleanup({ canReuseWebdriver: false });
+    [Symbol.asyncDispose](): Promise<void> {
+        return this.quit();
     }
 
-    private _cleanup({ canReuseWebdriver }: { canReuseWebdriver: boolean }): Promise<void> {
-        if (!canReuseWebdriver) {
-            this._shouldKillWebdriver = true;
-        }
-
-        this._cleanupPromise ??= this._performCleanup(canReuseWebdriver);
-
-        return this._cleanupPromise;
-    }
-
-    private async _performCleanup(canReuseWebdriver: boolean): Promise<void> {
-        signalHandler.off("exit", this._onExit);
-
-        try {
-            if (this._session) {
-                if (canReuseWebdriver) {
-                    this.setHttpTimeout(this._config.sessionQuitTimeout);
-                }
-
-                await this._session.deleteSession();
-            }
-        } catch (error) {
-            this._shouldKillWebdriver = true;
-            const warningSubject = canReuseWebdriver ? "close session" : "kill WebDriver process";
-
-            warn(`WARNING: Can not ${warningSubject}: ${(error as Error)?.message ?? String(error)}`);
-        } finally {
-            if (canReuseWebdriver && this._session && !this._shouldKillWebdriver) {
-                this._wdProcess?.free();
-            } else {
-                this._wdProcess?.kill();
-            }
-
-            // Pool cleanup still reads session metadata after cancellation.
-            this._wdProcess = null;
-        }
-    }
-
-    getDriverPid(): number | undefined {
-        if (this._wdProcess) {
-            return this._wdProcess.getPid();
-        }
-
-        return;
-    }
-
-    protected async _createSession(): Promise<WebdriverIO.Browser> {
-        const sessionOpts = await this._getSessionOpts();
-
-        return remote(sessionOpts);
-    }
-
-    protected async _setPageLoadTimeout(): Promise<void> {
-        if (!this._config.pageLoadTimeout) {
-            return;
-        }
-
+    private async _setPageLoadTimeout(): Promise<void> {
+        if (!this._config.pageLoadTimeout) return;
         try {
             await this._session!.setTimeout({ pageLoad: this._config.pageLoadTimeout });
-        } catch (e) {
-            // edge with w3c does not support setting page load timeout
-            if (
-                this._session!.isW3C &&
-                (this._session!.capabilities as { browserName: string }).browserName === "MicrosoftEdge"
-            ) {
-                warn(`WARNING: Can not set page load timeout: ${(e as Error).message}`);
+        } catch (error) {
+            // Edge with W3C does not support setting the page load timeout.
+            if (this._session!.isW3C && this.capabilities.browserName === "MicrosoftEdge") {
+                warn(`WARNING: Can not set page load timeout: ${(error as Error).message}`);
             } else {
-                throw e;
+                throw error;
             }
         }
-    }
-
-    protected _isLocalGridUrl(): boolean {
-        return this._config.gridUrl === LOCAL_GRID_URL || getInstance().local;
-    }
-
-    protected async _getSessionOpts(): Promise<Capabilities.WebdriverIOConfig> {
-        const config = this._config;
-
-        let gridUrl = config.gridUrl;
-
-        if (this._isLocalGridUrl()) {
-            gridUrl = await this._getLocalWebdriverGridUrl();
-        }
-
-        const gridUri = new URI(gridUrl);
-
-        const capabilities = await this._extendCapabilities(config);
-
-        const options = {
-            protocol: gridUri.protocol(),
-            hostname: this._getGridHost(gridUri),
-            port: gridUri.port() ? parseInt(gridUri.port(), 10) : DEFAULT_PORT,
-            path: gridUri.path(),
-            queryParams: this._getQueryParams(gridUri.query()),
-            capabilities,
-            automationProtocol: config.automationProtocol,
-            connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
-            connectionRetryCount: 3,
-            baseUrl: config.baseUrl,
-            waitforTimeout: config.waitTimeout,
-            waitforInterval: config.waitInterval,
-            ...this._getSessionOptsFromConfig(),
-        };
-
-        return options as Capabilities.WebdriverIOConfig;
-    }
-
-    protected _extendCapabilities(config: BrowserConfig): Promise<WebdriverIO.Capabilities> {
-        const capabilitiesExtendedByVersion = this.version
-            ? this._extendCapabilitiesByVersion()
-            : config.desiredCapabilities;
-        const capabilitiesExtendedByProtocol = this._addWebDriverClassicCapability(capabilitiesExtendedByVersion!);
-        const capabilitiesWithAddedHeadless = this._addHeadlessCapability(
-            config.headless,
-            capabilitiesExtendedByProtocol!,
-        );
-
-        return this._isLocalGridUrl()
-            ? this._applyLocalBrowserCapabilities(config, capabilitiesWithAddedHeadless)
-            : Promise.resolve(capabilitiesWithAddedHeadless);
-    }
-
-    protected _addHeadlessCapability(
-        headless: BrowserConfig["headless"],
-        capabilities: WebdriverIO.Capabilities,
-    ): WebdriverIO.Capabilities {
-        if (!headless) {
-            return capabilities;
-        }
-        const browserNameW3C = getNormalizedBrowserName(capabilities.browserName);
-
-        if (!browserNameW3C) {
-            return capabilities;
-        }
-
-        const capabilitySettings = headlessBrowserOptions[browserNameW3C];
-        if (!capabilitySettings) {
-            warn(`WARNING: Headless setting is not supported for ${capabilities.browserName} browserName`);
-            return capabilities;
-        }
-        const browserCapabilities = (capabilities[capabilitySettings.capabilityName as VendorSpecificCapabilityName] ??
-            {}) as WebdriverIO.Capabilities[VendorSpecificCapabilityName];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (capabilities as any)[capabilitySettings.capabilityName] = {
-            ...browserCapabilities,
-            args: [...(browserCapabilities!.args ?? []), ...capabilitySettings.getArgs(headless)],
-        };
-        return capabilities;
-    }
-
-    protected _addWebDriverClassicCapability(capabilities: WebdriverIO.Capabilities): WebdriverIO.Capabilities {
-        if (
-            capabilities.browserName?.toLowerCase() === INTERNET_EXPLORER_BROWSER_NAME ||
-            capabilities?.webSocketUrl ||
-            WEBDRIVER_CLASSIC_CAPABILITY in capabilities
-        ) {
-            return capabilities;
-        }
-
-        return assign({}, capabilities, { [WEBDRIVER_CLASSIC_CAPABILITY]: true });
-    }
-
-    protected _extendCapabilitiesByVersion(): WebdriverIO.Capabilities {
-        const { desiredCapabilities, sessionEnvFlags } = this._config;
-        const versionKeyName =
-            desiredCapabilities!.browserVersion || sessionEnvFlags.isW3C ? "browserVersion" : "version";
-
-        return assign({}, desiredCapabilities, { [versionKeyName]: this.version });
-    }
-
-    protected async _getLocalWebdriverGridUrl(): Promise<string> {
-        if (!this._wdPool) {
-            throw new Error("webdriver pool is not defined");
-        }
-
-        if (this._wdProcess) {
-            return this._wdProcess.gridUrl;
-        }
-
-        this._wdProcess = await this._wdPool.getWebdriver(
-            this._config.desiredCapabilities?.browserName,
-            this._config.desiredCapabilities?.browserVersion,
-            {
-                debug: this._rootConfig.system.debug,
-                browserDownloadMirrors: this._rootConfig.browserDownloadMirrors,
-            },
-        );
-
-        return this._wdProcess.gridUrl;
-    }
-
-    protected async _applyLocalBrowserCapabilities(
-        config: BrowserConfig,
-        capabilities: WebdriverIO.Capabilities,
-    ): Promise<WebdriverIO.Capabilities> {
-        const { installBrowser } = await import("../browser-installer");
-        const browserNameW3C = getNormalizedBrowserName(config.desiredCapabilities?.browserName);
-
-        if (!browserNameW3C) {
-            throw new Error(
-                [
-                    `Running auto local "${config.desiredCapabilities?.browserName}" is unsupported`,
-                    `Supported browsers: "chrome", "firefox", "safari", "edge"`,
-                ].join("\n"),
-            );
-        }
-
-        const executablePath = await installBrowser(browserNameW3C, config.desiredCapabilities?.browserVersion, {
-            shouldInstallWebDriver: false,
-            shouldInstallUbuntuPackages: true,
-            browserDownloadMirrors: this._rootConfig.browserDownloadMirrors,
-        });
-
-        if (executablePath) {
-            const capabilitySettings = headlessBrowserOptions[browserNameW3C];
-
-            if (!capabilitySettings) {
-                return capabilities;
-            }
-
-            capabilities[capabilitySettings.capabilityName] ||= {};
-            capabilities[capabilitySettings.capabilityName]!.binary ||= executablePath;
-        }
-
-        const filteredCapabilities: WebdriverIO.Capabilities = Object.keys(capabilities)
-            .filter(capabilityName => {
-                const isW3CCapability = W3C_CAPABILITIES.includes(capabilityName);
-                const isVendorSpecificCapability = VENDOR_CAPABILITIES[browserNameW3C].includes(capabilityName);
-
-                return isW3CCapability || isVendorSpecificCapability;
-            })
-            .reduce((acc, capabilityName) => {
-                return set(acc, [capabilityName], capabilities[capabilityName as keyof WebdriverIO.Capabilities]);
-            }, {});
-
-        return filteredCapabilities;
-    }
-
-    protected _getGridHost(url: URI): string {
-        return new URI({
-            username: url.username(),
-            password: url.password(),
-            hostname: url.hostname(),
-        })
-            .toString()
-            .slice(2); // URIjs leaves `//` prefix, removing it
-    }
-
-    protected _getQueryParams(query: string): Record<string, string> {
-        if (isEmpty(query)) {
-            return {};
-        }
-
-        const urlParams = new URLSearchParams(query);
-        return Object.fromEntries(urlParams);
     }
 }

@@ -52,10 +52,11 @@ module.exports = class TestRunner {
         this._test.testplaneCtx = _.cloneDeep(test.testplaneCtx) || {};
     }
 
-    async prepareBrowser({ sessionId, sessionCaps, sessionOpts, state }) {
+    /** @param {import("./types").WorkerTestRunnerRunOpts} options */
+    async prepareBrowser({ sessionId, sessionCaps, sessionOpts, cdpAvailable, state }) {
         this._browserIsSettled = new Promise(resolve => {
             this._browserAgent
-                .getBrowser({ sessionId, sessionCaps, sessionOpts, state })
+                .getBrowser({ sessionId, sessionCaps, sessionOpts, cdpAvailable, state })
                 .then(browser => {
                     this._browser = browser;
                 })
@@ -151,7 +152,7 @@ module.exports = class TestRunner {
             this._browser.state.isLastTestFailed = true;
         }
 
-        this._browserAgent.freeBrowser(this._browser);
+        await this._browserAgent.freeBrowser(this._browser);
 
         if (error) {
             filterExtraStackFrames(error);

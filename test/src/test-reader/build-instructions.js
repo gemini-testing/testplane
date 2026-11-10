@@ -43,6 +43,12 @@ describe("test-reader/build-instructions", () => {
         });
 
         describe("exec", () => {
+            let treeBuilder;
+
+            beforeEach(() => {
+                treeBuilder = sinon.createStubInstance(TreeBuilder);
+            });
+
             it("should exec instructions in the order of push", () => {
                 const foo = sinon.spy().named("foo");
                 const bar = sinon.spy().named("bar");
@@ -55,7 +61,10 @@ describe("test-reader/build-instructions", () => {
 
             it("should exec common instructions with passed ctx", () => {
                 const instruction = sinon.spy();
-                const ctx = { foo: "bar" };
+                const ctx = {
+                    foo: "bar",
+                    treeBuilder,
+                };
 
                 new InstructionsList().push(instruction).exec([], ctx);
 
@@ -67,7 +76,10 @@ describe("test-reader/build-instructions", () => {
                 const bar = sinon.spy().named("bar");
                 const baz = sinon.spy().named("baz");
 
-                const ctx = { foo: "bar" };
+                const ctx = {
+                    foo: "bar",
+                    treeBuilder,
+                };
 
                 new InstructionsList()
                     .push(foo, "/foo.js")
@@ -83,7 +95,10 @@ describe("test-reader/build-instructions", () => {
             it("should ignore unknown files", () => {
                 const bar = sinon.spy().named("bar");
 
-                const ctx = { foo: "bar" };
+                const ctx = {
+                    foo: "bar",
+                    treeBuilder,
+                };
 
                 new InstructionsList().push(bar, "/bar.js").exec(["/foo.js", "/bar.js"], ctx);
 
@@ -97,8 +112,12 @@ describe("test-reader/build-instructions", () => {
 
                 const instructionsList = new InstructionsList().push(foo).push(bar, "/bar.js").push(baz, "/baz.js");
 
-                instructionsList.exec(["/bar.js"]);
-                instructionsList.exec(["/baz.js"]);
+                instructionsList.exec(["/bar.js"], {
+                    treeBuilder,
+                });
+                instructionsList.exec(["/baz.js"], {
+                    treeBuilder,
+                });
 
                 assert.calledTwice(foo);
                 assert.calledOnce(bar);
@@ -109,7 +128,9 @@ describe("test-reader/build-instructions", () => {
                 const foo = sinon.spy().named("foo");
                 const bar = sinon.spy().named("bar");
 
-                new InstructionsList().push(foo, "/foo.js").push(bar).exec(["/foo.js"]);
+                new InstructionsList().push(foo, "/foo.js").push(bar).exec(["/foo.js"], {
+                    treeBuilder,
+                });
 
                 assert.callOrder(bar, foo);
             });

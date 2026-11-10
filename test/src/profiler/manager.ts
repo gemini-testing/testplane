@@ -22,7 +22,7 @@ describe("profiler/manager", () => {
             system: { workers: 2 },
             getBrowserIds: () => ["chrome"],
             forBrowser: () => ({ sessionsPerBrowser: 3 }),
-        } as unknown as Config);
+        }) as unknown as Config;
 
     const makeOutput = (): ProfilerConsole & { log: SinonStub; warn: SinonStub } => ({
         log: sandbox.stub(),

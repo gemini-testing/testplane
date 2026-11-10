@@ -1,6 +1,7 @@
 import { groupBy } from "lodash";
+import fs from "node:fs";
 import path from "node:path";
-import { resolve as urlResolve } from "node:url";
+import { fileURLToPath, resolve as urlResolve } from "node:url";
 import { CSS_SOURCE_MAP_URL_COMMENT } from "../../../error-snippets/constants";
 import {
     fetchTextWithBrowserFallback,
@@ -17,15 +18,14 @@ import type { CssEvents, CSSRuleUsage } from "../domains/css";
 import type { SelectivityAssetState } from "./types";
 import type { SelectivityMapSourceMapUrlFn } from "../../../config/types";
 
-interface CssSessionCache
-    extends Record<
-        CDPStyleSheetId,
-        {
-            sourceMap: Exclude<Awaited<SelectivityAssetState>, Error>;
-            sourceMapUrl: string | null;
-            isError: boolean;
-        }
-    > {}
+interface CssSessionCache extends Record<
+    CDPStyleSheetId,
+    {
+        sourceMap: Exclude<Awaited<SelectivityAssetState>, Error>;
+        sourceMapUrl: string | null;
+        isError: boolean;
+    }
+> {}
 
 export class CSSSelectivity {
     private readonly _cdp: CDP;
@@ -34,8 +34,7 @@ export class CSSSelectivity {
     private readonly _sourceRoot: string;
     private readonly _mapSourceMapUrl: SelectivityMapSourceMapUrlFn | null;
     private _cssOnStyleSheetAddedFn:
-        | ((params: CssEvents["styleSheetAdded"], cdpSessionId?: CDPSessionId) => void)
-        | null = null;
+        ((params: CssEvents["styleSheetAdded"], cdpSessionId?: CDPSessionId) => void) | null = null;
     private readonly _stylesSourceMap: Record<CDPStyleSheetId, SelectivityAssetState> = {};
     private readonly _styleSheetIdToSourceMapUrl: Record<CDPStyleSheetId, string | null> = {};
     private readonly _coverageResult: CSSRuleUsage[] = [];
@@ -322,7 +321,7 @@ export class CSSSelectivity {
                     const sourceMap = await this._stylesSourceMap[styleSheetId];
                     const sourceMapUrl = this._styleSheetIdToSourceMapUrl[styleSheetId];
 
-                    if (!sourceMap) {
+                    if (sourceMap === null || sourceMap === undefined) {
                         return;
                     }
 
@@ -345,7 +344,7 @@ export class CSSSelectivity {
                         ? await getCachedSelectivityFile(CacheType.Asset, sourceMapUrl as string)
                         : sourceMap;
 
-                    if (!sourceMapString) {
+                    if (sourceMapString === null || sourceMapString === undefined) {
                         throw new Error(`CSS Selectivity: fs-cache is broken for ${sourceMapUrl}`);
                     }
 
@@ -361,12 +360,40 @@ export class CSSSelectivity {
                             return;
                         }
 
-                        // "Each entry is either a string that is a (potentially relative) URL", so we are using posix.jojn
-                        // https://tc39.es/ecma426/#sec-source-map-format
-                        // Except for file path with protocol ("turbopack://", "file://")
-                        const sourceRootBasedPath = hasProtocol(sourceFilePath)
-                            ? sourceFilePath
-                            : path.posix.join(rawSourceMap.sourceRoot || "", sourceFilePath);
+                        if (hasProtocol(sourceFilePath)) {
+                            totalDependingSourceFiles.add(sourceFilePath);
+                            return;
+                        }
+
+                        // sourceRoot is a directory, and URL roots must keep their protocol when resolving sources.
+                        const sourceRoot = rawSourceMap.sourceRoot || "";
+                        const sourceRootHasProtocol = hasProtocol(sourceRoot);
+                        const sourceRootBasedPath = sourceRootHasProtocol
+                            ? urlResolve(
+                                  sourceRoot.endsWith("/") ? sourceRoot : `${sourceRoot}/`,
+                                  sourceFilePath.replace(/^\/+/, ""),
+                              )
+                            : path.posix.join(sourceRoot, sourceFilePath);
+
+                        // A leading slash can be a logical source-map path, not a host filesystem absolute.
+                        // Keep genuine absolute originals too. If both local candidates exist, retain both:
+                        // choosing one silently could miss changes to the other. Missing originals still fail downstream.
+                        if (
+                            path.posix.isAbsolute(sourceFilePath) &&
+                            fs.existsSync(decodeURIComponent(sourceFilePath))
+                        ) {
+                            totalDependingSourceFiles.add(sourceFilePath);
+
+                            if (!sourceRootHasProtocol || sourceRoot.startsWith("file://")) {
+                                const rootedFilePath = sourceRootHasProtocol
+                                    ? fileURLToPath(sourceRootBasedPath)
+                                    : decodeURIComponent(sourceRootBasedPath);
+
+                                if (!fs.existsSync(rootedFilePath)) {
+                                    return;
+                                }
+                            }
+                        }
 
                         totalDependingSourceFiles.add(sourceRootBasedPath);
                     });

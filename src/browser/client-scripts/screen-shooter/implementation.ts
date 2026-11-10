@@ -51,7 +51,7 @@ import {
     computeScrollOffset
 } from "./operations";
 import { getReadableElementDescriptor } from "./utils/descriptions";
-import { getScreenshooterNamespaceData } from "./utils/dom";
+import { getMainWindow, getScreenshooterNamespaceData } from "./utils/dom";
 import { parseCaptureTarget } from "./utils/pseudo-element-rect";
 import { getCommonScrollParent, scrollElementBy, scrollElementToOffset } from "./utils/scroll";
 
@@ -183,10 +183,6 @@ export function prepareElementsScreenshot(
     return safeCall(prepareElementsScreenshotUnsafe, targetsToCapture, opts);
 }
 
-export function getCurrentPixelRatio(): number {
-    return computePixelRatio();
-}
-
 export function scrollBy(
     targetsToCapture: ElementTarget[],
     scrollDelta: Length<"device", "y"> | Coord<"page", "device", "y">,
@@ -262,9 +258,13 @@ export function scrollTo(
 
 function getViewportState(usePixelRatio?: boolean, pixelRatioOverride?: number): ViewportState {
     const pixelRatio = computePixelRatio(usePixelRatio, pixelRatioOverride);
+    const viewportSizeInCss = computeViewportSize();
 
     return {
-        viewportSize: fromCssToDevice(computeViewportSize(), pixelRatio),
+        // Cross-origin frames cannot measure the outer viewport captured by WebDriver.
+        isTopLevelViewport: getMainWindow() === window.top,
+        viewportSize: fromCssToDevice(viewportSizeInCss, pixelRatio),
+        viewportSizeInCss,
         viewportOffset: fromCssToDevice(floorCoords(computeViewportOffset()), pixelRatio),
         documentSize: ceilCoords(fromCssToDevice(computeDocumentSize(), pixelRatio)),
         pixelRatio
@@ -376,8 +376,10 @@ export function prepareFullPageScreenshot(
         );
 
         return {
+            isTopLevelViewport: getMainWindow() === window.top,
             documentSize: ceilCoords(fromCssToDevice(documentSize, pixelRatio)),
             viewportSize: fromCssToDevice(viewportSize, pixelRatio),
+            viewportSizeInCss: viewportSize,
             viewportOffset: fromCssToDevice(floorCoords(viewportOffset), pixelRatio),
             safeArea: fromCssToDevice(roundCoords(safeArea), pixelRatio),
             elementPositionsProbe,

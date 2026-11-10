@@ -164,8 +164,7 @@ function instrumentTestCall(
     }
 
     const visitedCallback = ts.visitEachChild(callback, visit, transformContext) as
-        | TypeScript.ArrowFunction
-        | TypeScript.FunctionExpression;
+        TypeScript.ArrowFunction | TypeScript.FunctionExpression;
     const replContext = createReplContextObject(
         ts,
         programContext,

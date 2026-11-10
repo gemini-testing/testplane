@@ -50,22 +50,29 @@ interface CompareOptions {
     antialiasingTolerance?: number;
 }
 
-const initJsquashPromise = new Promise<unknown>(resolve => {
-    const wasmLocation = require.resolve("@jsquash/png/codec/pkg/squoosh_png_bg.wasm");
+type JsquashPngModule = typeof import("@jsquash/png/decode.js");
 
-    Promise.all([
-        loadEsm<typeof import("@jsquash/png/decode.js")>("@jsquash/png/decode.js"),
-        fs.promises.readFile(wasmLocation),
-    ])
-        .then(([mod, wasmBytes]) => mod.init(wasmBytes))
-        .then(resolve);
-});
+let initJsquashPromise: Promise<JsquashPngModule> | null = null;
+
+export const initImage = (): Promise<JsquashPngModule> => {
+    if (!initJsquashPromise) {
+        const wasmLocation = require.resolve("@jsquash/png/codec/pkg/squoosh_png_bg.wasm");
+
+        initJsquashPromise = Promise.all([
+            loadEsm<JsquashPngModule>("@jsquash/png/decode.js"),
+            fs.promises.readFile(wasmLocation),
+        ]).then(async ([mod, wasmBytes]) => {
+            await mod.init(wasmBytes);
+
+            return mod;
+        });
+    }
+
+    return initJsquashPromise;
+};
 
 const jsquashDecode = (buffer: ArrayBuffer): Promise<ImageData> => {
-    return Promise.all([
-        loadEsm<typeof import("@jsquash/png/decode.js")>("@jsquash/png/decode.js"),
-        initJsquashPromise,
-    ]).then(([mod]) => mod.decode(buffer, { bitDepth: BITS_IN_BYTE }));
+    return initImage().then(mod => mod.decode(buffer, { bitDepth: BITS_IN_BYTE }));
 };
 
 export const extractBase64PngSize = (base64EncodedPng: string): ImageSize => {
@@ -98,7 +105,7 @@ const hasICCPChunk = (buffer: Buffer): boolean => {
     const IDATChunkType = Buffer.from("IDAT", "ascii").readUInt32BE(0);
     const PLTEChunkType = Buffer.from("PLTE", "ascii").readUInt32BE(0);
 
-    for (let nextChunkPointer = PNG_SIGNATURE.byteLength; nextChunkPointer <= buffer.length - auxChunkSizeBytes; ) {
+    for (let nextChunkPointer = PNG_SIGNATURE.byteLength; nextChunkPointer <= buffer.length - auxChunkSizeBytes;) {
         const chunkLength = buffer.readUInt32BE(nextChunkPointer);
         const chunkType = buffer.readUInt32BE(nextChunkPointer + 4);
 

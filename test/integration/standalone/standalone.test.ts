@@ -22,7 +22,7 @@ describe("Standalone Browser E2E Tests", function () {
         process.exit(1);
     }, 180000).unref();
 
-    let browser: WebdriverIO.Browser & { getDriverPid?: () => number | undefined };
+    let browser: Awaited<ReturnType<typeof launchBrowser>>;
 
     it("should launch browser and access a website", async function () {
         browser = await launchBrowser(BROWSER_CONFIG);
@@ -35,8 +35,8 @@ describe("Standalone Browser E2E Tests", function () {
         const title = await browser.getTitle();
         assert.strictEqual(title, "Example Domain", "Page title should match");
 
-        const linkText = await browser.$('a[href="https://iana.org/help/example-domains"]').getText();
-        assert.strictEqual(linkText, "Learn more", "Link text should match");
+        const description = await browser.$("p").getText();
+        assert.ok(description.includes("for use in documentation examples"), "Page description should match");
     });
 
     it("should execute JavaScript in the browser", async function () {

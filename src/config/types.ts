@@ -7,6 +7,7 @@ import type { Config } from "./index";
 import type { SelectivityCompressionType } from "../browser/cdp/selectivity/types";
 import type { CropMargins } from "../browser/camera";
 import { DisableHoverMode } from "../browser/isomorphic/types";
+import { RequestLibOptions } from "@testplane/wdio-types/build/Options";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;
@@ -335,10 +336,7 @@ export type StateOpts = {
 
 export type SelectivityDependencyScope = "browser" | "testplane";
 export type SelectivityDependencyReason =
-    | "browser-css-import"
-    | "browser-js-coverage"
-    | "testplane-js-import"
-    | "testplane-assert-view-reference";
+    "browser-css-import" | "browser-js-coverage" | "testplane-js-import" | "testplane-assert-view-reference";
 
 /**
  * @param {Object} dependency - Object with dependency scope and posix relative path
@@ -374,6 +372,26 @@ export interface BrowserDownloadMirrors {
 
 export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;
 
+/** Selenoid controller image and browser container settings. */
+export interface DockerConfig {
+    /** Defaults to ghcr.io/gemini-testing/selenoid:1.11.3-docker-29. Can be inherited from the top-level docker option. */
+    selenoidImage?: string;
+    /** Browser image platform. When pulling, prefers the Docker daemon's platform, then linux/amd64. */
+    platform?: string;
+    /** Selenoid controller platform. When pulling, prefers the Docker daemon's platform, then linux/amd64. */
+    selenoidPlatform?: string;
+    /** Absolute engine socket path on the daemon's Linux host. Defaults to /var/run/docker.sock. */
+    socketPath?: string;
+    image?: string;
+    path?: string;
+    port?: string;
+    shmSize?: number;
+    tmpfs?: Record<string, string>;
+    volumes?: string[];
+    hosts?: string[];
+    [option: string]: unknown;
+}
+
 export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver";
@@ -382,6 +400,7 @@ export interface CommonConfig {
         Record<"isW3C" | "isChrome" | "isMobile" | "isIOS" | "isAndroid" | "isSauce" | "isSeleniumStandalone", boolean>
     >;
     gridUrl: string;
+    docker: DockerConfig | null;
     baseUrl: string;
     sessionsPerBrowser: number;
     testsPerSession: number;
@@ -424,7 +443,7 @@ export interface CommonConfig {
     resetCursor: boolean;
     headers: Record<string, string> | null;
 
-    transformRequest: (req: RequestOptions) => RequestOptions;
+    transformRequest: (req: RequestLibOptions) => RequestLibOptions;
     transformResponse: (res: Response, req: RequestOptions) => Response;
 
     strictSSL: boolean | null;
