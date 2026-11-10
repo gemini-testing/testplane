@@ -486,4 +486,12 @@ describe("assertView", () => {
         await browser.switchToFrame(await browser.$("#frame"));
         await browser.assertView("iframe-element", ".target-element");
     });
+
+    it("should capture a tall element inside an offset iframe", async ({ browser }) => {
+        await browser.setWindowSize(1500, 1000);
+        await browser.url("offset-iframe.html");
+
+        await browser.switchToFrame(await browser.$("#frame"));
+        await browser.assertView("iframe-tall-element", ".tall-target");
+    });
 });
