@@ -207,6 +207,7 @@ describe("worker/browser-env/runner/test-runner", () => {
         NodejsEnvRunner = strictProxyquire("../../../../../../src/worker/runner/test-runner", {
             "../../../browser/history": {
                 runGroup: historyRunGroupStub,
+                runWithoutHistory: history.runWithoutHistory,
                 requestDomSnapshots: historyRequestDomSnapshotsStub,
                 cleanupDomSnapshots: historyCleanupDomSnapshotsStub,
             },

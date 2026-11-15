@@ -2,6 +2,7 @@
 "use strict";
 
 const _ = require("lodash");
+const ipc = require("../../../utils/ipc");
 const HookRunner = require("./hook-runner");
 const ExecutionThread = require("./execution-thread");
 const { captureFailScreenshot } = require("./capture-fail-screenshot");
@@ -12,6 +13,8 @@ const { REPL_INSTRUMENTED_FN_FLAG } = require("../../../constants/repl");
 const RuntimeConfig = require("../../../config/runtime-config");
 const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
+const { startNetworkRecording } = require("../../../browser/network-interception/network-recorder");
+const { MasterEvents } = require("../../../events");
 const { startSelectivity } = require("../../../browser/cdp/selectivity");
 const { noopProfilerRuntime } = require("../../../profiler/runtime/noop");
 
@@ -198,6 +201,9 @@ module.exports = class TestRunner {
         });
         const hookRunner = HookRunner.create(test, executionThread);
         const { callstackHistory } = this._browser;
+        const networkRecorder = await history.runWithoutHistory(null, () =>
+            startNetworkRecording(this._browser.publicAPI, this._config.timeTravel, (this._attempt ?? 0) > 0),
+        );
 
         let error;
 
@@ -258,6 +264,14 @@ module.exports = class TestRunner {
         } catch (e) {
             error = error || e;
         } finally {
+            if (networkRecorder) {
+                const recordedRequests = await networkRecorder.stop();
+                ipc.emit(MasterEvents.NETWORK_REQUESTS, {
+                    context: { testPath: test.titlePath(), browserId: test.browserId },
+                    data: { requests: recordedRequests },
+                });
+            }
+
             history.requestDomSnapshots({
                 callstack: callstackHistory,
                 snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
