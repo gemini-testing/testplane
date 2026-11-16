@@ -18,20 +18,22 @@ interface RecordedBody {
 }
 
 interface RecordedResponse
-    extends Pick<NetworkResponse, "status" | "statusText" | "headers" | "timestamp" | "timing">, RecordedBody {}
+    extends
+        Pick<NetworkResponse, "status" | "statusText" | "headers" | "timestamp" | "timing" | "networkStatus">,
+        RecordedBody {}
 
 export interface RecordedRequest
     extends Pick<NetworkRequest, "url" | "method" | "headers" | "timestamp">, RecordedBody {
     response?: RecordedResponse;
     finishedAt?: number;
     failure?: string;
+    failureDetails?: NetworkRequest["failureDetails"];
 }
 
 export class NetworkRecorder {
     private readonly _monitor: NetworkMonitor;
     private readonly _maxBodySizeBytes: number;
-    private readonly _recordedRequests: RecordedRequest[] = [];
-    private readonly _requests = new WeakMap<NetworkRequest, RecordedRequest>();
+    private readonly _requests = new Map<NetworkRequest, { record: RecordedRequest; response?: NetworkResponse }>();
     private readonly _bodyWrites = new Map<string, Promise<string>>();
     private readonly _pending = new Set<Promise<void>>();
 
@@ -53,20 +55,35 @@ export class NetworkRecorder {
 
         await Promise.all(this._pending);
 
-        return this._recordedRequests;
+        // Protocol metadata can be enriched after the initial request/response events.
+        return [...this._requests].map(([request, { record, response }]) => {
+            const result = { ...record, headers: request.headers };
+            if (request.failureDetails) {
+                result.failureDetails = request.failureDetails;
+            }
+            if (response) {
+                result.response = {
+                    ...record.response!,
+                    headers: response.headers,
+                    ...(response.networkStatus !== undefined ? { networkStatus: response.networkStatus } : {}),
+                };
+            }
+            return result;
+        });
     }
 
     private _onRequest = (request: NetworkRequest): void => {
         const { url, method, headers, timestamp } = request;
         const record: RecordedRequest = { url, method, headers, timestamp };
-        this._requests.set(request, record);
-        this._recordedRequests.push(record);
+        this._requests.set(request, { record });
         this._captureBody(record, () => request.body());
     };
 
     private _onResponse = (response: NetworkResponse): void => {
         const { request, status, statusText, headers, timestamp } = response;
-        const record = this._requests.get(request)!;
+        const entry = this._requests.get(request)!;
+        entry.response = response;
+        const { record } = entry;
         record.response = {
             status,
             statusText,
@@ -78,7 +95,7 @@ export class NetworkRecorder {
     };
 
     private _onFinished = (request: NetworkRequest, timestamp: number, error?: string): void => {
-        const record = this._requests.get(request)!;
+        const { record } = this._requests.get(request)!;
         record.finishedAt = timestamp;
         if (error !== undefined) {
             record.failure = error;
@@ -110,8 +127,9 @@ export class NetworkRecorder {
                     fs.writeFile(filePath, body).then(() => filePath),
                 );
             }
+            const filePath = await this._bodyWrites.get(hash)!;
             record.bodyHash = hash;
-            record.bodyFilePath = await this._bodyWrites.get(hash)!;
+            record.bodyFilePath = filePath;
         } catch (error) {
             record.bodyError = error instanceof Error ? error.message : String(error);
         }

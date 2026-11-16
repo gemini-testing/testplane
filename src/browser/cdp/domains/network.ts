@@ -50,6 +50,8 @@ interface GetResponseBodyResponse {
 interface GetRequestPostDataResponse {
     /** Request body string, omitting files from multipart requests. */
     postData: string;
+    /** Older Chromium versions omit this flag. */
+    base64Encoded?: boolean;
 }
 
 interface SetCookieRequest {
@@ -80,6 +82,15 @@ interface EnableRequest {
 }
 
 export interface NetworkEvents {
+    requestWillBeSentExtraInfo: {
+        requestId: CDPNetworkRequestId;
+        headers: CDPNetworkHeaders;
+    };
+    responseReceivedExtraInfo: {
+        requestId: CDPNetworkRequestId;
+        headers: CDPNetworkHeaders;
+        statusCode: number;
+    };
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#event-dataReceived */
     dataReceived: {
         /** Request identifier. */
@@ -156,6 +167,7 @@ export interface NetworkEvents {
         initiator: CDPNetworkInitiator;
         /** Redirect response data. */
         redirectResponse?: CDPNetworkResponse;
+        redirectHasExtraInfo?: boolean;
         /** Type of this resource. */
         type?: CDPNetworkResourceType;
         /** Frame identifier. */
@@ -175,6 +187,7 @@ export interface NetworkEvents {
         type: CDPNetworkResourceType;
         /** Response data. */
         response: CDPNetworkResponse;
+        hasExtraInfo?: boolean;
         /** Frame identifier. */
         frameId?: CDPFrameId;
     };

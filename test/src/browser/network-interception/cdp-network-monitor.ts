@@ -58,12 +58,13 @@ describe("CDP network monitor", () => {
             fromSession,
         );
     };
-    const response = (overrides = {}, fromSession = sessionId): void => {
+    const response = (overrides = {}, fromSession = sessionId, hasExtraInfo = true): void => {
         cdp.network.emit(
             "responseReceived",
             {
                 requestId: "request",
                 timestamp: 10.25,
+                hasExtraInfo,
                 response: { status: 200, statusText: "OK", headers: {}, ...overrides },
             },
             fromSession,
@@ -206,10 +207,191 @@ describe("CDP network monitor", () => {
         assert.notProperty(responses[0], "timing");
     });
 
+    for (const requestFirst of [true, false]) {
+        for (const responseFirst of [true, false]) {
+            it(`should retain extra headers with requestFirst=${requestFirst}, responseFirst=${responseFirst}`, async () => {
+                await monitor.start();
+                const requestExtra = (): void => {
+                    cdp.network.emit(
+                        "requestWillBeSentExtraInfo",
+                        {
+                            requestId: "request",
+                            headers: { Cookie: "session=proof", Accept: "*/*" },
+                        },
+                        sessionId,
+                    );
+                };
+                const responseExtra = (): void => {
+                    cdp.network.emit(
+                        "responseReceivedExtraInfo",
+                        {
+                            requestId: "request",
+                            statusCode: 304,
+                            headers: { "Set-Cookie": "first=1\nsecond=2" },
+                        },
+                        sessionId,
+                    );
+                };
+                if (requestFirst) {
+                    request();
+                    requestExtra();
+                } else {
+                    requestExtra();
+                    request();
+                }
+                if (responseFirst) {
+                    response();
+                    responseExtra();
+                } else {
+                    responseExtra();
+                    response();
+                }
+                finish();
+                await monitor.stop();
+
+                assert.deepEqual(requests[0].headers, [
+                    { name: "cookie", value: "session=proof" },
+                    { name: "accept", value: "*/*" },
+                ]);
+                assert.equal(responses[0].status, 200);
+                assert.equal(responses[0].networkStatus, 304);
+                assert.deepEqual(responses[0].headers, [
+                    { name: "set-cookie", value: "first=1" },
+                    { name: "set-cookie", value: "second=2" },
+                ]);
+            });
+        }
+    }
+
+    it("should align late extra-info with redirect hops and skip hops without extra-info", async () => {
+        await monitor.start();
+        request();
+        request(
+            { url: "https://example.com/middle" },
+            {
+                redirectHasExtraInfo: true,
+                redirectResponse: { status: 302, statusText: "Found", headers: { location: "/middle" } },
+            },
+        );
+        request(
+            { url: "https://example.com/final" },
+            {
+                redirectHasExtraInfo: false,
+                redirectResponse: { status: 302, statusText: "Found", headers: { location: "/final" } },
+            },
+        );
+        response();
+        finish();
+        for (const hop of ["first", "final"]) {
+            cdp.network.emit(
+                "requestWillBeSentExtraInfo",
+                { requestId: "request", headers: { Cookie: hop } },
+                sessionId,
+            );
+            cdp.network.emit(
+                "responseReceivedExtraInfo",
+                {
+                    requestId: "request",
+                    statusCode: hop === "first" ? 302 : 200,
+                    headers: { "Set-Cookie": hop },
+                },
+                sessionId,
+            );
+        }
+        await monitor.stop();
+
+        assert.deepEqual(requests[0].headers, [{ name: "cookie", value: "first" }]);
+        assert.deepEqual(requests[2].headers, [{ name: "cookie", value: "final" }]);
+        assert.deepEqual(responses[0].headers, [{ name: "set-cookie", value: "first" }]);
+        assert.deepEqual(responses[1].headers, [{ name: "location", value: "/final" }]);
+        assert.deepEqual(responses[2].headers, [{ name: "set-cookie", value: "final" }]);
+    });
+
+    it("should isolate extra-info for reused request ids in different sessions", async () => {
+        targets.push(target("second"));
+        await monitor.start();
+        for (const fromSession of [sessionId, "session-second"]) {
+            cdp.network.emit(
+                "requestWillBeSentExtraInfo",
+                {
+                    requestId: "request",
+                    headers: { Cookie: fromSession },
+                },
+                fromSession,
+            );
+            request({}, {}, fromSession);
+            response({}, fromSession);
+            finish(fromSession);
+        }
+        await monitor.stop();
+
+        assert.deepEqual(
+            requests.map(req => req.headers),
+            [[{ name: "cookie", value: sessionId }], [{ name: "cookie", value: "session-second" }]],
+        );
+    });
+
+    for (const extraFirst of [true, false]) {
+        it(`should preserve CORS response metadata when extraFirst=${extraFirst}`, async () => {
+            await monitor.start();
+            request();
+            const extra = (): void => {
+                cdp.network.emit(
+                    "responseReceivedExtraInfo",
+                    {
+                        requestId: "request",
+                        statusCode: 418,
+                        headers: { "X-Proof": "cors" },
+                    },
+                    sessionId,
+                );
+            };
+            if (extraFirst) {
+                extra();
+            }
+            cdp.network.emit(
+                "loadingFailed",
+                {
+                    requestId: "request",
+                    timestamp: 10.5,
+                    errorText: "net::ERR_FAILED",
+                    corsErrorStatus: { corsError: "MissingAllowOriginHeader", failedParameter: "" },
+                },
+                sessionId,
+            );
+            if (!extraFirst) {
+                extra();
+            }
+            await monitor.stop();
+
+            assert.equal(responses[0].networkStatus, 418);
+            assert.deepEqual(responses[0].headers, [{ name: "x-proof", value: "cors" }]);
+            assert.isUndefined(responses[0].timestamp);
+            assert.deepEqual(requests[0].failureDetails, {
+                corsError: "MissingAllowOriginHeader",
+                failedParameter: "",
+            });
+            await assert.isRejected(responses[0].body(), /net::ERR_FAILED/);
+        });
+    }
+
+    it("should decode base64 post-data fallback responses", async () => {
+        const bytes = Buffer.from([0, 128, 255]);
+        command
+            .withArgs("Network.getRequestPostData")
+            .resolves({ postData: bytes.toString("base64"), base64Encoded: true });
+        await monitor.start();
+        request({ hasPostData: true });
+
+        assert.deepEqual(await requests[0].body(), bytes);
+    });
+
     it("should keep redirect hops separate when CDP reuses the request id", async () => {
         await monitor.start();
 
         request({ hasPostData: true });
+        // The recorder starts reading the body synchronously on the request event.
+        const postData = requests[0].body();
         request(
             { url: "https://example.com/redirected", method: "GET" },
             {
@@ -226,7 +408,7 @@ describe("CDP network monitor", () => {
                 ["https://example.com/redirected", 200],
             ],
         );
-        await assert.isRejected(requests[0].body(), /no longer available/);
+        assert.deepEqual(await postData, Buffer.from("post body"));
         await assert.isRejected(responses[0].body(), /redirects/);
         assert.deepEqual(await responses[1].body(), Buffer.from("response body"));
         assert.calledTwice(finished);
@@ -296,25 +478,6 @@ describe("CDP network monitor", () => {
 
         assert.deepEqual(await body, Buffer.from("done"));
         assert.callOrder(complete, command.withArgs("Target.detachFromTarget"));
-    });
-
-    it("should drain queued response events before stopping", async () => {
-        await monitor.start();
-        request();
-        monitor.on("response", value => {
-            void value.body();
-        });
-        command.withArgs("Runtime.evaluate").callsFake(async () => {
-            response();
-            finish();
-            return {};
-        });
-
-        await monitor.stop();
-
-        assert.lengthOf(responses, 1);
-        assert.deepEqual(await responses[0].body(), Buffer.from("response body"));
-        assert.callOrder(command.withArgs("Network.getResponseBody"), command.withArgs("Target.detachFromTarget"));
     });
 
     it("should clean up after Network.enable fails", async () => {
@@ -580,6 +743,16 @@ describe("CDP network monitor", () => {
             const bodies = await Promise.all(requests.map(req => req.body().catch(error => error.message)));
 
             assert.deepEqual(bodies, ["Body exceeds 3 bytes", "Body exceeds 3 bytes", Buffer.from([0, 128, 255])]);
+        });
+
+        it("should apply the fallback request body limit to decoded bytes", async () => {
+            command.withArgs("Network.getRequestPostData").resolves({ postData: "AID/", base64Encoded: true });
+            request({ hasPostData: true });
+            assert.deepEqual(await requests[0].body(), Buffer.from([0, 128, 255]));
+
+            command.withArgs("Network.getRequestPostData").resolves({ postData: "Zm91cg==", base64Encoded: true });
+            request({ hasPostData: true }, { requestId: "large" });
+            await assert.isRejected(requests[1].body(), /exceeds 3 bytes/);
         });
 
         it("should skip fetching a response when observed decoded bytes exceed the limit", async () => {

@@ -83,6 +83,43 @@ describe("Time Travel network recorder", () => {
         assert.notProperty(saved[1].response!, "timing");
     });
 
+    it("should serialize headers and network status enriched after completion", async () => {
+        const req = { ...request() };
+        const res = { ...response(req, Buffer.alloc(0)), networkStatus: undefined as number | undefined };
+        const recorder = new recorderModule.NetworkRecorder(monitor, 1024);
+        monitor.emit("request", req);
+        monitor.emit("response", res);
+        monitor.emit("requestfinished", req, 120);
+        req.headers = [{ name: "cookie", value: "proof" }];
+        res.headers = [{ name: "set-cookie", value: "proof" }];
+        res.networkStatus = 304;
+
+        const [saved] = await recorder.stop();
+
+        assert.deepEqual(saved.headers, req.headers);
+        assert.deepEqual(saved.response!.headers, res.headers);
+        assert.equal(saved.response!.status, 200);
+        assert.equal(saved.response!.networkStatus, 304);
+    });
+
+    it("should record write errors without publishing body references or retrying duplicate bodies", async () => {
+        const write = sandbox.stub(fs, "writeFile").rejects(new Error("disk unavailable"));
+        const body = Buffer.from("proof");
+        const recorder = new recorderModule.NetworkRecorder(monitor, 1024);
+        monitor.emit("request", request(body));
+        await new Promise(resolve => setImmediate(resolve));
+        monitor.emit("request", request(body));
+
+        const saved = await recorder.stop();
+
+        for (const record of saved) {
+            assert.equal(record.bodyError, "disk unavailable");
+            assert.notProperty(record, "bodyHash");
+            assert.notProperty(record, "bodyFilePath");
+        }
+        assert.calledOnce(write);
+    });
+
     it("should preserve failed and unfinished requests", async () => {
         const failed = request();
         const pending = { ...request(), url: "https://example.com/pending" };

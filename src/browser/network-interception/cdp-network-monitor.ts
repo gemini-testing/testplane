@@ -12,7 +12,14 @@ import type {
     CDPSessionId,
     CDPTargetInfo,
 } from "../cdp/types";
-import type { NetworkHeader, NetworkMonitor, NetworkMonitorEvents, NetworkRequest, NetworkTiming } from "./types";
+import type {
+    NetworkHeader,
+    NetworkMonitor,
+    NetworkMonitorEvents,
+    NetworkRequest,
+    NetworkResponse,
+    NetworkTiming,
+} from "./types";
 import * as logger from "../../utils/logger";
 
 interface TrackedRequest {
@@ -20,11 +27,22 @@ interface TrackedRequest {
     timestamp: number;
     finished: Promise<string | null>;
     finish: (error: string | null) => void;
-    redirected?: boolean;
     sessionId: CDPSessionId;
     navigationFrameId?: CDPFrameId;
-    responded?: boolean;
+    response?: NetworkResponse;
+    requestHeaders: NetworkHeader[];
+    responseHeaders?: NetworkHeader[];
+    networkStatus?: number;
+    failureDetails?: NetworkRequest["failureDetails"];
+    expectsExtraInfo?: boolean;
     responseBodySize: number;
+}
+
+interface RequestChain {
+    requestId: string;
+    hops: TrackedRequest[];
+    requestHeaders: NetworkEvents["requestWillBeSentExtraInfo"][];
+    responses: NetworkEvents["responseReceivedExtraInfo"][];
 }
 
 interface TargetSession {
@@ -32,6 +50,7 @@ interface TargetSession {
     type: CDPTargetInfo["type"];
     requests: Map<string, TrackedRequest>;
     bodyReads: Set<() => void>;
+    chains: Map<string, RequestChain>;
 }
 
 const headersToArray = (headers: CDPNetworkHeaders): NetworkHeader[] =>
@@ -46,6 +65,7 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
     private readonly _session: WebdriverIO.Browser;
     private readonly _maxBodySizeBytes: number;
     private readonly _sessions = new Map<CDPSessionId, TargetSession>();
+    private readonly _chains = new Set<RequestChain>();
     private readonly _contexts = new Set<CDPBrowserContextId | undefined>();
     private readonly _targetTasks = new Set<Promise<void>>();
     private readonly _bodyReads = new Set<Promise<Buffer | null>>();
@@ -63,10 +83,6 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
     }
 
     async start(): Promise<void> {
-        if (this._browserSessionId) {
-            return;
-        }
-
         const handles = await this._session.getWindowHandles();
         const { targetInfos } = await this._cdp.target.getTargets();
         const pages = targetInfos.filter(
@@ -77,14 +93,10 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
             throw new Error(`Could not find CDP targets for windows ${handles.join(", ")}`);
         }
 
-        this._contexts.clear();
         for (const page of pages) {
             this._contexts.add(page.browserContextId);
         }
         this._starting = true;
-        this._startError = undefined;
-        this._stopping = false;
-        this._stopPromise = undefined;
 
         this._browserSessionId = (
             await this._cdp.request<{ sessionId: CDPSessionId }>("Target.attachToBrowserTarget")
@@ -94,6 +106,8 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
         this._cdp.page.on("frameAttached", this._onFrameAttached);
         this._cdp.network.on("requestWillBeSent", this._onRequest);
         this._cdp.network.on("responseReceived", this._onResponse);
+        this._cdp.network.on("requestWillBeSentExtraInfo", this._onRequestExtraInfo);
+        this._cdp.network.on("responseReceivedExtraInfo", this._onResponseExtraInfo);
         this._cdp.network.on("dataReceived", this._onData);
         this._cdp.network.on("loadingFinished", this._onFinished);
         this._cdp.network.on("loadingFailed", this._onFailed);
@@ -124,14 +138,11 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
 
         this._stopping = true;
         await this._awaitTargetTasks();
-        // Give already queued renderer events a chance to arrive before the recording cutoff.
-        await Promise.all(
-            [...this._sessions.keys()].map(sessionId =>
-                this._cdp.runtime.evaluate(sessionId, { expression: "void 0" }).catch(() => {}),
-            ),
-        );
         this._cdp.network.off("requestWillBeSent", this._onRequest);
         this._cdp.network.off("responseReceived", this._onResponse);
+        this._cdp.network.off("requestWillBeSentExtraInfo", this._onRequestExtraInfo);
+        this._cdp.network.off("responseReceivedExtraInfo", this._onResponseExtraInfo);
+        this._applyExtraInfo();
         this._cdp.network.off("dataReceived", this._onData);
         this._cdp.network.off("loadingFinished", this._onFinished);
         this._cdp.network.off("loadingFailed", this._onFailed);
@@ -199,6 +210,7 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
                     type: targetInfo.type,
                     requests: targetInfo.type === "iframe" ? parent!.requests : new Map(),
                     bodyReads: new Set(),
+                    chains: targetInfo.type === "iframe" ? parent!.chains : new Map(),
                 });
                 commands.push(this._cdp.network.enable(sessionId), this._autoAttach(sessionId, ["iframe", "worker"]));
                 if (!isWorker) {
@@ -288,7 +300,7 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
         const { requestId, request, timestamp, wallTime, redirectResponse } = params;
         const previous = this._request(requestId, sessionId);
         if (redirectResponse && previous) {
-            previous.redirected = true;
+            previous.expectsExtraInfo = params.redirectHasExtraInfo;
             this._emitResponse(requestId, previous, redirectResponse, timestamp, true);
             this._finish(requestId, timestamp, sessionId);
         } else if (previous) {
@@ -302,6 +314,7 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
             navigationFrameId: requestId === params.loaderId ? params.frameId : undefined,
             timestamp,
             responseBodySize: 0,
+            requestHeaders: headersToArray(request.headers),
             finished: new Promise(resolve => {
                 finish = resolve;
             }),
@@ -309,7 +322,12 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
             request: {
                 url: request.url,
                 method: request.method,
-                headers: headersToArray(request.headers),
+                get headers() {
+                    return tracked.requestHeaders;
+                },
+                get failureDetails() {
+                    return tracked.failureDetails;
+                },
                 timestamp: wallTime * 1000,
                 body: () =>
                     (body ??= this._readBody(async () => {
@@ -333,23 +351,22 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
                         if (!request.hasPostData) {
                             return null;
                         }
-                        if (tracked.redirected || !this._sessions.has(tracked.sessionId)) {
-                            throw new Error("Request body is no longer available");
-                        }
-                        const { postData } = await this._readFromSession(tracked.sessionId, () =>
+                        const { postData, base64Encoded } = await this._readFromSession(tracked.sessionId, () =>
                             this._cdp.network.getRequestPostData(tracked.sessionId, requestId),
                         );
-                        return this._decodeBody(postData);
+                        return this._decodeBody(postData, base64Encoded ? "base64" : "utf8");
                     })),
             },
         };
         session.requests.set(requestId, tracked);
+        this._chain(requestId, sessionId)!.hops.push(tracked);
         this.emit("request", tracked.request);
     };
 
     private _onResponse = (params: NetworkEvents["responseReceived"], sessionId?: CDPSessionId): void => {
         const tracked = this._request(params.requestId, sessionId);
-        if (tracked && !tracked.responded) {
+        if (tracked && !tracked.response) {
+            tracked.expectsExtraInfo = params.hasExtraInfo;
             this._emitResponse(params.requestId, tracked, params.response, params.timestamp);
         }
     };
@@ -364,18 +381,23 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
     private _emitResponse(
         requestId: string,
         tracked: TrackedRequest,
-        response: CDPNetworkResponse,
-        timestamp: number,
+        response: Pick<CDPNetworkResponse, "status" | "statusText" | "headers" | "timing">,
+        timestamp?: number,
         redirect = false,
     ): void {
-        tracked.responded = true;
+        tracked.responseHeaders = headersToArray(response.headers);
         let body: Promise<Buffer> | undefined;
-        this.emit("response", {
+        tracked.response = {
             request: tracked.request,
             status: response.status,
             statusText: response.statusText,
-            headers: headersToArray(response.headers),
-            timestamp: this._wallTime(tracked, timestamp),
+            get headers(): NetworkHeader[] {
+                return tracked.responseHeaders!;
+            },
+            get networkStatus(): number | undefined {
+                return tracked.networkStatus;
+            },
+            timestamp: timestamp === undefined ? undefined : this._wallTime(tracked, timestamp),
             ...(response.timing ? { timing: this._timing(tracked, response.timing) } : {}),
             body: () =>
                 (body ??= this._readBody(async () => {
@@ -392,7 +414,66 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
                     );
                     return this._decodeBody(result.body, result.base64Encoded ? "base64" : "utf8");
                 })),
-        });
+        };
+        this.emit("response", tracked.response);
+    }
+
+    private _chain(requestId: string, sessionId?: CDPSessionId): RequestChain | undefined {
+        const session = this._sessions.get(sessionId!);
+        if (!session) {
+            return;
+        }
+        let chain = session.chains.get(requestId);
+        if (!chain) {
+            chain = { requestId, hops: [], requestHeaders: [], responses: [] };
+            session.chains.set(requestId, chain);
+            this._chains.add(chain);
+        }
+        return chain;
+    }
+
+    private _onRequestExtraInfo = (
+        params: NetworkEvents["requestWillBeSentExtraInfo"],
+        sessionId?: CDPSessionId,
+    ): void => {
+        this._chain(params.requestId, sessionId)?.requestHeaders.push(params);
+    };
+
+    private _onResponseExtraInfo = (
+        params: NetworkEvents["responseReceivedExtraInfo"],
+        sessionId?: CDPSessionId,
+    ): void => {
+        this._chain(params.requestId, sessionId)?.responses.push(params);
+    };
+
+    private _applyExtraInfo(): void {
+        // Both extra-info streams preserve hop order, but can precede or follow ordinary events.
+        // Joining at stop avoids delaying completion/body reads or waiting for missing events.
+        for (const chain of this._chains) {
+            let index = 0;
+            for (const hop of chain.hops) {
+                if (hop.expectsExtraInfo === false) {
+                    continue;
+                }
+                const request = chain.requestHeaders[index];
+                const response = chain.responses[index++];
+                if (request) {
+                    hop.requestHeaders = headersToArray(request.headers);
+                }
+                if (response) {
+                    if (!hop.response) {
+                        this._emitResponse(chain.requestId, hop, {
+                            status: response.statusCode,
+                            statusText: "",
+                            headers: response.headers,
+                        });
+                    }
+                    hop.responseHeaders = headersToArray(response.headers);
+                    hop.networkStatus = response.statusCode;
+                }
+            }
+        }
+        this._chains.clear();
     }
 
     private _timing(tracked: TrackedRequest, timing: CDPNetworkResourceTiming): NetworkTiming {
@@ -420,6 +501,18 @@ export class CdpNetworkMonitor extends EventEmitter<NetworkMonitorEvents> implem
     };
 
     private _onFailed = (params: NetworkEvents["loadingFailed"], sessionId?: CDPSessionId): void => {
+        const tracked = this._request(params.requestId, sessionId);
+        if (tracked && (params.blockedReason || params.corsErrorStatus)) {
+            tracked.failureDetails = {
+                ...(params.blockedReason ? { blockedReason: params.blockedReason } : {}),
+                ...(params.corsErrorStatus
+                    ? {
+                          corsError: params.corsErrorStatus.corsError,
+                          failedParameter: params.corsErrorStatus.failedParameter,
+                      }
+                    : {}),
+            };
+        }
         this._finish(params.requestId, params.timestamp, sessionId, params.errorText);
     };
 
