@@ -27,6 +27,7 @@ function makeConfigStub(opts = {}) {
             mochaOpts: {},
             expectOpts: {},
             patternsOnReject: [],
+            maxFailures: { limit: Infinity, patterns: null },
             testRunEnv: NODEJS_TEST_RUN_ENV,
             workers: 1,
         },

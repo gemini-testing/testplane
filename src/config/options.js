@@ -4,6 +4,7 @@ const _ = require("lodash");
 const { root, section, map, option } = require("gemini-configparser");
 const browserOptions = require("./browser-options");
 const defaults = require("./defaults");
+const { assertPositiveIntegerOrInfinity, assertOptionalArray } = require("./utils");
 const optionsBuilder = require("./options-builder");
 const { normalizeBrowserDownloadMirror } = require("../browser-installer/mirrors");
 const {
@@ -47,6 +48,27 @@ const rootSection = section(
             ctx: options.anyObject(),
 
             patternsOnReject: options.optionalArray("patternsOnReject"),
+
+            maxFailures: option({
+                defaultValue: defaults.maxFailures,
+                parseEnv: value => (value === "Infinity" ? Infinity : JSON.parse(value)),
+                parseCli: value => (value === "Infinity" ? Infinity : JSON.parse(value)),
+                validate: value => {
+                    if (_.isPlainObject(value)) {
+                        assertPositiveIntegerOrInfinity(value.limit, "system.maxFailures.limit");
+                        assertOptionalArray(value.patterns, "system.maxFailures.patterns");
+                        if (!value.patterns.every(pattern => typeof pattern === "string" || _.isRegExp(pattern))) {
+                            throw new Error('"system.maxFailures.patterns" must contain strings or RegExp');
+                        }
+                    } else {
+                        assertPositiveIntegerOrInfinity(value, "system.maxFailures");
+                    }
+                },
+                map: value =>
+                    typeof value === "number"
+                        ? { limit: value, patterns: null }
+                        : { limit: value.limit, patterns: value.patterns.map(pattern => new RegExp(pattern)) },
+            }),
 
             workers: options.positiveInteger("workers"),
 

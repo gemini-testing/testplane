@@ -18,6 +18,91 @@ describe("config options", () => {
 
     afterEach(() => sandbox.restore());
 
+    describe("system.maxFailures", () => {
+        it("should normalize the default and numeric limits", () => {
+            assert.deepEqual(parse_().system.maxFailures, { limit: Infinity, patterns: null });
+            assert.deepEqual(parse_({ options: { system: { maxFailures: 2 } } }).system.maxFailures, {
+                limit: 2,
+                patterns: null,
+            });
+        });
+
+        it("should compile patterns once without modifying the shared input", () => {
+            const pattern = /quota/gi;
+            pattern.lastIndex = 3;
+            const patterns = ["403", pattern];
+            const result = parse_({
+                options: { system: { maxFailures: { limit: 2, patterns }, patternsOnReject: patterns } },
+            });
+
+            assert.deepEqual(result.system.maxFailures, { limit: 2, patterns: [/403/, /quota/gi] });
+            assert.notStrictEqual(result.system.maxFailures.patterns[1], pattern);
+            assert.deepEqual(result.system.patternsOnReject, patterns);
+            assert.equal(pattern.lastIndex, 3);
+        });
+
+        it("should parse numeric and filtered limits from environment and CLI", () => {
+            for (const [value, expected] of [
+                ["20", { limit: 20, patterns: null }],
+                ['{"limit": 3, "patterns": ["429"]}', { limit: 3, patterns: [/429/] }],
+                ["Infinity", { limit: Infinity, patterns: null }],
+            ]) {
+                assert.deepEqual(
+                    parse_({ env: { ["testplane_system_max_failures"]: value } }).system.maxFailures,
+                    expected,
+                );
+                assert.deepEqual(parse_({ argv: ["--system-max-failures", value] }).system.maxFailures, expected);
+            }
+        });
+
+        it("should reject invalid limits in either input form", () => {
+            for (const limit of [null, false, "5", 0, -1, 1.5, NaN, -Infinity]) {
+                assert.throws(() => parse_({ options: { system: { maxFailures: limit } } }), "system.maxFailures");
+                assert.throws(
+                    () => parse_({ options: { system: { maxFailures: { limit, patterns: [] } } } }),
+                    "system.maxFailures.limit",
+                );
+            }
+        });
+
+        it("should require an array of string or RegExp patterns in object form", () => {
+            for (const patterns of [
+                undefined,
+                null,
+                "429",
+                {},
+                [42],
+                [() => true],
+                [{ name: "quota", pattern: /429/ }],
+            ]) {
+                assert.throws(
+                    () => parse_({ options: { system: { maxFailures: { limit: 2, patterns } } } }),
+                    "system.maxFailures.patterns",
+                );
+            }
+        });
+
+        it("should preserve empty patterns and an unlimited filtered configuration", () => {
+            assert.deepEqual(
+                parse_({ options: { system: { maxFailures: { limit: Infinity, patterns: [] } } } }).system.maxFailures,
+                {
+                    limit: Infinity,
+                    patterns: [],
+                },
+            );
+        });
+
+        it("should reject malformed regexps only for maxFailures", () => {
+            assert.throws(
+                () => parse_({ options: { system: { maxFailures: { limit: 2, patterns: ["["] } } } }),
+                "Invalid regular expression",
+            );
+            assert.deepEqual(parse_({ options: { system: { patternsOnReject: ["["] } } }).system.patternsOnReject, [
+                "[",
+            ]);
+        });
+    });
+
     describe("browserDownloadMirrors", () => {
         it("should be empty by default", () => {
             const result = parse_();

@@ -168,6 +168,71 @@ describe("NodejsEnvRunner", () => {
         });
     });
 
+    describe("maxFailures", () => {
+        it("should count retries and failures across browsers before interceptors and cancel once", async () => {
+            const config = makeConfigStub({
+                system: { maxFailures: { limit: 2, patterns: [/429/, /403/] } },
+            });
+            const interceptor = sandbox.stub().returns({ event: RunnerEvents.TEST_PASS });
+            const runner = new Runner(config, [{ event: RunnerEvents.TEST_FAIL, handler: interceptor }]);
+            const onError = sandbox.spy(error => runner.cancel(error));
+            const cancel = sandbox.spy(BrowserRunner.prototype, "cancel");
+            const workers = mkWorkers_();
+            WorkersRegistry.prototype.register.returns(workers);
+            runner.on(RunnerEvents.ERROR, onError);
+            const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
+            let attempts = 0;
+            onWaitTestsCompletion_(browserRunner => {
+                if (attempts++ === 0) {
+                    browserRunner.emit(RunnerEvents.RETRY, { err: new Error("429") });
+                    assert.notCalled(onError);
+                } else {
+                    browserRunner.emit(RunnerEvents.TEST_FAIL, { err: new Error("403") });
+                    assert.calledOnce(onError);
+                    browserRunner.emit(RunnerEvents.TEST_FAIL, { err: new Error("cancelled") });
+                }
+            });
+
+            await run_({ runner, testCollection });
+
+            assert.calledOnce(onError);
+            assert.include(onError.firstCall.args[0].message, "limit of 2 matching errors");
+            assert.calledTwice(cancel);
+            assert.calledOnce(workers.cancel);
+            assert.callOrder(onError, interceptor);
+        });
+
+        it("should ignore failures after external cancellation", async () => {
+            const config = makeConfigStub({ system: { maxFailures: { limit: 1, patterns: null } } });
+            const runner = new Runner(config);
+            const onError = sandbox.spy();
+            runner.on(RunnerEvents.ERROR, onError);
+            runner.cancel(new Error("cancelled"));
+            onWaitTestsCompletion_(browserRunner =>
+                browserRunner.emit(RunnerEvents.TEST_FAIL, { err: new Error("cancelled") }),
+            );
+
+            await run_({ runner });
+
+            assert.notCalled(onError);
+        });
+
+        it("should not terminate the run for patternsOnReject alone", async () => {
+            const config = makeConfigStub({ system: { patternsOnReject: ["429", "["] } });
+            const runner = new Runner(config);
+            const onError = sandbox.spy();
+            runner.on(RunnerEvents.ERROR, onError);
+            onWaitTestsCompletion_(browserRunner => {
+                browserRunner.emit(RunnerEvents.RETRY, { err: new Error("429") });
+                browserRunner.emit(RunnerEvents.TEST_FAIL, { err: new Error("429") });
+            });
+
+            await run_({ runner });
+
+            assert.notCalled(onError);
+        });
+    });
+
     describe("constructor", () => {
         it("should init temp with dir from config", () => {
             const config = makeConfigStub({ system: { tempDir: "some/dir" } });

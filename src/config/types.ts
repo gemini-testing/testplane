@@ -264,12 +264,22 @@ export interface MochaOpts {
     ui?: string | ((suite: unknown) => void);
 }
 
+export type ErrorPattern = string | RegExp;
+
+export type MaxFailuresConfig = number | { limit: number; patterns: ErrorPattern[] };
+
+export interface MaxFailuresConfigParsed {
+    limit: number;
+    patterns: RegExp[] | null;
+}
+
 export interface SystemConfig {
     debug: boolean;
     mochaOpts: MochaOpts;
     expectOpts: ExpectOptsConfig;
     ctx: { [name: string]: unknown };
-    patternsOnReject: Array<string | RegExp>;
+    patternsOnReject: ErrorPattern[];
+    maxFailures: MaxFailuresConfigParsed;
     workers: number;
     testsPerWorker: number;
     diffColor: string;
@@ -541,7 +551,7 @@ type PartialCommonConfig = Partial<
         | "selectivity"
     >
 > & {
-    system?: Partial<SystemConfig>;
+    system?: Partial<Omit<SystemConfig, "maxFailures">> & { maxFailures?: MaxFailuresConfig };
     timeTravel?: TimeTravelMode | TimeTravelConfig;
     takeScreenshotOnFails?: Partial<CommonConfig["takeScreenshotOnFails"]>;
     lastFailed?: Partial<CommonConfig["lastFailed"]>;
