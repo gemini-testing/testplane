@@ -41,7 +41,6 @@ export type {
     BrowserDownloadMirrors,
     BrowserDownloadMirrorsInput,
     ErrorPattern,
-    ErrorPatterns,
     MaxFailuresConfig,
 } from "./config/types";
 export type { ProfilerResultV1 } from "./profiler/schema";

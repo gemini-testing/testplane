@@ -69,7 +69,7 @@ export class MainRunner extends RunnableEmitter {
         super();
 
         this.config = config;
-        this.exitOnError = new ExitOnError(config.system);
+        this.exitOnError = new ExitOnError(config.system.maxFailures);
         this.interceptors = interceptors;
         this.browserPool = null;
 
@@ -210,24 +210,19 @@ export class MainRunner extends RunnableEmitter {
     }
 
     protected _createBrowserRunner(browserId: string): BrowserRunner {
-        const runner = BrowserRunner.create(
-            browserId,
-            this.config,
-            this.browserPool,
-            this.workers,
-            this.profiler,
-            (test: Test) => {
-                if (this.cancelled) {
-                    return undefined;
-                }
+        const runner = BrowserRunner.create(browserId, this.config, this.browserPool, this.workers, this.profiler);
+        const checkTestError = (test: Test): void => {
+            if (this.cancelled) {
+                return;
+            }
 
-                const error = this.exitOnError.check(test);
-                if (error) {
-                    this.emit(MasterEvents.ERROR, error);
-                }
-                return error;
-            },
-        );
+            const error = this.exitOnError.check(test);
+            if (error) {
+                this.emit(MasterEvents.ERROR, error);
+            }
+        };
+        runner.on(MasterEvents.TEST_FAIL, checkTestError);
+        runner.on(MasterEvents.RETRY, checkTestError);
 
         if (this._cancelError) {
             runner.cancel(this._cancelError);

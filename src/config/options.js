@@ -4,6 +4,7 @@ const _ = require("lodash");
 const { root, section, map, option } = require("gemini-configparser");
 const browserOptions = require("./browser-options");
 const defaults = require("./defaults");
+const { assertPositiveIntegerOrInfinity, assertOptionalArray } = require("./utils");
 const optionsBuilder = require("./options-builder");
 const { normalizeBrowserDownloadMirror } = require("../browser-installer/mirrors");
 const {
@@ -21,41 +22,6 @@ const browserDownloadMirrorOption = browserName =>
         map: value =>
             value === null ? value : normalizeBrowserDownloadMirror(value, `browserDownloadMirrors.${browserName}`),
     });
-
-function validateFailureLimit(value, path) {
-    if (!Number.isSafeInteger(value) || value <= 0) {
-        throw new Error(`"${path}" must be a positive safe integer`);
-    }
-}
-
-function validateErrorPatterns(value, path) {
-    if (!Array.isArray(value)) {
-        throw new Error(`"${path}" must be an array`);
-    }
-
-    const names = new Set();
-    for (const [index, rule] of value.entries()) {
-        const rulePath = `${path}[${index}]`;
-        if (typeof rule === "string" || _.isRegExp(rule)) {
-            // Validate legacy regular expression strings at config load time.
-            RegExp(rule);
-            continue;
-        }
-        if (!_.isPlainObject(rule)) {
-            throw new Error(`"${rulePath}" must be a string, RegExp or named pattern object`);
-        }
-        if (typeof rule.name !== "string" || !rule.name.trim()) {
-            throw new Error(`"${rulePath}.name" must be a non-empty string`);
-        }
-        if (names.has(rule.name)) {
-            throw new Error(`"${rulePath}.name" must be unique: duplicate pattern name "${rule.name}"`);
-        }
-        names.add(rule.name);
-        if (typeof rule.pattern !== "function" && !_.isRegExp(rule.pattern)) {
-            throw new Error(`"${rulePath}.pattern" must be a function or RegExp`);
-        }
-    }
-}
 
 const rootSection = section(
     _.extend(browserOptions.getTopLevel(), {
@@ -81,30 +47,27 @@ const rootSection = section(
 
             ctx: options.anyObject(),
 
-            patternsOnReject: option({
-                defaultValue: defaults.patternsOnReject,
-                parseEnv: JSON.parse,
-                parseCli: JSON.parse,
-                validate: value => validateErrorPatterns(value, "patternsOnReject"),
-            }),
+            patternsOnReject: options.optionalArray("patternsOnReject"),
 
             maxFailures: option({
                 defaultValue: defaults.maxFailures,
                 parseEnv: value => (value === "Infinity" ? Infinity : JSON.parse(value)),
                 parseCli: value => (value === "Infinity" ? Infinity : JSON.parse(value)),
                 validate: value => {
-                    if (typeof value === "number") {
-                        if (value !== Infinity) {
-                            validateFailureLimit(value, "system.maxFailures");
+                    if (_.isPlainObject(value)) {
+                        assertPositiveIntegerOrInfinity(value.limit, "system.maxFailures.limit");
+                        assertOptionalArray(value.patterns, "system.maxFailures.patterns");
+                        if (!value.patterns.every(pattern => typeof pattern === "string" || _.isRegExp(pattern))) {
+                            throw new Error('"system.maxFailures.patterns" must contain strings or RegExp');
                         }
-                        return;
+                    } else {
+                        assertPositiveIntegerOrInfinity(value, "system.maxFailures");
                     }
-                    if (!_.isPlainObject(value)) {
-                        throw new Error('"system.maxFailures" must be a positive safe integer, Infinity or an object');
-                    }
-                    validateFailureLimit(value.limit, "system.maxFailures.limit");
-                    validateErrorPatterns(value.patterns, "system.maxFailures.patterns");
                 },
+                map: value =>
+                    typeof value === "number"
+                        ? { limit: value, patterns: null }
+                        : { limit: value.limit, patterns: value.patterns.map(pattern => new RegExp(pattern)) },
             }),
 
             workers: options.positiveInteger("workers"),

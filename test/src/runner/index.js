@@ -169,17 +169,9 @@ describe("NodejsEnvRunner", () => {
     });
 
     describe("maxFailures", () => {
-        it("should share a counter across browsers and cancel all runners once before intercepted events", async () => {
+        it("should count retries and failures across browsers before interceptors and cancel once", async () => {
             const config = makeConfigStub({
-                system: {
-                    maxFailures: {
-                        limit: 2,
-                        patterns: [
-                            { name: "quota", pattern: /429/ },
-                            { name: "access", pattern: /403/ },
-                        ],
-                    },
-                },
+                system: { maxFailures: { limit: 2, patterns: [/429/, /403/] } },
             });
             const interceptor = sandbox.stub().returns({ event: RunnerEvents.TEST_PASS });
             const runner = new Runner(config, [{ event: RunnerEvents.TEST_FAIL, handler: interceptor }]);
@@ -189,43 +181,55 @@ describe("NodejsEnvRunner", () => {
             WorkersRegistry.prototype.register.returns(workers);
             runner.on(RunnerEvents.ERROR, onError);
             const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
-            let checks = 0;
-            onWaitTestsCompletion_(() => {
-                const check = BrowserRunner.create.getCall(checks).args[5];
-                const failedTest = { id: "same-test", file: "test.js", err: new Error(checks === 0 ? "429" : "403") };
-                const error = check(failedTest);
-                if (checks++ === 0) {
-                    assert.isUndefined(error);
+            let attempts = 0;
+            onWaitTestsCompletion_(browserRunner => {
+                if (attempts++ === 0) {
+                    browserRunner.emit(RunnerEvents.RETRY, { err: new Error("429") });
+                    assert.notCalled(onError);
                 } else {
-                    assert.instanceOf(error, Error);
-                    assert.isUndefined(check(failedTest));
+                    browserRunner.emit(RunnerEvents.TEST_FAIL, { err: new Error("403") });
+                    assert.calledOnce(onError);
+                    browserRunner.emit(RunnerEvents.TEST_FAIL, { err: new Error("cancelled") });
                 }
             });
 
             await run_({ runner, testCollection });
 
             assert.calledOnce(onError);
-            assert.include(onError.firstCall.args[0].message, 'limit of 2 matching errors (pattern "access")');
+            assert.include(onError.firstCall.args[0].message, "limit of 2 matching errors");
             assert.calledTwice(cancel);
             assert.calledOnce(workers.cancel);
-            assert.notCalled(interceptor);
+            assert.callOrder(onError, interceptor);
         });
 
-        it("should not invoke patterns after cancellation", async () => {
-            const pattern = sandbox.spy(() => true);
-            const config = makeConfigStub({
-                system: { maxFailures: { limit: 1, patterns: [{ name: "quota", pattern }] } },
-            });
+        it("should ignore failures after external cancellation", async () => {
+            const config = makeConfigStub({ system: { maxFailures: { limit: 1, patterns: null } } });
             const runner = new Runner(config);
+            const onError = sandbox.spy();
+            runner.on(RunnerEvents.ERROR, onError);
             runner.cancel(new Error("cancelled"));
-            onWaitTestsCompletion_(() => {
-                const check = BrowserRunner.create.firstCall.args[5];
-                check({ id: "one", err: new Error("cancelled") });
+            onWaitTestsCompletion_(browserRunner =>
+                browserRunner.emit(RunnerEvents.TEST_FAIL, { err: new Error("cancelled") }),
+            );
+
+            await run_({ runner });
+
+            assert.notCalled(onError);
+        });
+
+        it("should not terminate the run for patternsOnReject alone", async () => {
+            const config = makeConfigStub({ system: { patternsOnReject: ["429", "["] } });
+            const runner = new Runner(config);
+            const onError = sandbox.spy();
+            runner.on(RunnerEvents.ERROR, onError);
+            onWaitTestsCompletion_(browserRunner => {
+                browserRunner.emit(RunnerEvents.RETRY, { err: new Error("429") });
+                browserRunner.emit(RunnerEvents.TEST_FAIL, { err: new Error("429") });
             });
 
             await run_({ runner });
 
-            assert.notCalled(pattern);
+            assert.notCalled(onError);
         });
     });
 

@@ -12,7 +12,6 @@ import { Workers } from "./index";
 import type { Test } from "../types";
 import { noopProfilerRuntime } from "../profiler/runtime/noop";
 import type { ProfilerRuntimeLike } from "../profiler/runtime/types";
-import type { CheckTestError } from "./exit-on-error";
 
 export interface BrowserRunner {
     on(event: InterceptedEvent, handler: (test: Test) => void): this;
@@ -35,7 +34,6 @@ export class BrowserRunner extends CancelableEmitter {
         browserPool: BrowserPool,
         workers: Workers,
         profiler: ProfilerRuntimeLike = noopProfilerRuntime,
-        private checkTestError?: CheckTestError,
     ) {
         super();
         this._browserId = browserId;
@@ -74,7 +72,7 @@ export class BrowserRunner extends CancelableEmitter {
             version: test.browserVersion,
             pool: this.browserPool,
         });
-        const runner = TestRunner.create(test, this.config, browserAgent, this.profiler, this.checkTestError);
+        const runner = TestRunner.create(test, this.config, browserAgent, this.profiler);
 
         if (this.cancelError && typeof runner.cancel === "function") {
             runner.cancel(this.cancelError);

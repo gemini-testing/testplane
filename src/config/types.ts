@@ -264,30 +264,22 @@ export interface MochaOpts {
     ui?: string | ((suite: unknown) => void);
 }
 
-export interface ErrorPattern {
-    /** Unique, non-empty pattern name used in error messages. */
-    name: string;
-    pattern: RegExp | ((errorText: string) => boolean);
+export type ErrorPattern = string | RegExp;
+
+export type MaxFailuresConfig = number | { limit: number; patterns: ErrorPattern[] };
+
+export interface MaxFailuresConfigParsed {
+    limit: number;
+    patterns: RegExp[] | null;
 }
-
-/** Strings and RegExp preserve the existing patternsOnReject format. */
-export type ErrorPatterns = Array<string | RegExp | ErrorPattern>;
-
-export type MaxFailuresConfig =
-    | number
-    | {
-          /** Shared limit across all matching errors, tests, retries and browsers. */
-          limit: number;
-          patterns: ErrorPatterns;
-      };
 
 export interface SystemConfig {
     debug: boolean;
     mochaOpts: MochaOpts;
     expectOpts: ExpectOptsConfig;
     ctx: { [name: string]: unknown };
-    patternsOnReject: ErrorPatterns;
-    maxFailures: MaxFailuresConfig;
+    patternsOnReject: ErrorPattern[];
+    maxFailures: MaxFailuresConfigParsed;
     workers: number;
     testsPerWorker: number;
     diffColor: string;
@@ -559,7 +551,7 @@ type PartialCommonConfig = Partial<
         | "selectivity"
     >
 > & {
-    system?: Partial<SystemConfig>;
+    system?: Partial<Omit<SystemConfig, "maxFailures">> & { maxFailures?: MaxFailuresConfig };
     timeTravel?: TimeTravelMode | TimeTravelConfig;
     takeScreenshotOnFails?: Partial<CommonConfig["takeScreenshotOnFails"]>;
     lastFailed?: Partial<CommonConfig["lastFailed"]>;

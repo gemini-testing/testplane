@@ -1,8 +1,7 @@
-const patterns = [{ name: "quota", pattern: /Too Many Requests/i }];
+const patterns = [/Session creation failed/i];
 const failureOptions = {
     numeric: { maxFailures: 2 },
-    filtered: { maxFailures: { limit: 2, patterns } },
-    immediate: { maxFailures: { limit: 20, patterns }, patternsOnReject: patterns },
+    filtered: { maxFailures: { limit: 2, patterns }, patternsOnReject: patterns },
 };
 
 module.exports = {
