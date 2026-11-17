@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 9.5.0 (2026-11-17)
+
+
+### Features
+
+* stop all tests on error ([12c513c](https://github.com/gemini-testing/testplane/commit/12c513c73f6972b7688fe5ed7e84218792c4fe1d))
+
 ### 9.4.3 (2026-11-10)
 
 
