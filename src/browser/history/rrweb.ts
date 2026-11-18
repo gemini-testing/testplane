@@ -168,9 +168,16 @@ function collectRrwebEvents(
 
             const getRealTimestamp = (fallbackTime: number = 0): number => {
                 const nativeCode = "[native code]";
+                const isNativeFunction = (fn: unknown): boolean => {
+                    try {
+                        return typeof fn === "function" && Function.prototype.toString.call(fn).includes(nativeCode);
+                    } catch (e) {
+                        return false;
+                    }
+                };
 
                 try {
-                    if (Date.now.toString().includes(nativeCode)) {
+                    if (isNativeFunction(Date.now)) {
                         return Date.now();
                     }
                 } catch (e) {
@@ -178,23 +185,31 @@ function collectRrwebEvents(
                 }
 
                 try {
-                    if (new Date().getTime.toString().includes(nativeCode)) {
-                        return new Date().getTime();
+                    if (isNativeFunction(Date)) {
+                        const date = new Date();
+
+                        if (isNativeFunction(date.getTime)) {
+                            return date.getTime();
+                        }
                     }
                 } catch (e) {
                     /**/
                 }
 
                 try {
-                    if (new Date().valueOf.toString().includes(nativeCode)) {
-                        return new Date().valueOf();
+                    if (isNativeFunction(Date)) {
+                        const date = new Date();
+
+                        if (isNativeFunction(date.valueOf)) {
+                            return date.valueOf();
+                        }
                     }
                 } catch (e) {
                     /**/
                 }
 
                 try {
-                    if (performance.now.toString().includes(nativeCode)) {
+                    if (isNativeFunction(performance.now) && typeof performance.timeOrigin === "number") {
                         return Math.floor(performance.timeOrigin + performance.now());
                     }
                 } catch (e) {

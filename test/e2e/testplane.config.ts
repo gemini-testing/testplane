@@ -21,6 +21,10 @@ export default {
             files: path.join(__dirname, "tests/report-page-screenshot.testplane.js"),
             browsers: ["chrome"],
         },
+        timeTravel: {
+            files: path.join(__dirname, "tests/time-travel.testplane.js"),
+            browsers: ["chrome"],
+        },
         calibrationResize: {
             files: path.join(__dirname, "tests/calibration-resize.testplane.js"),
             browsers: ["calibrated-chrome"],
