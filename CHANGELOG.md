@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 9.6.0 (2026-11-18)
+
+
+### Features
+
+* implement time travel network data recording ([#1337](https://github.com/gemini-testing/testplane/issues/1337)) ([ab7f0c6](https://github.com/gemini-testing/testplane/commit/ab7f0c6f79b8dca9072106f0133d630f93d7357a))
+
 ## 9.5.0 (2026-11-17)
 
 
