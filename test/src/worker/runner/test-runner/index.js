@@ -9,7 +9,6 @@ const { AssertViewError } = require("src/browser/commands/assert-view/errors/ass
 const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
 const { Suite, Test } = require("src/test-reader/test-object");
 const history = require("src/browser/history");
-const { startNetworkRecording } = require("src/browser/network-interception/network-recorder");
 const { SAVE_HISTORY_MODE } = require("src/constants/config");
 const RuntimeConfig = require("src/config/runtime-config");
 const { REPL_INSTRUMENTED_FN_FLAG } = require("src/constants/repl");
@@ -20,7 +19,7 @@ describe("worker/runner/test-runner", () => {
     const sandbox = sinon.createSandbox();
     let historyRunGroupStub;
     let captureFailScreenshotStub;
-    let startNetworkRecordingStub;
+    let startNetworkRecorderStub;
     let requestDomSnapshotsStub;
     let TestRunner;
 
@@ -94,7 +93,7 @@ describe("worker/runner/test-runner", () => {
     beforeEach(() => {
         historyRunGroupStub = sandbox.stub().callsFake(history.runGroup);
         captureFailScreenshotStub = sandbox.stub().resolves(null);
-        startNetworkRecordingStub = sandbox.stub().resolves(null);
+        startNetworkRecorderStub = sandbox.stub().resolves(null);
         requestDomSnapshotsStub = sandbox.stub().callsFake(history.requestDomSnapshots);
 
         TestRunner = proxyquire("src/worker/runner/test-runner", {
@@ -106,7 +105,7 @@ describe("worker/runner/test-runner", () => {
                 startSelectivity: sandbox.stub().resolves(() => Promise.resolve()),
             },
             "../../../browser/network-interception/network-recorder": {
-                startNetworkRecording: startNetworkRecordingStub,
+                NetworkRecorder: { start: startNetworkRecorderStub },
             },
             "./capture-fail-screenshot": {
                 captureFailScreenshot: captureFailScreenshotStub,
@@ -1040,7 +1039,6 @@ describe("worker/runner/test-runner", () => {
             });
 
             it("should collect DOM snapshots without creating a network monitor when network is disabled", async () => {
-                startNetworkRecordingStub.callsFake(startNetworkRecording);
                 const snapshots = [{ type: 4, timestamp: 100, data: { width: 800, height: 600 } }];
                 const snapshotHistory = proxyquire("src/browser/history", {
                     "./rrweb": { installRrwebAndCollectEvents: sandbox.stub().resolves(snapshots) },
@@ -1059,6 +1057,7 @@ describe("worker/runner/test-runner", () => {
                 const test = mkTest_();
                 await run_({ runner: mkRunner_({ test, config }) });
 
+                assert.notCalled(startNetworkRecorderStub);
                 assert.notCalled(getCdp);
                 assert.calledOnceWithExactly(process.send, {
                     event: "domSnapshots",
@@ -1069,8 +1068,10 @@ describe("worker/runner/test-runner", () => {
 
             it("should send collected requests even when the test fails", async () => {
                 const requests = [{ url: "https://example.com" }];
-                const stop = sandbox.stub().resolves(requests);
-                startNetworkRecordingStub.resolves({ stop });
+                const stop = sandbox.stub().resolves();
+                const snapshot = sandbox.stub().returns(requests);
+                const dispose = sandbox.stub().resolves();
+                startNetworkRecorderStub.resolves({ stop, snapshot, [Symbol.asyncDispose]: dispose });
                 ExecutionThread.prototype.run.rejects(new Error("test failed"));
                 const test = mkTest_();
                 const config = makeConfigStub({
@@ -1080,8 +1081,8 @@ describe("worker/runner/test-runner", () => {
                 const result = run_({ runner: mkRunner_({ test, config }) });
 
                 await assert.isRejected(result, /test failed/);
-                assert.calledWithExactly(startNetworkRecordingStub, sinon.match.object, config.timeTravel, false);
-                assert.callOrder(stop, process.send, BrowserAgent.prototype.freeBrowser);
+                assert.calledWithExactly(startNetworkRecorderStub, sinon.match.object, { maxBodySizeBytes: 1024 });
+                assert.callOrder(stop, snapshot, process.send, dispose, BrowserAgent.prototype.freeBrowser);
                 assert.calledOnceWithExactly(process.send, {
                     event: "networkRequests",
                     context: { testPath: test.titlePath(), browserId: test.browserId },

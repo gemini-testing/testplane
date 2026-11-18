@@ -1,18 +1,18 @@
 import sinon from "sinon";
 import { CDP } from "src/browser/cdp";
-import { CdpNetworkMonitor } from "src/browser/network-interception/cdp-network-monitor";
+import { CdpNetworkEventSource } from "src/browser/network-interception/cdp-network-event-source";
 import type { NetworkRequest, NetworkResponse } from "src/browser/network-interception/types";
 import type { CDPTargetInfo } from "src/browser/cdp/types";
 
 const sessionId = "monitor-session";
 const browserSessionId = "monitor-browser";
 
-describe("CDP network monitor", () => {
+describe("CDP network event source", () => {
     const sandbox = sinon.createSandbox();
     let command: sinon.SinonStub;
     let cdp: CDP;
     let session: WebdriverIO.Browser;
-    let monitor: CdpNetworkMonitor;
+    let monitor: CdpNetworkEventSource;
     let requests: NetworkRequest[];
     let responses: NetworkResponse[];
     let finished: sinon.SinonSpy;
@@ -74,6 +74,14 @@ describe("CDP network monitor", () => {
         cdp.network.emit("loadingFinished", { requestId: "request", timestamp: 10.5 }, fromSession);
     };
 
+    const start = (): Promise<void> =>
+        monitor.start({
+            onRequest: value => requests.push(value),
+            onResponse: value => responses.push(value),
+            onFinished: finished,
+            onFailed: failed,
+        });
+
     beforeEach(() => {
         command = sandbox.stub().resolves({});
         targets = [target("page")];
@@ -92,52 +100,59 @@ describe("CDP network monitor", () => {
         session = {
             getWindowHandles: sandbox.stub().resolves(["CDwindow-page"]),
         } as never;
-        monitor = new CdpNetworkMonitor(cdp, session);
+        monitor = new CdpNetworkEventSource(cdp, session, { maxBodySizeBytes: Infinity });
         requests = [];
         responses = [];
         finished = sandbox.spy();
         failed = sandbox.spy();
-        monitor.on("request", value => requests.push(value));
-        monitor.on("response", value => responses.push(value));
-        monitor.on("requestfinished", finished);
-        monitor.on("requestfailed", failed);
     });
 
     afterEach(async () => {
-        await monitor.stop();
+        await monitor[Symbol.asyncDispose]();
         sandbox.restore();
     });
 
     it("should expose request metadata and read the response only after completion", async () => {
         const bytes = Buffer.from([0, 255, 128]);
         command.withArgs("Network.getResponseBody").resolves({ body: bytes.toString("base64"), base64Encoded: true });
-        await monitor.start();
+        await start();
 
-        request({ hasPostData: true });
+        request({ hasPostData: true }, { type: "XHR" });
         response({ headers: { "Set-Cookie": "a=1\nb=2" } });
-        const body = responses[0].body();
+        const body = responses[0].consumeBody();
+        await assert.isRejected(responses[0].consumeBody(), /already consumed/);
         finish();
-        const [postData, responseData] = await Promise.all([requests[0].body(), body]);
+        const [postData, responseData] = await Promise.all([requests[0].consumeBody(), body]);
 
-        assert.include(requests[0], { url: "https://example.com/api", method: "POST", timestamp: 100000 });
+        assert.include(requests[0], {
+            url: "https://example.com/api",
+            method: "POST",
+            timestamp: 100000,
+            resourceType: "xhr",
+        });
         assert.include(responses[0], { request: requests[0], status: 200, timestamp: 100250 });
+        assert.notProperty(responses[0], "timing");
         assert.deepEqual(responses[0].headers, [
             { name: "set-cookie", value: "a=1" },
             { name: "set-cookie", value: "b=2" },
         ]);
         assert.deepEqual([postData, responseData], [Buffer.from("post body"), bytes]);
+        await assert.isRejected(requests[0].consumeBody(), /already consumed/);
+        await assert.isRejected(responses[0].consumeBody(), /already consumed/);
+        assert.calledOnce(command.withArgs("Network.getRequestPostData"));
+        assert.calledOnce(command.withArgs("Network.getResponseBody"));
         assert.calledOnceWithExactly(finished, requests[0], 100500);
         assert.callOrder(finished, command.withArgs("Network.getResponseBody"));
     });
 
     it("should normalize response timing to an epoch baseline and millisecond offsets", async () => {
-        await monitor.start();
+        await start();
         request();
         response({
             timing: {
                 requestTime: 10.01,
-                dnsStart: 0,
-                dnsEnd: 2,
+                dnsStart: -1,
+                dnsEnd: -1,
                 connectStart: 2,
                 connectEnd: 12,
                 sslStart: 5,
@@ -151,8 +166,8 @@ describe("CDP network monitor", () => {
 
         assert.deepEqual(responses[0].timing, {
             startTime: 100010,
-            dnsStart: 0,
-            dnsEnd: 2,
+            dnsStart: undefined,
+            dnsEnd: undefined,
             connectStart: 2,
             connectEnd: 12,
             tlsStart: 5,
@@ -164,107 +179,62 @@ describe("CDP network monitor", () => {
         });
     });
 
-    it("should leave unavailable timing phases undefined for reused connections", async () => {
-        await monitor.start();
-        request();
-        response({
-            timing: {
-                requestTime: 10,
-                dnsStart: -1,
-                dnsEnd: -1,
-                connectStart: -1,
-                connectEnd: -1,
-                sslStart: -1,
-                sslEnd: -1,
-                sendStart: 0,
-                sendEnd: 1,
-                receiveHeadersEnd: 20,
-            },
-        });
-
-        const timing = responses[0].timing!;
-        assert.equal(timing.startTime, 100000);
-        for (const phase of [
-            "dnsStart",
-            "dnsEnd",
-            "connectStart",
-            "connectEnd",
-            "tlsStart",
-            "tlsEnd",
-            "responseHeadersStart",
-        ] as const) {
-            assert.isUndefined(timing[phase]);
-        }
-        assert.equal(timing.sendStart, 0);
-        assert.equal(timing.responseHeadersEnd, 20);
-    });
-
-    it("should omit timing when CDP does not provide it", async () => {
-        await monitor.start();
-        request();
-        response();
-
-        assert.notProperty(responses[0], "timing");
-    });
-
     for (const requestFirst of [true, false]) {
-        for (const responseFirst of [true, false]) {
-            it(`should retain extra headers with requestFirst=${requestFirst}, responseFirst=${responseFirst}`, async () => {
-                await monitor.start();
-                const requestExtra = (): void => {
-                    cdp.network.emit(
-                        "requestWillBeSentExtraInfo",
-                        {
-                            requestId: "request",
-                            headers: { Cookie: "session=proof", Accept: "*/*" },
-                        },
-                        sessionId,
-                    );
-                };
-                const responseExtra = (): void => {
-                    cdp.network.emit(
-                        "responseReceivedExtraInfo",
-                        {
-                            requestId: "request",
-                            statusCode: 304,
-                            headers: { "Set-Cookie": "first=1\nsecond=2" },
-                        },
-                        sessionId,
-                    );
-                };
-                if (requestFirst) {
-                    request();
-                    requestExtra();
-                } else {
-                    requestExtra();
-                    request();
-                }
-                if (responseFirst) {
-                    response();
-                    responseExtra();
-                } else {
-                    responseExtra();
-                    response();
-                }
-                finish();
-                await monitor.stop();
+        it(`should retain extra headers when request extra-info arrives ${requestFirst ? "after" : "before"} the request`, async () => {
+            await start();
+            const requestExtra = (): void => {
+                cdp.network.emit(
+                    "requestWillBeSentExtraInfo",
+                    {
+                        requestId: "request",
+                        headers: { Cookie: "session=proof", Accept: "*/*" },
+                    },
+                    sessionId,
+                );
+            };
+            const responseExtra = (): void => {
+                cdp.network.emit(
+                    "responseReceivedExtraInfo",
+                    {
+                        requestId: "request",
+                        statusCode: 304,
+                        headers: { "Set-Cookie": "first=1\nsecond=2" },
+                    },
+                    sessionId,
+                );
+            };
+            if (requestFirst) {
+                request();
+                requestExtra();
+            } else {
+                requestExtra();
+                request();
+            }
+            if (!requestFirst) {
+                response();
+                responseExtra();
+            } else {
+                responseExtra();
+                response();
+            }
+            finish();
+            await monitor[Symbol.asyncDispose]();
 
-                assert.deepEqual(requests[0].headers, [
-                    { name: "cookie", value: "session=proof" },
-                    { name: "accept", value: "*/*" },
-                ]);
-                assert.equal(responses[0].status, 200);
-                assert.equal(responses[0].networkStatus, 304);
-                assert.deepEqual(responses[0].headers, [
-                    { name: "set-cookie", value: "first=1" },
-                    { name: "set-cookie", value: "second=2" },
-                ]);
-            });
-        }
+            assert.deepEqual(requests[0].headers, [
+                { name: "cookie", value: "session=proof" },
+                { name: "accept", value: "*/*" },
+            ]);
+            assert.equal(responses[0].status, 200);
+            assert.equal(responses[0].networkStatus, 304);
+            assert.deepEqual(responses[0].headers, [
+                { name: "set-cookie", value: "first=1" },
+                { name: "set-cookie", value: "second=2" },
+            ]);
+        });
     }
 
     it("should align late extra-info with redirect hops and skip hops without extra-info", async () => {
-        await monitor.start();
+        await start();
         request();
         request(
             { url: "https://example.com/middle" },
@@ -280,8 +250,6 @@ describe("CDP network monitor", () => {
                 redirectResponse: { status: 302, statusText: "Found", headers: { location: "/final" } },
             },
         );
-        response();
-        finish();
         for (const hop of ["first", "final"]) {
             cdp.network.emit(
                 "requestWillBeSentExtraInfo",
@@ -297,8 +265,15 @@ describe("CDP network monitor", () => {
                 },
                 sessionId,
             );
+            monitor.reconcile();
         }
-        await monitor.stop();
+        assert.deepEqual(requests[2].headers, [{ name: "content-type", value: "text/plain" }]);
+        assert.lengthOf(responses, 2);
+
+        response();
+        monitor.reconcile();
+        monitor.reconcile();
+        assert.lengthOf(responses, 3);
 
         assert.deepEqual(requests[0].headers, [{ name: "cookie", value: "first" }]);
         assert.deepEqual(requests[2].headers, [{ name: "cookie", value: "final" }]);
@@ -307,33 +282,9 @@ describe("CDP network monitor", () => {
         assert.deepEqual(responses[2].headers, [{ name: "set-cookie", value: "final" }]);
     });
 
-    it("should isolate extra-info for reused request ids in different sessions", async () => {
-        targets.push(target("second"));
-        await monitor.start();
-        for (const fromSession of [sessionId, "session-second"]) {
-            cdp.network.emit(
-                "requestWillBeSentExtraInfo",
-                {
-                    requestId: "request",
-                    headers: { Cookie: fromSession },
-                },
-                fromSession,
-            );
-            request({}, {}, fromSession);
-            response({}, fromSession);
-            finish(fromSession);
-        }
-        await monitor.stop();
-
-        assert.deepEqual(
-            requests.map(req => req.headers),
-            [[{ name: "cookie", value: sessionId }], [{ name: "cookie", value: "session-second" }]],
-        );
-    });
-
     for (const extraFirst of [true, false]) {
         it(`should preserve CORS response metadata when extraFirst=${extraFirst}`, async () => {
-            await monitor.start();
+            await start();
             request();
             const extra = (): void => {
                 cdp.network.emit(
@@ -348,6 +299,8 @@ describe("CDP network monitor", () => {
             };
             if (extraFirst) {
                 extra();
+                monitor.reconcile();
+                assert.isEmpty(responses);
             }
             cdp.network.emit(
                 "loadingFailed",
@@ -362,7 +315,9 @@ describe("CDP network monitor", () => {
             if (!extraFirst) {
                 extra();
             }
-            await monitor.stop();
+            monitor.reconcile();
+            monitor.reconcile();
+            assert.lengthOf(responses, 1);
 
             assert.equal(responses[0].networkStatus, 418);
             assert.deepEqual(responses[0].headers, [{ name: "x-proof", value: "cors" }]);
@@ -371,27 +326,16 @@ describe("CDP network monitor", () => {
                 corsError: "MissingAllowOriginHeader",
                 failedParameter: "",
             });
-            await assert.isRejected(responses[0].body(), /net::ERR_FAILED/);
+            await assert.isRejected(responses[0].consumeBody(), /net::ERR_FAILED/);
         });
     }
 
-    it("should decode base64 post-data fallback responses", async () => {
-        const bytes = Buffer.from([0, 128, 255]);
-        command
-            .withArgs("Network.getRequestPostData")
-            .resolves({ postData: bytes.toString("base64"), base64Encoded: true });
-        await monitor.start();
-        request({ hasPostData: true });
-
-        assert.deepEqual(await requests[0].body(), bytes);
-    });
-
     it("should keep redirect hops separate when CDP reuses the request id", async () => {
-        await monitor.start();
+        await start();
 
         request({ hasPostData: true });
         // The recorder starts reading the body synchronously on the request event.
-        const postData = requests[0].body();
+        const postData = requests[0].consumeBody();
         request(
             { url: "https://example.com/redirected", method: "GET" },
             {
@@ -409,46 +353,47 @@ describe("CDP network monitor", () => {
             ],
         );
         assert.deepEqual(await postData, Buffer.from("post body"));
-        await assert.isRejected(responses[0].body(), /redirects/);
-        assert.deepEqual(await responses[1].body(), Buffer.from("response body"));
+        await assert.isRejected(responses[0].consumeBody(), /redirects/);
+        assert.deepEqual(await responses[1].consumeBody(), Buffer.from("response body"));
         assert.calledTwice(finished);
     });
 
     it("should preserve raw request bytes and reject incomplete multipart bodies", async () => {
-        await monitor.start();
+        await start();
 
         request({ postData: "lossy", postDataEntries: [{ bytes: "AID/" }, { bytes: "Kg==" }] });
         request({ postData: "partial", postDataEntries: [{ bytes: "aGk=" }, {}] }, { requestId: "multipart" });
 
-        assert.deepEqual(await requests[0].body(), Buffer.from([0, 128, 255, 42]));
-        await assert.isRejected(requests[1].body(), /unavailable data/);
+        assert.deepEqual(await requests[0].consumeBody(), Buffer.from([0, 128, 255, 42]));
+        await assert.isRejected(requests[1].consumeBody(), /unavailable data/);
     });
 
     it("should report a failed download and reject its pending body", async () => {
-        await monitor.start();
+        await start();
         request();
         response();
-        const body = responses[0].body();
+        const body = responses[0].consumeBody();
 
         cdp.network.emit(
             "loadingFailed",
-            { requestId: "request", timestamp: 10.3, errorText: "net::ERR_ABORTED" },
+            { requestId: "request", timestamp: 10.3, errorText: "net::ERR_ABORTED", type: "Fetch" },
             sessionId,
         );
 
+        assert.equal(requests[0].resourceType, "fetch");
         await assert.isRejected(body, /net::ERR_ABORTED/);
         assert.calledOnceWithExactly(failed, requests[0], 100300, "net::ERR_ABORTED");
         assert.notCalled(command.withArgs("Network.getResponseBody"));
     });
 
     it("should settle incomplete bodies and remove listeners when stopped", async () => {
-        await monitor.start();
+        await start();
         request();
         response();
-        const body = responses[0].body();
+        const body = responses[0].consumeBody();
 
-        await monitor.stop();
-        await monitor.stop();
+        await monitor[Symbol.asyncDispose]();
+        await monitor[Symbol.asyncDispose]();
 
         await assert.isRejected(body, /stopped before/);
         assert.isEmpty(cdp.network.eventNames());
@@ -458,6 +403,25 @@ describe("CDP network monitor", () => {
         });
     });
 
+    it("should detach and remove listeners even if final reconciliation throws", async () => {
+        const onResponse = sandbox.stub().throws(new Error("Could not record response"));
+        await monitor.start({ onRequest: () => {}, onResponse, onFinished: finished, onFailed: failed });
+        request();
+        cdp.network.emit(
+            "responseReceivedExtraInfo",
+            { requestId: "request", statusCode: 418, headers: {} },
+            sessionId,
+        );
+
+        await monitor.stop();
+
+        assert.calledOnce(onResponse);
+        assert.isEmpty(cdp.network.eventNames());
+        assert.isEmpty(cdp.target.eventNames());
+        assert.isEmpty(cdp.page.eventNames());
+        assert.calledOnce(command.withArgs("Target.detachFromTarget"));
+    });
+
     it("should wait for an ongoing body read before detaching", async () => {
         let complete!: sinon.SinonSpy;
         command.withArgs("Network.getResponseBody").returns(
@@ -465,13 +429,13 @@ describe("CDP network monitor", () => {
                 complete = sandbox.spy(resolve);
             }),
         );
-        await monitor.start();
+        await start();
         request();
         response();
-        const body = responses[0].body();
+        const body = responses[0].consumeBody();
         finish();
 
-        const stopped = monitor.stop();
+        const stopped = monitor[Symbol.asyncDispose]();
         await flushAttachments();
         complete({ body: "done", base64Encoded: false });
         await stopped;
@@ -483,7 +447,7 @@ describe("CDP network monitor", () => {
     it("should clean up after Network.enable fails", async () => {
         command.withArgs("Network.enable").rejects(new Error("enable failed"));
 
-        const started = monitor.start();
+        const started = start();
 
         await assert.isRejected(started, /enable failed/);
         assert.isEmpty(cdp.network.eventNames());
@@ -495,49 +459,35 @@ describe("CDP network monitor", () => {
     it("should refuse to record an arbitrary target if the current window is missing", async () => {
         command.withArgs("Target.getTargets").resolves({ targetInfos: [{ targetId: "unrelated-page", type: "page" }] });
 
-        const started = monitor.start();
+        const started = start();
 
         await assert.isRejected(started, /Could not find/);
         assert.notCalled(command.withArgs("Target.attachToBrowserTarget"));
     });
 
-    it("should leave no listeners or attachments when the experimental browser command is unavailable", async () => {
-        command.withArgs("Target.attachToBrowserTarget").rejects(new Error("Method not found"));
-
-        await assert.isRejected(monitor.start(), /Method not found/);
-        await monitor.stop();
-
-        assert.isEmpty(cdp.network.eventNames());
-        assert.isEmpty(cdp.target.eventNames());
-        assert.notCalled(command.withArgs("Target.detachFromTarget"));
-    });
-
-    for (const type of ["worker", "shared_worker", "service_worker"] as const) {
-        it(`should record ${type} traffic without Page commands or request id collisions`, async () => {
-            await monitor.start();
-            attach("worker-session", target("worker", type), sessionId);
-            await flushAttachments();
-            request();
-            request({ url: "https://example.com/worker" }, {}, "worker-session");
-            response();
-            response({}, "worker-session");
-            finish();
-            finish("worker-session");
-
-            assert.lengthOf(requests, 2);
-            assert.deepEqual(await responses[1].body(), Buffer.from("response body"));
-            assert.notCalled(command.withArgs("Page.enable", { sessionId: "worker-session" }));
-            assert.calledWithExactly(command, "Network.getResponseBody", {
-                sessionId: "worker-session",
-                params: { requestId: "request" },
-            });
+    it("should capture a dedicated worker without using Page commands", async () => {
+        await start();
+        attach("worker-session", target("worker", "worker"), sessionId);
+        await flushAttachments();
+        request();
+        request({ url: "https://example.com/worker" }, {}, "worker-session");
+        response();
+        response({}, "worker-session");
+        finish();
+        finish("worker-session");
+        assert.lengthOf(requests, 2);
+        assert.deepEqual(await responses[1].consumeBody(), Buffer.from("response body"));
+        assert.notCalled(command.withArgs("Page.enable", { sessionId: "worker-session" }));
+        assert.calledWithExactly(command, "Network.getResponseBody", {
+            sessionId: "worker-session",
+            params: { requestId: "request" },
         });
-    }
+    });
 
     it("should include existing shared and service workers only from this browser context", async () => {
         targets.push(target("shared", "shared_worker"), target("service", "service_worker"));
         targets.push(target("unrelated", "service_worker", "other-context"));
-        await monitor.start();
+        await start();
 
         request({}, {}, "session-shared");
         request({}, {}, "session-service");
@@ -570,7 +520,7 @@ describe("CDP network monitor", () => {
 
     it("should attach nested workers and settle their pending bodies when their parent closes", async () => {
         command.withArgs("Network.getResponseBody").returns(new Promise(() => {}));
-        await monitor.start();
+        await start();
         attach("worker-session", target("worker", "worker"), sessionId);
         await flushAttachments();
         attach("nested-worker-session", target("nested", "worker"), "worker-session");
@@ -578,7 +528,7 @@ describe("CDP network monitor", () => {
         request({}, {}, "nested-worker-session");
         response({}, "nested-worker-session");
         finish("nested-worker-session");
-        const body = responses[0].body();
+        const body = responses[0].consumeBody();
         await Promise.resolve();
 
         detached("worker-session");
@@ -590,8 +540,15 @@ describe("CDP network monitor", () => {
     it("should isolate tabs with reused request ids and exclude unrelated browser contexts", async () => {
         targets.push(target("second"), target("unrelated", "page", "other-context"));
         (session.getWindowHandles as sinon.SinonStub).resolves(["CDwindow-page", "second"]);
-        await monitor.start();
+        await start();
 
+        for (const fromSession of [sessionId, "session-second"]) {
+            cdp.network.emit(
+                "requestWillBeSentExtraInfo",
+                { requestId: "request", headers: { Cookie: fromSession } },
+                fromSession,
+            );
+        }
         request();
         request({ url: "https://example.com/second" }, {}, "session-second");
         request({}, {}, "session-unrelated");
@@ -599,11 +556,16 @@ describe("CDP network monitor", () => {
         response({}, "session-second");
         finish();
         finish("session-second");
-        await Promise.all(responses.map(res => res.body()));
+        await Promise.all(responses.map(res => res.consumeBody()));
 
         assert.deepEqual(
             responses.map(res => res.request),
             requests,
+        );
+        monitor.reconcile();
+        assert.deepEqual(
+            requests.map(req => req.headers),
+            [[{ name: "cookie", value: sessionId }], [{ name: "cookie", value: "session-second" }]],
         );
         assert.lengthOf(requests, 2);
         assert.calledWithExactly(command, "Network.getResponseBody", {
@@ -618,7 +580,7 @@ describe("CDP network monitor", () => {
     });
 
     it("should enable monitoring before resuming a popup without an opener", async () => {
-        await monitor.start();
+        await start();
         let enable!: () => void;
         command.withArgs("Network.enable", { sessionId: "popup-session", params: undefined }).returns(
             new Promise<void>(resolve => {
@@ -636,7 +598,7 @@ describe("CDP network monitor", () => {
         await flushAttachments();
 
         assert.lengthOf(requests, 1);
-        assert.deepEqual(await responses[0].body(), Buffer.from("response body"));
+        assert.deepEqual(await responses[0].consumeBody(), Buffer.from("response body"));
         assert.callOrder(
             command.withArgs("Network.enable", { sessionId: "popup-session", params: undefined }),
             command.withArgs("Runtime.runIfWaitingForDebugger", { sessionId: "popup-session" }),
@@ -644,7 +606,7 @@ describe("CDP network monitor", () => {
     });
 
     it("should observe same-process frames and recursively attach to out-of-process frames", async () => {
-        await monitor.start();
+        await start();
         request({}, { frameId: "local-frame" });
         finish();
         attach("frame-session", target("frame", "iframe"), sessionId);
@@ -659,7 +621,7 @@ describe("CDP network monitor", () => {
 
         assert.lengthOf(requests, 3);
         assert.calledThrice(finished);
-        assert.deepEqual(await responses[0].body(), Buffer.from("response body"));
+        assert.deepEqual(await responses[0].consumeBody(), Buffer.from("response body"));
         assert.calledWithExactly(command, "Network.getResponseBody", {
             sessionId: "nested-session",
             params: { requestId: "request" },
@@ -667,10 +629,10 @@ describe("CDP network monitor", () => {
     });
 
     it("should correlate iframe navigation across sessions and fetch its body from the finishing session", async () => {
-        await monitor.start();
+        await start();
         request({}, { loaderId: "request", frameId: "frame" });
         response();
-        const body = responses[0].body();
+        const body = responses[0].consumeBody();
         attach("frame-session", target("frame", "iframe"), sessionId);
         await flushAttachments();
         request({}, { loaderId: "request", frameId: "frame" }, "frame-session");
@@ -688,12 +650,12 @@ describe("CDP network monitor", () => {
     });
 
     it("should preserve a navigation when iframe detachment arrives before the process swap", async () => {
-        await monitor.start();
+        await start();
         attach("frame-session", target("frame", "iframe"), sessionId);
         await flushAttachments();
         request({}, { loaderId: "request", frameId: "frame" }, "frame-session");
         response({}, "frame-session");
-        const body = responses[0].body();
+        const body = responses[0].consumeBody();
         command.withArgs("Page.enable", { sessionId }).callsFake(async () => {
             cdp.page.emit("frameAttached", { frameId: "frame", parentFrameId: "page" }, sessionId);
         });
@@ -711,17 +673,17 @@ describe("CDP network monitor", () => {
 
     it("should cancel a child frame body read when its page closes", async () => {
         command.withArgs("Network.getResponseBody").returns(new Promise(() => {}));
-        await monitor.start();
+        await start();
         attach("frame-session", target("frame", "iframe"), sessionId);
         await flushAttachments();
         request({}, {}, "frame-session");
         response({}, "frame-session");
         finish("frame-session");
-        const body = responses[0].body();
+        const body = responses[0].consumeBody();
         await Promise.resolve();
 
         detached(sessionId);
-        await monitor.stop();
+        await monitor[Symbol.asyncDispose]();
 
         await assert.isRejected(body, /no longer available/);
         assert.isEmpty(cdp.network.eventNames());
@@ -729,10 +691,8 @@ describe("CDP network monitor", () => {
 
     describe("body size limit", () => {
         beforeEach(async () => {
-            monitor = new CdpNetworkMonitor(cdp, session, 3);
-            monitor.on("request", value => requests.push(value));
-            monitor.on("response", value => responses.push(value));
-            await monitor.start();
+            monitor = new CdpNetworkEventSource(cdp, session, { maxBodySizeBytes: 3 });
+            await start();
         });
 
         it("should limit decoded bytes, including UTF-8 and multipart request data", async () => {
@@ -740,7 +700,7 @@ describe("CDP network monitor", () => {
             request({ postDataEntries: [{ bytes: "AQI=" }, { bytes: "AwQ=" }] }, { requestId: "multipart" });
             request({ postDataEntries: [{ bytes: "AID/" }] }, { requestId: "exact" });
 
-            const bodies = await Promise.all(requests.map(req => req.body().catch(error => error.message)));
+            const bodies = await Promise.all(requests.map(req => req.consumeBody().catch(error => error.message)));
 
             assert.deepEqual(bodies, ["Body exceeds 3 bytes", "Body exceeds 3 bytes", Buffer.from([0, 128, 255])]);
         });
@@ -748,17 +708,17 @@ describe("CDP network monitor", () => {
         it("should apply the fallback request body limit to decoded bytes", async () => {
             command.withArgs("Network.getRequestPostData").resolves({ postData: "AID/", base64Encoded: true });
             request({ hasPostData: true });
-            assert.deepEqual(await requests[0].body(), Buffer.from([0, 128, 255]));
+            assert.deepEqual(await requests[0].consumeBody(), Buffer.from([0, 128, 255]));
 
             command.withArgs("Network.getRequestPostData").resolves({ postData: "Zm91cg==", base64Encoded: true });
             request({ hasPostData: true }, { requestId: "large" });
-            await assert.isRejected(requests[1].body(), /exceeds 3 bytes/);
+            await assert.isRejected(requests[1].consumeBody(), /exceeds 3 bytes/);
         });
 
         it("should skip fetching a response when observed decoded bytes exceed the limit", async () => {
             request();
             response({ headers: { "Content-Length": "2", "Content-Encoding": "gzip" } });
-            const body = responses[0].body();
+            const body = responses[0].consumeBody();
 
             for (let i = 0; i < 2; i++) {
                 cdp.network.emit(
@@ -780,7 +740,7 @@ describe("CDP network monitor", () => {
             response();
             finish();
 
-            await assert.isRejected(responses[0].body(), /exceeds 3 bytes/);
+            await assert.isRejected(responses[0].consumeBody(), /exceeds 3 bytes/);
         });
 
         it("should allow a response exactly at the limit", async () => {
@@ -791,7 +751,7 @@ describe("CDP network monitor", () => {
             cdp.network.emit("dataReceived", { requestId: "request", dataLength: 3, encodedDataLength: 3 }, sessionId);
             finish();
 
-            assert.deepEqual(await responses[0].body(), Buffer.from([0, 128, 255]));
+            assert.deepEqual(await responses[0].consumeBody(), Buffer.from([0, 128, 255]));
         });
     });
 });

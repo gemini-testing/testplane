@@ -1,17 +1,23 @@
-import { EventEmitter } from "node:events";
 import crypto from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import fs from "fs-extra";
 import sinon from "sinon";
 import proxyquire from "proxyquire";
-import { TimeTravelMode } from "src/config";
-import { CdpNetworkMonitor } from "src/browser/network-interception/cdp-network-monitor";
-import type { NetworkMonitorEvents, NetworkRequest, NetworkResponse } from "src/browser/network-interception/types";
+import type {
+    NetworkEventSourceHandlers,
+    NetworkRequest,
+    NetworkResponse,
+} from "src/browser/network-interception/types";
 
-class Monitor extends EventEmitter<NetworkMonitorEvents> {
-    start = sinon.stub().resolves();
+class Monitor {
+    handlers!: NetworkEventSourceHandlers;
+    start = sinon.stub().callsFake(async (handlers: NetworkEventSourceHandlers) => {
+        this.handlers = handlers;
+    });
     stop = sinon.stub().resolves();
+    reconcile = sinon.stub();
+    [Symbol.asyncDispose] = (): Promise<void> => this.stop();
 }
 
 const request = (body: Buffer | null = null): NetworkRequest => ({
@@ -19,7 +25,7 @@ const request = (body: Buffer | null = null): NetworkRequest => ({
     method: "POST",
     headers: [],
     timestamp: 100,
-    body: async () => body,
+    consumeBody: async () => body,
 });
 const response = (request: NetworkRequest, body: Buffer): NetworkResponse => ({
     request,
@@ -27,12 +33,14 @@ const response = (request: NetworkRequest, body: Buffer): NetworkResponse => ({
     statusText: "OK",
     headers: [],
     timestamp: 110,
-    body: async () => body,
+    consumeBody: async () => body,
 });
 
 describe("Time Travel network recorder", () => {
     const sandbox = sinon.createSandbox();
-    const config = { mode: TimeTravelMode.On, network: { enabled: true, maxBodySizeBytes: 1024 } };
+    const settings = { maxBodySizeBytes: 1024 };
+    // eslint-disable-next-line camelcase
+    const session = { unstable_getCdp: async () => ({}) } as never;
     let dir: string;
     let monitor: Monitor;
     let recorderModule: typeof import("src/browser/network-interception/network-recorder");
@@ -41,7 +49,8 @@ describe("Time Travel network recorder", () => {
         dir = await fs.mkdtemp(path.join(os.tmpdir(), "network-recorder-"));
         monitor = new Monitor();
         recorderModule = proxyquire("src/browser/network-interception/network-recorder", {
-            "../../temp": { attach: () => {}, path: () => path.join(dir, crypto.randomUUID()) },
+            "./cdp-network-event-source": { CdpNetworkEventSource: sinon.stub().returns(monitor) },
+            "../../temp": { attach: () => {}, init: () => {}, path: () => path.join(dir, crypto.randomUUID()) },
         });
     });
 
@@ -53,49 +62,47 @@ describe("Time Travel network recorder", () => {
     it("should save binary bodies once when a response echoes the request", async () => {
         const body = Buffer.from([0, 128, 255]);
         const req = request(body);
-        const recorder = new recorderModule.NetworkRecorder(monitor, 1024);
+        await using recorder = await recorderModule.NetworkRecorder.start(session, settings);
 
-        monitor.emit("request", req);
-        monitor.emit("response", response(req, body));
-        monitor.emit("requestfinished", req, 120);
-        const [saved] = await recorder.stop();
+        monitor.handlers.onRequest(req);
+        const timing = { startTime: 100, sendStart: 0, sendEnd: 1, responseHeadersEnd: 10 };
+        monitor.handlers.onResponse({ ...response(req, body), timing });
+        monitor.handlers.onFinished(req, 120);
+        await recorder.stop();
+        const [saved] = recorder.snapshot();
 
         assert.include(saved, { url: req.url, method: "POST", finishedAt: 120 });
         assert.include(saved.response, { status: 200, bodyHash: saved.bodyHash, bodyFilePath: saved.bodyFilePath });
+        assert.deepEqual(saved.response?.timing, timing);
         assert.equal(saved.bodyHash, crypto.createHash("sha256").update(body).digest("hex"));
         assert.deepEqual(await fs.readFile(saved.bodyFilePath!), body);
         assert.lengthOf(await fs.readdir(dir), 1);
     });
 
-    it("should preserve optional timing without requiring it from the monitor", async () => {
-        const recorder = new recorderModule.NetworkRecorder(monitor, 1024);
-        const timing = { startTime: 100, sendStart: 0, sendEnd: 1, responseHeadersEnd: 10 };
-        const timed = request();
-        const untimed = request();
-        monitor.emit("request", timed);
-        monitor.emit("response", { ...response(timed, Buffer.alloc(0)), timing });
-        monitor.emit("request", untimed);
-        monitor.emit("response", response(untimed, Buffer.alloc(0)));
-
-        const saved = await recorder.stop();
-
-        assert.deepEqual(saved[0].response!.timing, timing);
-        assert.notProperty(saved[1].response!, "timing");
-    });
-
-    it("should serialize headers and network status enriched after completion", async () => {
-        const req = { ...request() };
+    it("should refresh headers and network status when taking a live snapshot", async () => {
+        const req = { ...request(), resourceType: undefined as string | undefined };
         const res = { ...response(req, Buffer.alloc(0)), networkStatus: undefined as number | undefined };
-        const recorder = new recorderModule.NetworkRecorder(monitor, 1024);
-        monitor.emit("request", req);
-        monitor.emit("response", res);
-        monitor.emit("requestfinished", req, 120);
-        req.headers = [{ name: "cookie", value: "proof" }];
-        res.headers = [{ name: "set-cookie", value: "proof" }];
-        res.networkStatus = 304;
+        await using recorder = await recorderModule.NetworkRecorder.start(session, settings);
+        monitor.handlers.onRequest(req);
+        monitor.handlers.onResponse(res);
+        monitor.handlers.onFinished(req, 120);
+        const [initial] = recorder.snapshot();
+        monitor.reconcile.callsFake(() => {
+            req.headers = [{ name: "cookie", value: "proof" }];
+            req.resourceType = "fetch";
+            res.headers = [{ name: "set-cookie", value: "proof" }];
+            res.networkStatus = 304;
+        });
 
-        const [saved] = await recorder.stop();
+        const [saved] = recorder.snapshot();
 
+        assert.notProperty(initial, "resourceType");
+        assert.equal(saved.resourceType, "fetch");
+        assert.isEmpty(initial.headers);
+        assert.isEmpty(initial.response!.headers);
+        assert.notProperty(initial.response!, "timing");
+        assert.isUndefined(initial.response!.networkStatus);
+        assert.notCalled(monitor.stop);
         assert.deepEqual(saved.headers, req.headers);
         assert.deepEqual(saved.response!.headers, res.headers);
         assert.equal(saved.response!.status, 200);
@@ -105,12 +112,13 @@ describe("Time Travel network recorder", () => {
     it("should record write errors without publishing body references or retrying duplicate bodies", async () => {
         const write = sandbox.stub(fs, "writeFile").rejects(new Error("disk unavailable"));
         const body = Buffer.from("proof");
-        const recorder = new recorderModule.NetworkRecorder(monitor, 1024);
-        monitor.emit("request", request(body));
+        await using recorder = await recorderModule.NetworkRecorder.start(session, settings);
+        monitor.handlers.onRequest(request(body));
         await new Promise(resolve => setImmediate(resolve));
-        monitor.emit("request", request(body));
+        monitor.handlers.onRequest(request(body));
 
-        const saved = await recorder.stop();
+        await recorder.stop();
+        const saved = recorder.snapshot();
 
         for (const record of saved) {
             assert.equal(record.bodyError, "disk unavailable");
@@ -123,12 +131,13 @@ describe("Time Travel network recorder", () => {
     it("should preserve failed and unfinished requests", async () => {
         const failed = request();
         const pending = { ...request(), url: "https://example.com/pending" };
-        const recorder = new recorderModule.NetworkRecorder(monitor, 1024);
+        await using recorder = await recorderModule.NetworkRecorder.start(session, settings);
 
-        monitor.emit("request", failed);
-        monitor.emit("requestfailed", failed, 120, "net::ERR_FAILED");
-        monitor.emit("request", pending);
-        const saved = await recorder.stop();
+        monitor.handlers.onRequest(failed);
+        monitor.handlers.onFailed(failed, 120, "net::ERR_FAILED");
+        monitor.handlers.onRequest(pending);
+        await recorder.stop();
+        const saved = recorder.snapshot();
 
         assert.deepEqual(saved, [
             {
@@ -145,80 +154,31 @@ describe("Time Travel network recorder", () => {
 
     it("should keep metadata when bodies exceed the limit or cannot be read", async () => {
         const req = request(Buffer.from("four"));
-        const recorder = new recorderModule.NetworkRecorder(monitor, 3);
+        await using recorder = await recorderModule.NetworkRecorder.start(session, { maxBodySizeBytes: 3 });
         const res = {
             ...response(req, Buffer.alloc(0)),
-            body: async (): Promise<Buffer> => {
+            consumeBody: async (): Promise<Buffer> => {
                 throw new Error("body evicted");
             },
         };
 
-        monitor.emit("request", req);
-        monitor.emit("response", res);
-        const [saved] = await recorder.stop();
+        monitor.handlers.onRequest(req);
+        monitor.handlers.onResponse(res);
+        await recorder.stop();
+        const [saved] = recorder.snapshot();
 
         assert.include(saved, { url: req.url, bodyError: "Body exceeds 3 bytes" });
         assert.include(saved.response, { status: 200, bodyError: "body evicted" });
         assert.isEmpty(await fs.readdir(dir));
     });
 
-    it("should unsubscribe only its own listeners when stopped", async () => {
-        const listener = sandbox.spy();
-        monitor.on("request", listener);
-        const recorder = new recorderModule.NetworkRecorder(monitor, 1024);
-
-        const saved = await recorder.stop();
-        monitor.emit("request", request());
-
-        assert.isEmpty(saved);
-        assert.calledOnce(listener);
-        assert.notCalled(monitor.stop);
-        assert.deepEqual(monitor.eventNames(), ["request"]);
-    });
-
-    it("should avoid CDP unless network recording is enabled for this attempt", async () => {
-        const getCdp = sandbox.stub().rejects(new Error("CDP must not be accessed"));
+    it("should return an empty recording when CDP is unavailable", async () => {
         // eslint-disable-next-line camelcase
-        const session = { unstable_getCdp: getCdp } as never;
-        const disabledConfigs = [
-            { ...config, network: { ...config.network, enabled: false } },
-            { ...config, mode: TimeTravelMode.Off },
-            { ...config, mode: TimeTravelMode.RetriesOnly },
-        ];
+        const session = { unstable_getCdp: async () => null } as never;
 
-        const recordings = await Promise.all(
-            disabledConfigs.map(options => recorderModule.startNetworkRecording(session, options, false)),
-        );
-
-        assert.deepEqual(recordings, [null, null, null]);
-        assert.notCalled(getCdp);
-    });
-
-    it("should warn once per unsupported browser session", async () => {
-        const warn = sandbox.stub(console, "warn");
-        // eslint-disable-next-line camelcase
-        const session = { sessionId: crypto.randomUUID(), unstable_getCdp: async () => null } as never;
-
-        const first = await recorderModule.startNetworkRecording(session, config, false);
-        const second = await recorderModule.startNetworkRecording(session, config, false);
-
-        assert.deepEqual([first, second], [null, null]);
-        assert.calledOnceWithMatch(warn, sinon.match.string, /CDP is unavailable/);
-    });
-
-    it("should disable network recording and warn once when an experimental CDP method is missing", async () => {
-        const warn = sandbox.stub(console, "warn");
-        sandbox.stub(CdpNetworkMonitor.prototype, "start").rejects(new Error("Method not found"));
-        const stop = sandbox.stub(CdpNetworkMonitor.prototype, "stop").resolves();
-        // eslint-disable-next-line camelcase
-        const session = { sessionId: crypto.randomUUID(), unstable_getCdp: async () => ({}) } as never;
-
-        const first = await recorderModule.startNetworkRecording(session, config, false);
-        const second = await recorderModule.startNetworkRecording(session, config, false);
-
-        assert.deepEqual([first, second], [null, null]);
-        assert.calledTwice(stop);
-        assert.calledOnceWithMatch(warn, sinon.match.string, /Method not found/);
+        await using recorder = await recorderModule.NetworkRecorder.start(session, settings);
+        assert.isEmpty(recorder.snapshot());
+        assert.notCalled(monitor.start);
     });
 
     it("should flush the monitor before returning the final response body", async () => {
@@ -227,21 +187,24 @@ describe("Time Travel network recorder", () => {
         const body = new Promise<Buffer>(resolve => {
             finishBody = resolve;
         });
-        sandbox.stub(CdpNetworkMonitor.prototype, "start").callsFake(async function (this: CdpNetworkMonitor) {
-            this.emit("request", req);
-            this.emit("response", { ...response(req, Buffer.alloc(0)), body: () => body });
+        monitor.start.callsFake(async (handlers: NetworkEventSourceHandlers) => {
+            monitor.handlers = handlers;
+            monitor.handlers.onRequest(req);
+            monitor.handlers.onResponse({ ...response(req, Buffer.alloc(0)), consumeBody: () => body });
         });
-        sandbox.stub(CdpNetworkMonitor.prototype, "stop").callsFake(async function (this: CdpNetworkMonitor) {
-            this.emit("requestfinished", req, 120);
+        monitor.stop.callsFake(async () => {
+            monitor.handlers.onFinished(req, 120);
             finishBody(Buffer.from("last response"));
         });
-        // eslint-disable-next-line camelcase
-        const session = { unstable_getCdp: async () => ({}) } as never;
 
-        const recording = await recorderModule.startNetworkRecording(session, config, false);
-        const [saved] = await recording!.stop();
+        {
+            await using recording = await recorderModule.NetworkRecorder.start(session, settings);
+            await recording.stop();
+            const [saved] = recording.snapshot();
 
-        assert.equal(saved.finishedAt, 120);
-        assert.deepEqual(await fs.readFile(saved.response!.bodyFilePath!), Buffer.from("last response"));
+            assert.equal(saved.finishedAt, 120);
+            assert.deepEqual(await fs.readFile(saved.response!.bodyFilePath!), Buffer.from("last response"));
+        }
+        assert.calledOnce(monitor.stop);
     });
 });
