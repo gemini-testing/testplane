@@ -17,6 +17,7 @@ import type { eventWithTime as RrwebEvent } from "@rrweb/types";
 import type { runGroup } from "../browser/history";
 import type { NormalizedDependencies, SelectivityCompressionType } from "../browser/cdp/selectivity/types";
 import type { ProfilerResultV1 } from "../profiler/schema";
+import { RecordedRequest } from "../browser/network-interception/network-recorder";
 
 export type { Test } from "../test-reader/test-object/test";
 export type { Suite } from "../test-reader/test-object/suite";
@@ -228,6 +229,10 @@ export interface SnapshotsData {
     rrwebSnapshots: RrwebEvent[];
 }
 
+export interface NetworkRequestsData {
+    requests: RecordedRequest[];
+}
+
 export interface TestDepsContext {
     testDependenciesPath: string;
     compression: SelectivityCompressionType;
@@ -267,6 +272,7 @@ export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["TEST_PENDING"], callback: (test: Test) => void): T;
     (event: Events["RETRY"], callback: (test: TestResultWithRetries) => void): T;
     (event: Events["DOM_SNAPSHOTS"], callback: (context: TestContext, data: SnapshotsData) => void): T;
+    (event: Events["NETWORK_REQUESTS"], callback: (context: TestContext, data: NetworkRequestsData) => void): T;
     (event: Events["TEST_DEPENDENCIES"], callback: (context: TestDepsContext, data: TestDepsData) => void): T;
 
     (event: Events["CLI"], callback: (commander: commander.CommanderStatic) => void | Promise<void>): T;

@@ -64,6 +64,10 @@ export class CDPRuntime extends CDPEventEmitter<RuntimeEvents> {
         return this._connection.request("Runtime.enable", { sessionId });
     }
 
+    async runIfWaitingForDebugger(sessionId: CDPSessionId): Promise<void> {
+        return this._connection.request("Runtime.runIfWaitingForDebugger", { sessionId });
+    }
+
     /**
      * @param sessionId result of "Target.attachToTarget"
      * @link https://chromedevtools.github.io/devtools-protocol/1-3/Runtime/#method-disable

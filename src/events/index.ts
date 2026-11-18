@@ -46,6 +46,7 @@ export const RunnerSyncEvents = {
     RETRY: "retry",
 
     DOM_SNAPSHOTS: "domSnapshots",
+    NETWORK_REQUESTS: "networkRequests",
 
     ADD_FILE_TO_REMOVE: "addFileToRemove",
 

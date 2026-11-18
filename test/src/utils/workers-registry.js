@@ -117,6 +117,22 @@ describe("WorkersRegistry", () => {
     });
 
     describe("communication with worker", () => {
+        it("should forward network requests separately from DOM snapshots", () => {
+            const registry = mkWorkersRegistry_();
+            const networkListener = sinon.spy();
+            const snapshotListener = sinon.spy();
+            registry.on(Events.NETWORK_REQUESTS, networkListener);
+            registry.on(Events.DOM_SNAPSHOTS, snapshotListener);
+            const child = initChild_(123);
+            const context = { testPath: ["test"], browserId: "chrome" };
+            const data = { requests: [{ url: "https://example.com" }] };
+
+            child.emit("message", { event: Events.NETWORK_REQUESTS, context, data });
+
+            assert.calledOnceWithExactly(networkListener, context, data);
+            assert.notCalled(snapshotListener);
+        });
+
         it("should reply to worker init request", () => {
             RuntimeConfig.getInstance.returns({ baz: "qux" });
             mkWorkersRegistry_({ configPath: "foo/bar" });
