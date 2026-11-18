@@ -8,12 +8,13 @@ const ExecutionThread = require("./execution-thread");
 const { captureFailScreenshot } = require("./capture-fail-screenshot");
 const { AssertViewError } = require("../../../browser/commands/assert-view/errors/assert-view-error");
 const history = require("../../../browser/history");
+const { shouldRecordSnapshots } = require("../../../browser/history/utils");
 const { SAVE_HISTORY_MODE } = require("../../../constants/config");
 const { REPL_INSTRUMENTED_FN_FLAG } = require("../../../constants/repl");
 const RuntimeConfig = require("../../../config/runtime-config");
 const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
-const { startNetworkRecording } = require("../../../browser/network-interception/network-recorder");
+const { NetworkRecorder } = require("../../../browser/network-interception/network-recorder");
 const { MasterEvents } = require("../../../events");
 const { startSelectivity } = require("../../../browser/cdp/selectivity");
 const { noopProfilerRuntime } = require("../../../profiler/runtime/noop");
@@ -201,9 +202,13 @@ module.exports = class TestRunner {
         });
         const hookRunner = HookRunner.create(test, executionThread);
         const { callstackHistory } = this._browser;
-        const networkRecorder = await history.runWithoutHistory(null, () =>
-            startNetworkRecording(this._browser.publicAPI, this._config.timeTravel, (this._attempt ?? 0) > 0),
-        );
+        const { network, mode } = this._config.timeTravel;
+        await using networkRecorder =
+            network.enabled && shouldRecordSnapshots(mode, (this._attempt ?? 0) > 0)
+                ? await history.runWithoutHistory(null, () =>
+                      NetworkRecorder.start(this._browser.publicAPI, { maxBodySizeBytes: network.maxBodySizeBytes }),
+                  )
+                : undefined;
 
         let error;
 
@@ -264,8 +269,9 @@ module.exports = class TestRunner {
         } catch (e) {
             error = error || e;
         } finally {
-            if (networkRecorder) {
-                const recordedRequests = await networkRecorder.stop();
+            await networkRecorder?.stop();
+            const recordedRequests = networkRecorder?.snapshot();
+            if (recordedRequests?.length) {
                 ipc.emit(MasterEvents.NETWORK_REQUESTS, {
                     context: { testPath: test.titlePath(), browserId: test.browserId },
                     data: { requests: recordedRequests },

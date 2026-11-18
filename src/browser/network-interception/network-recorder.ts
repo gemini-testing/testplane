@@ -1,14 +1,12 @@
 import crypto from "node:crypto";
 import fs from "fs-extra";
+import makeDebug from "debug";
 import * as temp from "../../temp";
-import * as logger from "../../utils/logger";
 import RuntimeConfig from "../../config/runtime-config";
-import type { TimeTravelConfig } from "../../config/types";
-import type { NetworkMonitor, NetworkRequest, NetworkResponse } from "./types";
-import { shouldRecordSnapshots } from "../history/utils";
-import { CdpNetworkMonitor } from "./cdp-network-monitor";
+import type { NetworkEventSource, NetworkRequest, NetworkResponse, NetworkSettings } from "./types";
+import { CdpNetworkEventSource } from "./cdp-network-event-source";
 
-const warnedSessions = new Set<string>();
+const debug = makeDebug("testplane:time-travel:network");
 
 interface RecordedBody {
     /** SHA-256 of the body stored at network/bodies/<hash> in the snapshot archive. */
@@ -23,52 +21,111 @@ interface RecordedResponse
         RecordedBody {}
 
 export interface RecordedRequest
-    extends Pick<NetworkRequest, "url" | "method" | "headers" | "timestamp">, RecordedBody {
+    extends Pick<NetworkRequest, "url" | "method" | "headers" | "timestamp" | "resourceType">, RecordedBody {
     response?: RecordedResponse;
     finishedAt?: number;
     failure?: string;
     failureDetails?: NetworkRequest["failureDetails"];
 }
 
-export class NetworkRecorder {
-    private readonly _monitor: NetworkMonitor;
-    private readonly _maxBodySizeBytes: number;
+export class NetworkRecorder implements AsyncDisposable {
+    // Owned
+    private _source?: NetworkEventSource;
+
+    // Data
+    private _stopPromise?: Promise<void>;
+    private readonly _pending = new Set<Promise<void>>();
+    private _maxBodySizeBytes = Infinity;
     private readonly _requests = new Map<NetworkRequest, { record: RecordedRequest; response?: NetworkResponse }>();
     private readonly _bodyWrites = new Map<string, Promise<string>>();
-    private readonly _pending = new Set<Promise<void>>();
 
-    constructor(monitor: NetworkMonitor, maxBodySizeBytes: number) {
-        this._monitor = monitor;
-        this._maxBodySizeBytes = maxBodySizeBytes;
+    private constructor() {}
 
-        monitor.on("request", this._onRequest);
-        monitor.on("response", this._onResponse);
-        monitor.on("requestfinished", this._onFinished);
-        monitor.on("requestfailed", this._onFinished);
+    static async start(browser: WebdriverIO.Browser, settings: NetworkSettings): Promise<NetworkRecorder> {
+        const recorder = new NetworkRecorder();
+
+        try {
+            const cdp = await browser.unstable_getCdp();
+            if (!cdp) {
+                debug("CDP is unavailable");
+                return recorder;
+            }
+
+            const source = new CdpNetworkEventSource(cdp, browser, settings);
+            recorder._maxBodySizeBytes = settings.maxBodySizeBytes;
+            recorder._source = source;
+            await source.start({
+                onRequest: recorder._onRequest,
+                onResponse: recorder._onResponse,
+                onFinished: recorder._onFinished,
+                onFailed: recorder._onFinished,
+            });
+        } catch (error) {
+            debug("Network recording could not start: %O", error);
+            await recorder.stop();
+            return new NetworkRecorder();
+        }
+
+        return recorder;
     }
 
-    async stop(): Promise<RecordedRequest[]> {
-        this._monitor.off("request", this._onRequest);
-        this._monitor.off("response", this._onResponse);
-        this._monitor.off("requestfinished", this._onFinished);
-        this._monitor.off("requestfailed", this._onFinished);
+    /** Stops capture and settles pending body writes before the final snapshot. */
+    stop(): Promise<void> {
+        return (this._stopPromise ??= this._stop());
+    }
 
-        await Promise.all(this._pending);
+    [Symbol.asyncDispose](): Promise<void> {
+        return this.stop();
+    }
+
+    private async _stop(): Promise<void> {
+        const source = this._source;
+        if (!source) {
+            return;
+        }
+
+        try {
+            // Final reconciliation can still emit responses.
+            await source.stop();
+        } catch (error) {
+            debug("Network recording cleanup failed: %O", error);
+        } finally {
+            await Promise.all(this._pending);
+            this._source = undefined;
+        }
+    }
+
+    snapshot(): RecordedRequest[] {
+        try {
+            this._source?.reconcile?.();
+        } catch (error) {
+            debug("Network metadata reconciliation failed: %O", error);
+        }
 
         // Protocol metadata can be enriched after the initial request/response events.
         return [...this._requests].map(([request, { record, response }]) => {
-            const result = { ...record, headers: request.headers };
-            if (request.failureDetails) {
-                result.failureDetails = request.failureDetails;
+            try {
+                const result = { ...record, headers: request.headers };
+                const resourceType = request.resourceType;
+                if (resourceType !== undefined) {
+                    result.resourceType = resourceType;
+                }
+                if (request.failureDetails) {
+                    result.failureDetails = request.failureDetails;
+                }
+                if (response) {
+                    const networkStatus = response.networkStatus;
+                    result.response = {
+                        ...record.response!,
+                        headers: response.headers,
+                        ...(networkStatus !== undefined ? { networkStatus } : {}),
+                    };
+                }
+                return result;
+            } catch (error) {
+                debug("Could not read enriched network metadata: %O", error);
+                return { ...record, response: record.response && { ...record.response } };
             }
-            if (response) {
-                result.response = {
-                    ...record.response!,
-                    headers: response.headers,
-                    ...(response.networkStatus !== undefined ? { networkStatus: response.networkStatus } : {}),
-                };
-            }
-            return result;
         });
     }
 
@@ -76,7 +133,7 @@ export class NetworkRecorder {
         const { url, method, headers, timestamp } = request;
         const record: RecordedRequest = { url, method, headers, timestamp };
         this._requests.set(request, { record });
-        this._captureBody(record, () => request.body());
+        this._captureBody(record, () => request.consumeBody());
     };
 
     private _onResponse = (response: NetworkResponse): void => {
@@ -91,7 +148,7 @@ export class NetworkRecorder {
             timestamp,
             ...(response.timing ? { timing: response.timing } : {}),
         };
-        this._captureBody(record.response, () => response.body());
+        this._captureBody(record.response, () => response.consumeBody());
     };
 
     private _onFinished = (request: NetworkRequest, timestamp: number, error?: string): void => {
@@ -120,7 +177,12 @@ export class NetworkRecorder {
             }
             const hash = crypto.createHash("sha256").update(body).digest("hex");
             if (!this._bodyWrites.has(hash)) {
-                temp.attach(RuntimeConfig.getInstance().tempOpts);
+                const { tempOpts } = RuntimeConfig.getInstance();
+                if (tempOpts) {
+                    temp.attach(tempOpts);
+                } else {
+                    temp.init(undefined);
+                }
                 const filePath = temp.path();
                 this._bodyWrites.set(
                     hash,
@@ -135,43 +197,3 @@ export class NetworkRecorder {
         }
     }
 }
-
-export const startNetworkRecording = async (
-    session: WebdriverIO.Browser,
-    config: TimeTravelConfig,
-    isRetry: boolean,
-): Promise<Pick<NetworkRecorder, "stop"> | null> => {
-    if (!config.network.enabled || !shouldRecordSnapshots(config.mode, isRetry)) {
-        return null;
-    }
-
-    let stop: NetworkRecorder["stop"] | undefined;
-    try {
-        const cdp = await session.unstable_getCdp();
-        if (!cdp) {
-            throw new Error("CDP is unavailable");
-        }
-        const monitor = new CdpNetworkMonitor(cdp, session, config.network.maxBodySizeBytes);
-
-        const recorder = new NetworkRecorder(monitor, config.network.maxBodySizeBytes);
-        stop = async (): Promise<RecordedRequest[]> => {
-            try {
-                await monitor.stop();
-            } catch (error) {
-                logger.warn(`Failed to stop Time Travel network recording: ${error}`);
-            }
-            return recorder.stop();
-        };
-        await monitor.start();
-
-        return { stop };
-    } catch (error) {
-        await stop?.();
-        if (!warnedSessions.has(session.sessionId)) {
-            warnedSessions.add(session.sessionId);
-            logger.warn(`Time Travel network recording is unavailable for session ${session.sessionId}: ${error}`);
-        }
-
-        return null;
-    }
-};

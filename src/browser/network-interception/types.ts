@@ -1,4 +1,6 @@
-import type { EventEmitter } from "node:events";
+export interface NetworkSettings {
+    maxBodySizeBytes: number;
+}
 
 export interface NetworkHeader {
     readonly name: string;
@@ -16,8 +18,11 @@ export interface NetworkRequest {
     readonly method: string;
     readonly headers: readonly NetworkHeader[];
     readonly timestamp: number;
+    /** Lowercase resource type, when provided by the source. */
+    readonly resourceType?: string;
     readonly failureDetails?: NetworkFailureDetails;
-    body(): Promise<Buffer | null>;
+    /** Reads the body once. */
+    consumeBody(): Promise<Buffer | null>;
 }
 
 /** Timing offsets are milliseconds relative to startTime; absent phases are unavailable. */
@@ -47,19 +52,22 @@ export interface NetworkResponse {
     /** Actual network status, which may differ from status after cache revalidation. */
     readonly networkStatus?: number;
     readonly timing?: NetworkTiming;
-    body(): Promise<Buffer>;
+    /** Reads the body once. */
+    consumeBody(): Promise<Buffer>;
 }
 
-export interface NetworkMonitorEvents {
-    request: [request: NetworkRequest];
-    response: [response: NetworkResponse];
-    requestfinished: [request: NetworkRequest, timestamp: number];
-    requestfailed: [request: NetworkRequest, timestamp: number, error: string];
+export interface NetworkEventSourceHandlers {
+    onRequest(request: NetworkRequest): void;
+    onResponse(response: NetworkResponse): void;
+    onFinished(request: NetworkRequest, timestamp: number): void;
+    onFailed(request: NetworkRequest, timestamp: number, error: string): void;
 }
 
-/** Metadata on emitted objects may be enriched until stop() completes. */
-export interface NetworkMonitor extends Pick<EventEmitter<NetworkMonitorEvents>, "on" | "off"> {
-    start(): Promise<void>;
+/** Metadata on received objects may be enriched until capture stops. */
+export interface NetworkEventSource extends AsyncDisposable {
+    start(handlers: NetworkEventSourceHandlers): Promise<void>;
+    /** Applies any metadata that can be matched to an emitted request or response. */
+    reconcile?(): void;
     /** Stops events and settles pending body reads before releasing the protocol session. */
     stop(): Promise<void>;
 }
