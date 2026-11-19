@@ -29,3 +29,4 @@ testplane-report/**
 *.tsbuildinfo
 test/browser-env/report/**
 test/e2e/report
+examples/**/dist/
