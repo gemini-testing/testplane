@@ -34,6 +34,22 @@ describe("compileTagFilter", () => {
         });
     });
 
+    it("should match tags with the same case as in the expression", () => {
+        const cases = [
+            { expression: "Smoke", okTags: ["Smoke"], badTags: ["smoke"] },
+            { expression: "!Slow", okTags: ["slow", "Payments"], badTags: ["Slow", "Payments"] },
+            { expression: "Payments&Slow", okTags: ["Slow", "Payments"], badTags: ["slow", "payments"] },
+        ];
+
+        cases.forEach(({ expression, okTags, badTags }) => {
+            const func = compileTagFilter(expression);
+
+            assert.isTrue(func(new Set(okTags)));
+
+            assert.isFalse(func(new Set(badTags)));
+        });
+    });
+
     it("check injection code", () => {
         const injectionStr = '")+console.log("111111';
         const func = compileTagFilter(injectionStr);

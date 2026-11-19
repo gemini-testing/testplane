@@ -10,7 +10,7 @@ export const collectCliValues = (newValue: unknown, array = [] as unknown[]): un
 export type TagFilter = (tags: Set<string>) => boolean;
 
 export const compileTagFilter = (filter: string): TagFilter => {
-    const normalizedFilter = filter.replace(/[\s'"`\\]/g, "").toLowerCase();
+    const normalizedFilter = filter.replace(/[\s'"`\\]/g, "");
 
     function compileOrExpression(expr: string): string {
         const parts = expr.split("|");

@@ -736,6 +736,15 @@ describe("test-reader/test-parser", () => {
                     assert.isTrue(filter(test));
                 });
 
+                it("installed filter should accept matched test with uppercase letters in tag", async () => {
+                    await parse_({ tag: compileTagFilter("Smoke") });
+
+                    const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
+                    const test = { fullTitle: () => "Some name", tags: new Map([["Smoke", false]]) };
+
+                    assert.isTrue(filter(test));
+                });
+
                 it("installed filter should ignore not matched test", async () => {
                     await parse_({ tag: compileTagFilter("desktop") });
 
