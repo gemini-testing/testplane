@@ -444,6 +444,18 @@ describe("CDP network event source", () => {
         assert.callOrder(complete, command.withArgs("Target.detachFromTarget"));
     });
 
+    it("should still capture bodies when Chrome does not support durable messages", async () => {
+        const configure = command.withArgs("Network.configureDurableMessages");
+        configure.rejects(new Error("Method not found"));
+        await start();
+        request();
+        response();
+        finish();
+
+        assert.calledOnce(configure);
+        assert.deepEqual(await responses[0].consumeBody(), Buffer.from("response body"));
+    });
+
     it("should clean up after Network.enable fails", async () => {
         command.withArgs("Network.enable").rejects(new Error("enable failed"));
 
