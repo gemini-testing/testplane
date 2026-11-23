@@ -22,10 +22,16 @@ describe("reporter/informers/file", () => {
 
     afterEach(() => sandbox.restore());
 
-    it("should create write stream to passed file path", () => {
+    it("should overwrite the file by default", () => {
         FileInformer.create({ path: "./some-path/file.txt" });
 
-        assert.calledOnceWith(fs.createWriteStream, "./some-path/file.txt");
+        assert.calledOnceWith(fs.createWriteStream, "./some-path/file.txt", { flags: "w" });
+    });
+
+    it("should append to the file when requested", () => {
+        FileInformer.create({ path: "./some-path/file.txt", append: true });
+
+        assert.calledOnceWith(fs.createWriteStream, "./some-path/file.txt", { flags: "a" });
     });
 
     it("should inform user that test results will be saved to a file", () => {

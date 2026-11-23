@@ -8,7 +8,7 @@ module.exports = class FileInformer extends BaseInformer {
     constructor(opts) {
         super(opts);
 
-        this._fileStream = fs.createWriteStream(opts.path);
+        this._fileStream = fs.createWriteStream(opts.path, { flags: opts.append === true ? "a" : "w" });
         this._reporterType = opts.type;
 
         logger.log(`Information with test results for report: "${opts.type}" will be saved to a file: "${opts.path}"`);
