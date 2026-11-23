@@ -25,6 +25,7 @@ import type {
 import * as logger from "../../utils/logger";
 
 const debug = makeDebug("testplane:time-travel:network");
+const MAX_DURABLE_BUFFER_BYTES = 16 * 1024 * 1024;
 
 interface TrackedRequest {
     request: NetworkRequest;
@@ -242,7 +243,7 @@ export class CdpNetworkEventSource implements NetworkEventSource {
                 });
                 commands.push(this._cdp.network.enable(sessionId), this._autoAttach(sessionId, ["iframe", "worker"]));
                 if (!isWorker) {
-                    commands.push(this._cdp.page.enable(sessionId));
+                    commands.push(this._cdp.page.enable(sessionId), this._configureDurableMessages(sessionId));
                 }
             }
             // Issue setup before resuming, but do not wait: a paused popup can defer command responses.
@@ -262,6 +263,22 @@ export class CdpNetworkEventSource implements NetworkEventSource {
             this._removeSession(sessionId);
             await this._cdp.target.detachFromTarget(sessionId, parentId).catch(() => {});
             throw error;
+        }
+    }
+
+    private async _configureDurableMessages(sessionId: CDPSessionId): Promise<void> {
+        // Keep response bodies available when a navigation replaces the renderer.
+        try {
+            await this._cdp.request(
+                "Network.configureDurableMessages",
+                {
+                    maxTotalBufferSize: MAX_DURABLE_BUFFER_BYTES,
+                    maxResourceBufferSize: Math.min(this._maxBodySizeBytes, MAX_DURABLE_BUFFER_BYTES),
+                },
+                sessionId,
+            );
+        } catch (error) {
+            debug("Durable response bodies unavailable: %O", error);
         }
     }
 
