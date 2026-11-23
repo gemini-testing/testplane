@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.7.1 (2026-11-23)
+
+
+### Bug Fixes
+
+* enable durable request/response bodies via CDP when possible ([#1364](https://github.com/gemini-testing/testplane/issues/1364)) ([079afc2](https://github.com/gemini-testing/testplane/commit/079afc2f4f498ba4c0a34334aa8afb6c7f994227))
+
 ## 9.7.0 (2026-11-23)
 
 ## 9.6.0 (2026-11-18)
