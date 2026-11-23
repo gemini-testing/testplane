@@ -93,7 +93,7 @@ describe('"initReporters" method', () => {
 
         it("should create reporter with correct args", async () => {
             sinon.spy(Reporter, "create");
-            const jsonReporter = JSON.stringify({ type: "reporter", path: "./foo/bar.txt" });
+            const jsonReporter = JSON.stringify({ type: "reporter", path: "./foo/bar.txt", append: true });
 
             await initReporters([jsonReporter], runner);
 
@@ -121,7 +121,7 @@ describe('"initReporters" method', () => {
 
         it("should create reporter with correct args", async () => {
             sinon.spy(Reporter, "create");
-            const objReporter = { type: "reporter", path: "./foo/bar.txt" };
+            const objReporter = { type: "reporter", path: "./foo/bar.txt", append: true };
 
             await initReporters([objReporter], runner);
 

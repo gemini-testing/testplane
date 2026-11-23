@@ -72,14 +72,14 @@ function getReporterDefinition(rawReporter, parser) {
         return { type: null, path: null };
     }
 
-    const { type, path } = parser(rawReporter);
+    const { type, path, append } = parser(rawReporter);
 
     if (!type) {
         const strRawReporter = typeof rawReporter !== "string" ? JSON.stringify(rawReporter) : rawReporter;
         throw new Error(`Failed to find required "type" field in reporter definition: "${strRawReporter}"`);
     }
 
-    return { type, path };
+    return { type, path, append };
 }
 
 function validateReporter(Reporter) {
