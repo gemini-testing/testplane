@@ -48,6 +48,7 @@ describe("CDP/Selectivity/empty declared source maps", () => {
             }),
         },
         css: {
+            enable: sandbox.stub().resolves(),
             on: sandbox.stub(),
             off: sandbox.stub(),
             startRuleUsageTracking: sandbox.stub().resolves(),

@@ -59,6 +59,7 @@ describe("CDP/Selectivity/CSSSelectivity source-root compatibility", () => {
         const ruleUsage = [{ styleSheetId, startOffset: 0, endOffset: 100, used }];
         const cdp = {
             css: {
+                enable: async (): Promise<void> => {},
                 on: emitter.on.bind(emitter),
                 off: emitter.off.bind(emitter),
                 startRuleUsageTracking: async () => ({}),
@@ -86,6 +87,7 @@ describe("CDP/Selectivity/CSSSelectivity source-root compatibility", () => {
         const dependencies = await collector.stop();
 
         assert.equal(emitter.listenerCount("styleSheetAdded"), 0);
+        assert.equal(emitter.listenerCount("styleSheetRemoved"), 0);
         assert.isNotNull(dependencies);
         return dependencies as Set<string>;
     };
@@ -409,7 +411,6 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
     let fetchTextWithBrowserFallbackStub: SinonStub;
     let patchSourceMapSourcesStub: SinonStub;
     let urlResolveStub: SinonStub;
-    let groupByStub: SinonStub;
     let hasProtocolStub: SinonStub;
     let isDataProtocolStub: SinonStub;
     let canParseStub: SinonStub;
@@ -473,15 +474,6 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         fetchTextWithBrowserFallbackStub = sandbox.stub().resolves(JSON.stringify(mockSourceMap));
         patchSourceMapSourcesStub = sandbox.stub().returnsArg(0);
         urlResolveStub = sandbox.stub().returnsArg(1);
-        groupByStub = sandbox.stub().callsFake((arr, key) => {
-            const result: Record<string, any[]> = {};
-            arr.forEach((item: any) => {
-                const keyValue = item[key];
-                if (!result[keyValue]) result[keyValue] = [];
-                result[keyValue].push(item);
-            });
-            return result;
-        });
         hasProtocolStub = sandbox.stub().returns(false);
         isDataProtocolStub = sandbox.stub().callsFake((url: string) => url.startsWith("data:"));
         // In production "urlResolve" yields an absolute (parseable) url; the stub above returns a relative one,
@@ -494,7 +486,6 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         setCachedSelectivityFileStub = sandbox.stub().resolves();
 
         CSSSelectivity = proxyquire("src/browser/cdp/selectivity/css-selectivity", {
-            lodash: { groupBy: groupByStub },
             "node:path": path,
             "node:url": { resolve: urlResolveStub, URL: global.URL },
             "./utils": {
@@ -524,7 +515,10 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
             await cssSelectivity.start();
 
             assert.calledWith(cdpMock.css.startRuleUsageTracking, sessionId);
-            assert.calledOnceWith(cdpMock.css.on, "styleSheetAdded");
+            assert.calledOnceWith(cdpMock.css.enable, sessionId);
+            assert.calledWith(cdpMock.css.on, "styleSheetAdded");
+            assert.calledWith(cdpMock.css.on, "styleSheetRemoved");
+            assert.callOrder(cdpMock.css.on, cdpMock.css.enable, cdpMock.css.startRuleUsageTracking);
         });
 
         it("should handle styleSheetAdded events when there is no cache", async () => {
@@ -719,6 +713,48 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
     });
 
     describe("stop", () => {
+        describe("removed stylesheets", () => {
+            let events: EventEmitter;
+            let collector: ProductionCSSSelectivity;
+
+            beforeEach(async () => {
+                events = new EventEmitter();
+                cdpMock.css.on.callsFake(events.on.bind(events));
+                cdpMock.css.off.callsFake(events.off.bind(events));
+                cdpMock.css.stopRuleUsageTracking.resolves({ ruleUsage: [] });
+                // The sheet is already on the page when tracking starts.
+                cdpMock.css.enable.callsFake(async () => events.emit("styleSheetAdded", styleSheetEvent, sessionId));
+                collector = new CSSSelectivity(cdpMock as any, sessionId, wdSessionId, sourceRoot, null);
+                await collector.start();
+            });
+
+            it("should retain all mapped sources even when Chromium reports no rule usage", async () => {
+                events.emit("styleSheetRemoved", { styleSheetId: styleSheetEvent.header.styleSheetId }, sessionId);
+                await collector.takeCoverageSnapshot();
+
+                assert.deepEqual(await collector.stop(), new Set(["/root/src/styles.css", "/root/src/theme.css"]));
+                assert.notCalled(cdpMock.css.getStyleSheetText);
+            });
+
+            it("should ignore removals outside the tracked session", async () => {
+                const { styleSheetId } = styleSheetEvent.header;
+                events.emit("styleSheetRemoved", { styleSheetId }, "other-session");
+                events.emit("styleSheetRemoved", { styleSheetId });
+
+                assert.deepEqual(await collector.stop(), new Set());
+            });
+
+            it("should resolve a stylesheet reported by both coverage and removal only once", async () => {
+                const { styleSheetId } = styleSheetEvent.header;
+                cdpMock.css.takeCoverageDelta.resolves({ coverage: [{ styleSheetId }] });
+                await collector.takeCoverageSnapshot();
+                events.emit("styleSheetRemoved", { styleSheetId }, sessionId);
+                await collector.stop();
+
+                assert.calledOnce(patchSourceMapSourcesStub);
+            });
+        });
+
         it("should return empty array when drop is true", async () => {
             const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, wdSessionId, sourceRoot, null);
 
@@ -726,7 +762,9 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
             const result = await cssSelectivity.stop(true);
 
             assert.deepEqual(Array.from(result || []).sort(), []);
-            assert.calledOnceWith(cdpMock.css.off, "styleSheetAdded");
+            for (const [event, listener] of cdpMock.css.on.args) {
+                assert.calledWith(cdpMock.css.off, event, listener);
+            }
         });
 
         it("should process rule usage and return dependencies", async () => {
