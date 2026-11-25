@@ -1,4 +1,3 @@
-import { groupBy } from "lodash";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, resolve as urlResolve } from "node:url";
@@ -14,7 +13,7 @@ import { CacheType, getCachedSelectivityFile, hasCachedSelectivityFile, setCache
 import { debugSelectivity } from "./debug";
 import type { CDP } from "..";
 import type { CDPStyleSheetId, CDPSessionId } from "../types";
-import type { CssEvents, CSSRuleUsage } from "../domains/css";
+import type { CssEvents } from "../domains/css";
 import type { SelectivityAssetState } from "./types";
 import type { SelectivityMapSourceMapUrlFn } from "../../../config/types";
 
@@ -33,11 +32,9 @@ export class CSSSelectivity {
     private readonly _wdSessionId: string;
     private readonly _sourceRoot: string;
     private readonly _mapSourceMapUrl: SelectivityMapSourceMapUrlFn | null;
-    private _cssOnStyleSheetAddedFn:
-        ((params: CssEvents["styleSheetAdded"], cdpSessionId?: CDPSessionId) => void) | null = null;
     private readonly _stylesSourceMap: Record<CDPStyleSheetId, SelectivityAssetState> = {};
     private readonly _styleSheetIdToSourceMapUrl: Record<CDPStyleSheetId, string | null> = {};
-    private readonly _coverageResult: CSSRuleUsage[] = [];
+    private readonly _usedStyleSheetIds = new Set<CDPStyleSheetId>();
 
     constructor(
         cdp: CDP,
@@ -53,10 +50,10 @@ export class CSSSelectivity {
         this._mapSourceMapUrl = mapSourceMapUrl;
     }
 
-    private _processStyle(
+    private readonly _onStyleSheetAdded = (
         { header: { styleSheetId, sourceURL, sourceMapURL } }: CssEvents["styleSheetAdded"],
         cdpSessionId?: CDPSessionId,
-    ): void {
+    ): void => {
         if (!this._cdpSessionId || cdpSessionId !== this._cdpSessionId) {
             return;
         }
@@ -121,11 +118,21 @@ export class CSSSelectivity {
                           .catch((err: Error) => err);
             });
         }
-    }
+    };
+
+    private readonly _onStyleSheetRemoved = (
+        { styleSheetId }: CssEvents["styleSheetRemoved"],
+        cdpSessionId?: CDPSessionId,
+    ): void => {
+        if (this._cdpSessionId && cdpSessionId === this._cdpSessionId) {
+            // Chromium can omit removed stylesheets from rule usage: https://issues.chromium.org/issues/585218686
+            this._usedStyleSheetIds.add(styleSheetId);
+        }
+    };
 
     // If we haven't got "styleSheetAdded" event for the script, pull up styles + source map manually
-    private _ensureStylesAreLoading(ruleUsage: CSSRuleUsage[]): void {
-        ruleUsage.forEach(({ styleSheetId }) => {
+    private _ensureStylesAreLoading(styleSheetIds: CDPStyleSheetId[]): void {
+        styleSheetIds.forEach(styleSheetId => {
             if (Object.hasOwn(this._stylesSourceMap, styleSheetId)) {
                 return;
             }
@@ -268,36 +275,24 @@ export class CSSSelectivity {
     }
 
     async start(): Promise<void> {
-        const cssOnStyleSheetAdded = (this._cssOnStyleSheetAddedFn = this._processStyle.bind(this));
+        await this._loadSessionCache().catch(err => {
+            debugSelectivity("Couldn't load session cache for session '%s': %O", this._wdSessionId, err);
+        });
 
-        this._cdp.css.on("styleSheetAdded", cssOnStyleSheetAdded);
-
-        const [startTrackingResult, loadSessionCacheResult] = await Promise.all([
-            this._cdp.css.startRuleUsageTracking(this._cdpSessionId).catch((err: Error) => err),
-            this._loadSessionCache().catch((err: Error) => err),
-        ]);
-
-        if (startTrackingResult instanceof Error) {
-            throw startTrackingResult;
-        }
-
-        if (loadSessionCacheResult instanceof Error) {
-            debugSelectivity(
-                "Couldn't load session cache for session '%s': %O",
-                this._wdSessionId,
-                loadSessionCacheResult,
-            );
-        }
+        // CSS.enable reports sheets already on the page. Once removed, their text is no longer available via CDP.
+        this._cdp.css.on("styleSheetAdded", this._onStyleSheetAdded);
+        this._cdp.css.on("styleSheetRemoved", this._onStyleSheetRemoved);
+        await this._cdp.css.enable(this._cdpSessionId);
+        await this._cdp.css.startRuleUsageTracking(this._cdpSessionId);
     }
 
     async takeCoverageSnapshot(): Promise<void> {
         const coveragePart = await this._cdp.css.takeCoverageDelta(this._cdpSessionId);
+        const styleSheetIds = coveragePart.coverage.map(({ styleSheetId }) => styleSheetId);
 
-        this._ensureStylesAreLoading(coveragePart.coverage);
-
+        styleSheetIds.forEach(id => this._usedStyleSheetIds.add(id));
+        this._ensureStylesAreLoading(styleSheetIds);
         await this._waitForLoadingStyles();
-
-        this._coverageResult.push(...coveragePart.coverage);
     }
 
     /** @param drop only performs cleanup without providing actual deps. Should be "true" if test is failed */
@@ -308,13 +303,12 @@ export class CSSSelectivity {
             }
 
             const coverageLastPart = await this._cdp.css.stopRuleUsageTracking(this._cdpSessionId);
-            const coverageStyles = [...this._coverageResult, ...coverageLastPart.ruleUsage];
+            coverageLastPart.ruleUsage.forEach(({ styleSheetId }) => this._usedStyleSheetIds.add(styleSheetId));
 
-            this._ensureStylesAreLoading(coverageLastPart.ruleUsage);
+            const styleSheetIds = [...this._usedStyleSheetIds];
+            this._ensureStylesAreLoading(styleSheetIds);
 
             const totalDependingSourceFiles = new Set<string>();
-            const grouppedByStyleSheetCoverage = groupBy(coverageStyles, "styleSheetId");
-            const styleSheetIds = Object.keys(grouppedByStyleSheetCoverage);
 
             await Promise.all(
                 styleSheetIds.map(async styleSheetId => {
@@ -404,7 +398,8 @@ export class CSSSelectivity {
 
             return totalDependingSourceFiles;
         } finally {
-            this._cssOnStyleSheetAddedFn && this._cdp.css.off("styleSheetAdded", this._cssOnStyleSheetAddedFn);
+            this._cdp.css.off("styleSheetAdded", this._onStyleSheetAdded);
+            this._cdp.css.off("styleSheetRemoved", this._onStyleSheetRemoved);
         }
     }
 }

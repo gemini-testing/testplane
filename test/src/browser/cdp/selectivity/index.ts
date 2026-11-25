@@ -75,7 +75,6 @@ describe("CDP/Selectivity", () => {
                 setAutoAttach: SinonStub;
             };
             dom: { enable: SinonStub };
-            css: { enable: SinonStub };
             debugger: { enable: SinonStub; on: SinonStub; off: SinonStub; resume: SinonStub };
             page: { enable: SinonStub; addScriptToEvaluateOnNewDocument: SinonStub; on: SinonStub; off: SinonStub };
             profiler: { enable: SinonStub };
@@ -176,7 +175,6 @@ describe("CDP/Selectivity", () => {
                     setAutoAttach: sandbox.stub().resolves(),
                 },
                 dom: { enable: sandbox.stub().resolves() },
-                css: { enable: sandbox.stub().resolves() },
                 debugger: {
                     enable: sandbox.stub().resolves(),
                     on: sandbox.stub(),
@@ -311,7 +309,6 @@ describe("CDP/Selectivity", () => {
             await startSelectivity(browserMock as unknown as ExistingBrowser);
 
             assert.calledWith(browserMock.cdp!.dom.enable, "session-123");
-            assert.calledWith(browserMock.cdp!.css.enable, "session-123");
             assert.calledWith(browserMock.cdp!.target.setAutoAttach, "session-123", {
                 autoAttach: true,
                 waitForDebuggerOnStart: false,

@@ -187,7 +187,7 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
     const jsSelectivity = new JSSelectivity(cdp, cdpSessionId, sourceRoot, mapSourceMapUrl);
 
     await Promise.all([
-        cdp.dom.enable(cdpSessionId).then(() => cdp.css.enable(cdpSessionId)),
+        cdp.dom.enable(cdpSessionId),
         cdp.target.setAutoAttach(cdpSessionId, { autoAttach: true, waitForDebuggerOnStart: false }),
         cdp.debugger.enable(cdpSessionId),
         cdp.page.enable(cdpSessionId),
