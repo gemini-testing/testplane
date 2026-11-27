@@ -1,4 +1,4 @@
-import { Rect, Coord, Length, getCoveringRect } from "@isomorphic";
+import { Rect, Coord, Length, getCoveringRect, getIntersection } from "@isomorphic";
 import { getOwnerWindow, getOwnerIframe } from "./dom";
 import { PSEUDO_ELEMENTS, PseudoElementSelector, getPseudoElementRect } from "./pseudo-element-rect";
 
@@ -154,8 +154,8 @@ function isHidden(css: CSSStyleDeclaration, rect: Rect<"viewport", "css">): bool
 }
 
 export function getBoundingClientContentRect(element: Element): Rect<"viewport", "css"> {
-    const style = getComputedStyle(element);
-    const bcr = element.getBoundingClientRect();
+    const style = (getOwnerWindow(element) ?? window).getComputedStyle(element);
+    const bcr = getNestedBoundingClientRect(element);
     const borderLeft = parseFloat(style.borderLeftWidth) || 0;
     const borderTop = parseFloat(style.borderTopWidth) || 0;
     const borderRight = parseFloat(style.borderRightWidth) || 0;
@@ -167,6 +167,22 @@ export function getBoundingClientContentRect(element: Element): Rect<"viewport",
         width: (bcr.width - borderLeft - borderRight) as Length<"css", "x">,
         height: (bcr.height - borderTop - borderBottom) as Length<"css", "y">
     };
+}
+
+export function intersectWithIframeBounds(rect: Rect<"viewport", "css">): Rect<"viewport", "css"> {
+    let intersection = rect;
+    let iframe = getOwnerIframe(document.documentElement);
+
+    while (iframe) {
+        intersection = getIntersection(intersection, getBoundingClientContentRect(iframe)) ?? {
+            ...intersection,
+            width: 0 as Length<"css", "x">,
+            height: 0 as Length<"css", "y">
+        };
+        iframe = getOwnerIframe(iframe);
+    }
+
+    return intersection;
 }
 
 export function getElementCaptureRect(
