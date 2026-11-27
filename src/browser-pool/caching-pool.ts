@@ -3,12 +3,10 @@ import debug from "debug";
 import { LimitedUseSet } from "./limited-use-set";
 import { buildCompositeBrowserId } from "./utils";
 import { BasicPool } from "./basic-pool";
-import { Pool, PoolObserver } from "./types";
+import { FreeBrowserOpts, Pool, PoolObserver } from "./types";
 import { NewBrowser } from "../browser/new-browser";
 import { CancelledError } from "./cancelled-error";
 import { BrowserConfig } from "../config/browser-config";
-
-export type FreeBrowserOpts = { hasFreeSlots?: boolean; force?: boolean; compositeIdForNextRequest?: string };
 
 export class CachingPool implements Pool {
     private _caches: Record<string, LimitedUseSet<NewBrowser>>;
@@ -105,6 +103,17 @@ export class CachingPool implements Pool {
             return !hasFreeSlots && !hasCacheForNextRequest;
         };
         const force = this._closed || options.force || shouldFreeForNextRequest();
+
+        if (!this._closed && options.deferRelease) {
+            const cache = this._getCacheFor(browser.config, browser.version);
+            if (!cache.isOverLimit(browser)) {
+                options.deferRelease({
+                    canReuse: () => !this._closed,
+                    finish: reuse => this.freeBrowser(browser, { force: !reuse }),
+                });
+                return;
+            }
+        }
 
         this.log(`free ${browser.fullId} force=${force}`);
 

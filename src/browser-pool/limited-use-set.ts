@@ -36,7 +36,7 @@ export class LimitedUseSet<T extends object = object> {
 
         this.log(`push ${formatedItem}`);
 
-        if (this._isOverLimit(value)) {
+        if (this.isOverLimit(value)) {
             this.log(`over limit, finalizing ${formatedItem}`);
             return this._finalize(value);
         }
@@ -47,7 +47,7 @@ export class LimitedUseSet<T extends object = object> {
         return Promise.resolve();
     }
 
-    private _isOverLimit(value: T): boolean {
+    isOverLimit(value: T): boolean {
         if (this._useLimit === 0) {
             return true;
         }
