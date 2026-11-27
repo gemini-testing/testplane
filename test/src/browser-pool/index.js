@@ -69,4 +69,107 @@ describe("browser-pool", () => {
 
         assert.instanceOf(browserPool, PerBrowserLimitedPool);
     });
+
+    describe("with a finite parallelLimit", () => {
+        let basicPool;
+        let config;
+        let browserPool;
+
+        beforeEach(() => {
+            basicPool = sinon.createStubInstance(BasicPool);
+            BasicPool.create.returns(basicPool);
+            basicPool.getBrowser.callsFake(async (config, { version } = {}) => ({
+                id: config.id,
+                config,
+                version,
+                reset: sandbox.stub().resolves(),
+            }));
+            basicPool.freeBrowser.resolves();
+            config = makeConfigStub({
+                browsers: ["chrome", "firefox"],
+                system: { parallelLimit: 2 },
+                sessionsPerBrowser: 2,
+            });
+            browserPool = mkPool_({ config });
+        });
+
+        it("should reuse a session for a request waiting in the global queue", async () => {
+            const chrome = config.forBrowser("chrome");
+            const [first, second] = await Promise.all([browserPool.getBrowser(chrome), browserPool.getBrowser(chrome)]);
+            const queued = browserPool.getBrowser(chrome);
+
+            await browserPool.freeBrowser(first);
+
+            assert.strictEqual(await queued, first);
+            assert.callCount(basicPool.getBrowser, 2);
+            assert.notCalled(basicPool.freeBrowser);
+            await Promise.all([browserPool.freeBrowser(first), browserPool.freeBrowser(second)]);
+        });
+
+        it("should wait for cached sessions to close before opening replacements for another profile", async () => {
+            const chrome = config.forBrowser("chrome");
+            const firefox = config.forBrowser("firefox");
+            const browsers = await Promise.all([browserPool.getBrowser(chrome), browserPool.getBrowser(chrome)]);
+            await Promise.all(browsers.map(browser => browserPool.freeBrowser(browser)));
+            assert.notCalled(basicPool.freeBrowser);
+
+            const closing = Promise.withResolvers();
+            basicPool.freeBrowser.returns(closing.promise);
+            const replacements = Promise.all([browserPool.getBrowser(firefox), browserPool.getBrowser(firefox)]);
+
+            await new Promise(resolve => setImmediate(resolve));
+
+            assert.callCount(basicPool.getBrowser, 2);
+            assert.callCount(basicPool.freeBrowser, 2);
+            closing.resolve();
+            await replacements;
+            assert.callCount(basicPool.getBrowser, 4);
+        });
+
+        it("should reuse an idle session and evict an incompatible version at the profile limit", async () => {
+            const chrome = config.forBrowser("chrome");
+            chrome.sessionsPerBrowser = 1;
+            browserPool = mkPool_({ config });
+            const first = await browserPool.getBrowser(chrome, { version: "1" });
+            await browserPool.freeBrowser(first);
+
+            assert.notCalled(basicPool.freeBrowser);
+            assert.strictEqual(await browserPool.getBrowser(chrome, { version: "1" }), first);
+            await browserPool.freeBrowser(first);
+            const replacement = await browserPool.getBrowser(chrome, { version: "2" });
+
+            assert.notStrictEqual(replacement, first);
+            assert.calledOnceWithExactly(basicPool.freeBrowser, first);
+            assert.isTrue(basicPool.freeBrowser.firstCall.calledBefore(basicPool.getBrowser.secondCall));
+        });
+
+        it("should keep the slot occupied if an idle session fails to close", async () => {
+            config.system.parallelLimit = 1;
+            browserPool = mkPool_({ config });
+            const chrome = config.forBrowser("chrome");
+            const firefox = config.forBrowser("firefox");
+            const first = await browserPool.getBrowser(chrome);
+            await browserPool.freeBrowser(first);
+            basicPool.freeBrowser.rejects(new Error("quit failed"));
+
+            await assert.isRejected(browserPool.getBrowser(firefox), "quit failed");
+            await assert.isRejected(browserPool.getBrowser(firefox), "quit failed");
+            assert.calledOnce(basicPool.getBrowser);
+        });
+
+        it("should replace a session when it reaches testsPerSession", async () => {
+            config.system.parallelLimit = 1;
+            const chrome = config.forBrowser("chrome");
+            chrome.testsPerSession = 1;
+            browserPool = mkPool_({ config });
+            const first = await browserPool.getBrowser(chrome);
+            const queued = browserPool.getBrowser(chrome);
+
+            await browserPool.freeBrowser(first);
+
+            assert.notStrictEqual(await queued, first);
+            assert.calledOnceWithExactly(basicPool.freeBrowser, first);
+            assert.callCount(basicPool.getBrowser, 2);
+        });
+    });
 });

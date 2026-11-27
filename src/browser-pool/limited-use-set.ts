@@ -56,11 +56,11 @@ export class LimitedUseSet<T extends object = object> {
     }
 
     pop(): T | null {
-        if (this._objects.length === 0) {
+        const result = this.take();
+        if (!result) {
             return null;
         }
 
-        const result = this._objects.pop()!;
         const useCount = this._useCounts.get(result) || 0;
         const formatedItem = this._formatItem(result);
 
@@ -70,5 +70,9 @@ export class LimitedUseSet<T extends object = object> {
         this._useCounts.set(result, useCount + 1);
 
         return result;
+    }
+
+    take(): T | undefined {
+        return this._objects.pop();
     }
 }

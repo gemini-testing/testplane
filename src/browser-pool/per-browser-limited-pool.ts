@@ -16,6 +16,7 @@ export class PerBrowserLimitedPool implements Pool {
         private readonly underlyingPool: Pool,
         config: Config,
         observer?: PoolObserver,
+        keepIdleSessions = false,
     ) {
         this.log = debug("testplane:pool:per-browser-limited");
 
@@ -25,6 +26,7 @@ export class PerBrowserLimitedPool implements Pool {
             ids.map(id =>
                 LimitedPool.create(underlyingPool, {
                     limit: config.forBrowser(id).sessionsPerBrowser,
+                    keepIdleSessions,
                     ...(observer && { observer }),
                 }),
             ),
