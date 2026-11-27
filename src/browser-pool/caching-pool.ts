@@ -8,7 +8,12 @@ import { NewBrowser } from "../browser/new-browser";
 import { CancelledError } from "./cancelled-error";
 import { BrowserConfig } from "../config/browser-config";
 
-export type FreeBrowserOpts = { hasFreeSlots?: boolean; force?: boolean; compositeIdForNextRequest?: string };
+type FreeBrowserOpts = {
+    force?: boolean;
+    hasExcessSessions?: boolean;
+    hasFreeSlots?: boolean;
+    compositeIdForNextRequest?: string;
+};
 
 interface BrowserCache {
     browserId: string;
@@ -39,16 +44,26 @@ export class CachingPool implements Pool {
     }
 
     private _getCacheFor(browserConfig: BrowserConfig, version?: string): LimitedUseSet<NewBrowser> {
-        const compositeId = buildCompositeBrowserId(browserConfig.id, version);
+        const { id, testsPerSession } = browserConfig;
+        const compositeId = buildCompositeBrowserId(id, version);
 
         this.log(`request for ${compositeId}`);
 
-        if (!this._caches[compositeId]) {
-            this.log(`init for ${compositeId}`);
-            this._initPool(browserConfig, version);
+        const cached = this._caches[compositeId];
+        if (cached) {
+            return cached.sessions;
         }
 
-        return this._caches[compositeId].sessions;
+        this.log(`init for ${compositeId}`);
+        const sessions = new LimitedUseSet<NewBrowser>({
+            formatItem: item => item.fullId,
+            // The first checkout bypasses the cache.
+            useLimit: testsPerSession - 1,
+            finalize: browser => this._closeBrowser(browser),
+        });
+        this._caches[compositeId] = { browserId: id, sessions };
+
+        return sessions;
     }
 
     async getBrowser(browserConfig: BrowserConfig, opts: BrowserOpts = {}): Promise<NewBrowser> {
@@ -155,43 +170,13 @@ export class CachingPool implements Pool {
         return closing;
     }
 
-    private _initPool(browserConfig: BrowserConfig, version?: string): void {
-        const compositeId = buildCompositeBrowserId(browserConfig.id, version);
-        const { testsPerSession } = browserConfig;
-
-        const sessions = new LimitedUseSet<NewBrowser>({
-            formatItem: (item): string => item.fullId,
-            // browser does not get put in a set on first usages, so if
-            // we want to limit it usage to N times, we must set N-1 limit
-            // for the set.
-            useLimit: testsPerSession - 1,
-            finalize: browser => this._closeBrowser(browser),
-        });
-        this._caches[compositeId] = { browserId: browserConfig.id, sessions };
-    }
-
-    /**
-     * Free browser
-     * @param {Browser} browser session instance
-     * @param {Object} [options] - advanced options
-     * @param {Boolean} [options.force] - if `true` than browser should
-     * not be cached
-     * @returns {Promise<undefined>}
-     */
     async freeBrowser(browser: NewBrowser, options: FreeBrowserOpts = {}): Promise<void> {
-        const shouldFreeForNextRequest = (): boolean => {
-            const { compositeIdForNextRequest } = options;
-
-            if (!compositeIdForNextRequest) {
-                return false;
-            }
-
-            const { hasFreeSlots } = options;
-            const hasCacheForNextRequest = this._caches[options.compositeIdForNextRequest!];
-
-            return !hasFreeSlots && !hasCacheForNextRequest;
-        };
-        const force = this._closed || options.force || (this._parallelLimit === Infinity && shouldFreeForNextRequest());
+        const { compositeIdForNextRequest, hasExcessSessions, hasFreeSlots } = options;
+        const closeIdleSession =
+            this._parallelLimit === Infinity &&
+            (hasExcessSessions ||
+                (compositeIdForNextRequest && !hasFreeSlots && !this._caches[compositeIdForNextRequest]));
+        const force = this._closed || options.force || closeIdleSession;
 
         this.log(`free ${browser.fullId} force=${force}`);
 

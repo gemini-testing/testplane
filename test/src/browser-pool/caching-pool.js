@@ -260,6 +260,15 @@ describe("browser-pool/caching-pool", () => {
     }
 
     describe("freeBrowser", () => {
+        it("should close an excess session without a global limit", async () => {
+            const browser = stubBrowser("bro");
+            const pool = makePool_();
+
+            await pool.freeBrowser(browser, { hasExcessSessions: true });
+
+            assert.calledOnceWithExactly(underlyingPool.freeBrowser, browser);
+        });
+
         it("should free if next test requires specific browser version and limit has reached", () => {
             const browser = stubBrowser("bro", "10.1");
             const pool = makePool_();

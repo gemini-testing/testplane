@@ -12,7 +12,6 @@ import { BrowserConfig } from "../config/browser-config";
 export interface LimitedPoolOpts {
     limit: number;
     isSpecificBrowserLimiter?: boolean;
-    keepIdleSessions?: boolean;
     observer?: PoolObserver;
 }
 
@@ -35,7 +34,6 @@ export class LimitedPool implements Pool {
     private _requestQueue: yallist<QueueItem>;
     private _highPriorityRequestQueue: yallist<QueueItem>;
     private _isSpecificBrowserLimiter: boolean;
-    private readonly _keepIdleSessions: boolean;
     private _observer?: PoolObserver;
     private _cancelError: Error | null = null;
     log: debug.Debugger;
@@ -57,7 +55,6 @@ export class LimitedPool implements Pool {
         this._isSpecificBrowserLimiter = _.isBoolean(opts.isSpecificBrowserLimiter)
             ? opts.isSpecificBrowserLimiter
             : true;
-        this._keepIdleSessions = opts.keepIdleSessions ?? false;
         this._observer = opts.observer;
     }
 
@@ -86,10 +83,8 @@ export class LimitedPool implements Pool {
         const compositeIdForNextRequest =
             nextRequest && buildCompositeBrowserId(nextRequest.browserConfig.id, nextRequest.opts.version);
         const hasFreeSlots = this._launched < this._limit;
-        const shouldFreeUnusedResource =
-            this._isSpecificBrowserLimiter && !this._keepIdleSessions && this._launched > this._requests;
-        const force = opts.force || shouldFreeUnusedResource;
-        const optsForFree = { force, compositeIdForNextRequest, hasFreeSlots };
+        const hasExcessSessions = this._isSpecificBrowserLimiter && this._launched > this._requests;
+        const optsForFree = { force: opts.force ?? false, hasExcessSessions, compositeIdForNextRequest, hasFreeSlots };
 
         this.log(`free browser ${browser.fullId} with opts:${JSON.stringify(optsForFree)}`);
 

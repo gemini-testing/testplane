@@ -157,6 +157,30 @@ describe("browser-pool", () => {
             assert.calledOnce(basicPool.getBrowser);
         });
 
+        it("should wait for a closing session to free a slot in its profile", async () => {
+            const chrome = config.forBrowser("chrome");
+            chrome.sessionsPerBrowser = 1;
+            const firefox = config.forBrowser("firefox");
+            browserPool = mkPool_({ config });
+
+            const chromeSession = await browserPool.getBrowser(chrome);
+            await browserPool.freeBrowser(chromeSession);
+            const firefoxSession = await browserPool.getBrowser(firefox, { version: "1" });
+
+            const closing = Promise.withResolvers();
+            basicPool.freeBrowser.withArgs(chromeSession).returns(closing.promise);
+            const newFirefox = browserPool.getBrowser(firefox, { version: "2" });
+            const newChrome = browserPool.getBrowser(chrome);
+            await browserPool.freeBrowser(firefoxSession);
+
+            assert.calledOnceWithExactly(basicPool.freeBrowser, chromeSession);
+            assert.callCount(basicPool.getBrowser, 2);
+
+            closing.resolve();
+            await Promise.all([newFirefox, newChrome]);
+            assert.callCount(basicPool.getBrowser, 4);
+        });
+
         it("should replace a session when it reaches testsPerSession", async () => {
             config.system.parallelLimit = 1;
             const chrome = config.forBrowser("chrome");

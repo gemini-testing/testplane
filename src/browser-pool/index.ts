@@ -30,7 +30,7 @@ export const create = function (
     );
 
     pool = new CachingPool(pool, observer, hasGlobalLimit ? parallelLimit : undefined);
-    pool = new PerBrowserLimitedPool(pool, config, observer, hasGlobalLimit);
+    pool = new PerBrowserLimitedPool(pool, config, observer);
 
     if (hasGlobalLimit) {
         pool = new LimitedPool(pool, {
