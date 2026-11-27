@@ -42,6 +42,29 @@ describe("NewBrowser", () => {
     afterEach(() => sandbox.restore());
 
     describe("create", () => {
+        it("should leave BiDi dialogs to the attached execution browser", async () => {
+            session.isBidi = true;
+            const on = sandbox.stub();
+            session.on = on;
+
+            await create();
+
+            assert.calledOnceWith(on, "dialog", sinon.match.func);
+            const dialog = { dismiss: sandbox.stub(), accept: sandbox.stub() };
+            on.firstCall.args[1](dialog);
+            assert.notCalled(dialog.dismiss);
+            assert.notCalled(dialog.accept);
+        });
+
+        it("should not add a dialog observer to a Classic session", async () => {
+            const on = sandbox.stub();
+            session.on = on;
+
+            await create();
+
+            assert.notCalled(on);
+        });
+
         it("should start a session through the supplied backend", async () => {
             const config = createBrowserConfig_().forBrowser();
             const browser = await NewBrowser.create(config, backend, { id: "browser", emitter: new AsyncEmitter() });

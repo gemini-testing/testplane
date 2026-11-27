@@ -23,9 +23,11 @@ import type {
     NetworkSettings,
 } from "./types";
 import * as logger from "../../utils/logger";
+import { promiseTimeout } from "../../utils/promise";
 
 const debug = makeDebug("testplane:time-travel:network");
 const MAX_DURABLE_BUFFER_BYTES = 16 * 1024 * 1024;
+const BODY_DRAIN_TIMEOUT_MS = 250;
 
 interface TrackedRequest {
     request: NetworkRequest;
@@ -171,6 +173,17 @@ export class CdpNetworkEventSource implements NetworkEventSource {
             debug("Final network metadata reconciliation failed: %O", error);
         }
         this._chains.clear();
+
+        // A WebDriver command may finish before CDP delivers loadingFinished on its own connection.
+        // Keep terminal events and size accounting live for current reads, but don't wait for streams forever.
+        if (this._bodyReads.size) {
+            await promiseTimeout(
+                Promise.allSettled(this._bodyReads),
+                BODY_DRAIN_TIMEOUT_MS,
+                "Network body reads are still pending at shutdown",
+            ).catch(error => debug("%s", error.message));
+        }
+
         this._cdp.network.off("dataReceived", this._onData);
         this._cdp.network.off("loadingFinished", this._onFinished);
         this._cdp.network.off("loadingFailed", this._onFailed);

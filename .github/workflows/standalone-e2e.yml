@@ -44,6 +44,20 @@ jobs:
                   BROWSER: ${{ matrix.browser }}
               run: TS_NODE_TRANSPILE_ONLY=1 node scripts/run-node-without-type-stripping.js -r ts-node/register scripts/preload-standalone-browser.ts
 
+            - name: Test the packed npm consumer (runner and standalone)
+              if: ${{ matrix.browser == 'chrome' }}
+              run: |
+                  consumer="$(mktemp -d)"
+                  trap 'rm -rf "$consumer"' EXIT
+                  npm pack --ignore-scripts --pack-destination "$consumer"
+                  cp test/fixtures/packed-consumer/* "$consumer/"
+                  cd "$consumer"
+                  printf '{"name":"testplane-consumer","private":true}\n' > package.json
+                  npm install --omit=dev --no-audit --no-fund ./testplane-*.tgz
+                  npm ls --omit=dev --all > /dev/null
+                  ./node_modules/.bin/testplane -c testplane.config.cjs smoke.testplane.js
+                  node standalone.cjs
+
             - name: "Prepare screenshot tests: Cache browser docker image"
               if: ${{ matrix.browser == 'chrome' }}
               uses: actions/cache@v3

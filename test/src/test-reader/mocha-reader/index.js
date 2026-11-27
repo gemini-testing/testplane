@@ -7,8 +7,8 @@ const { TreeBuilder } = require("src/test-reader/tree-builder");
 const { Test } = require("src/test-reader/test-object");
 const { TestReaderEvents: ReadEvents } = require("src/events");
 const { MasterEvents: RunnerEvents } = require("src/events");
-const Mocha = require("mocha");
-const proxyquire = require("proxyquire").noCallThru();
+const { Mocha } = require("mocha");
+const proxyquire = require("proxyquire").noCallThru().noPreserveCache();
 const { EventEmitter } = require("events");
 
 describe("test-reader/mocha-reader", () => {
@@ -19,6 +19,7 @@ describe("test-reader/mocha-reader", () => {
     let getMethodsByInterfaceStub;
     let enableSourceMapsStub;
     let readFiles;
+    let loadFilesStub;
     let loggerWarnStub;
 
     const mkMochaSuiteStub_ = () => {
@@ -52,9 +53,11 @@ describe("test-reader/mocha-reader", () => {
         enableSourceMapsStub = sinon.stub();
 
         loggerWarnStub = sinon.stub();
+        loadFilesStub = sinon.stub().resolves();
 
         readFiles = proxyquire("src/test-reader/mocha-reader", {
-            mocha: MochaConstructorStub,
+            mocha: { Mocha: MochaConstructorStub },
+            "./load-files": { loadFiles: loadFilesStub },
             "@cspotcode/source-map-support": SourceMapSupportStub,
             "./utils": { getMethodsByInterface: getMethodsByInterfaceStub },
             "../../utils/typescript": { enableSourceMaps: enableSourceMapsStub },
@@ -65,7 +68,6 @@ describe("test-reader/mocha-reader", () => {
 
         sandbox.stub(Mocha.prototype, "fullTrace");
         sandbox.stub(Mocha.prototype, "addFile");
-        sandbox.stub(Mocha.prototype, "loadFilesAsync").resolves();
 
         sandbox.stub(Mocha.Suite.prototype, "hasOnly").returns(false);
         sandbox.stub(Mocha.Suite.prototype, "filterOnly");
@@ -158,31 +160,31 @@ describe("test-reader/mocha-reader", () => {
             it("should load files after add", async () => {
                 const calls = [];
                 Mocha.prototype.addFile.callsFake(() => calls.push("addFile"));
-                Mocha.prototype.loadFilesAsync.callsFake(() => calls.push("loadFilesAsync"));
+                loadFilesStub.callsFake(() => calls.push("loadFiles"));
 
                 await readFiles_(["foo/bar.js", "baz/qux.mjs"]);
 
-                assert.deepEqual(calls, ["addFile", "addFile", "loadFilesAsync"]);
+                assert.deepEqual(calls, ["addFile", "addFile", "loadFiles"]);
             });
 
-            it("should passthrough esmDecorator to mocha", async () => {
+            it("should pass the ESM decorator to the file loader", async () => {
                 const esmDecorator = sinon.spy();
 
                 await readFiles_({ esmDecorator });
 
-                assert.calledWith(Mocha.prototype.loadFilesAsync, { esmDecorator });
+                assert.calledWith(loadFilesStub, MochaConstructorStub.lastCall.returnValue, esmDecorator);
             });
 
             describe("handle errors", () => {
                 it("should do nothing if error thrown in non-browser environment", async () => {
-                    Mocha.prototype.loadFilesAsync.rejects(new Error("Some error"));
+                    loadFilesStub.rejects(new Error("Some error"));
 
                     await assert.isRejected(readFiles_({ isBrowserEnv: false }), "Some error");
                     assert.notCalled(loggerWarnStub);
                 });
 
                 it("should do nothing if error is not a MODULE_NOT_FOUND error", async () => {
-                    Mocha.prototype.loadFilesAsync.rejects(new Error("Some error"));
+                    loadFilesStub.rejects(new Error("Some error"));
 
                     await assert.isRejected(readFiles_({ isBrowserEnv: true }), "Some error");
                     assert.notCalled(loggerWarnStub);
@@ -191,7 +193,7 @@ describe("test-reader/mocha-reader", () => {
                 it("should do nothing if error message does not contain '?'", async () => {
                     const error = new Error("Cannot find module 'file.svg'");
                     error.code = "MODULE_NOT_FOUND";
-                    Mocha.prototype.loadFilesAsync.rejects(error);
+                    loadFilesStub.rejects(error);
 
                     await assert.isRejected(readFiles_({ isBrowserEnv: true }), "Cannot find module 'file.svg'");
                     assert.notCalled(loggerWarnStub);
@@ -200,7 +202,7 @@ describe("test-reader/mocha-reader", () => {
                 it("should warn if module not found with query parameter in browser environment", async () => {
                     const error = new Error("Cannot find module 'file.svg?react'");
                     error.code = "MODULE_NOT_FOUND";
-                    Mocha.prototype.loadFilesAsync.rejects(error);
+                    loadFilesStub.rejects(error);
 
                     await assert.isRejected(readFiles_({ isBrowserEnv: true }), "Cannot find module 'file.svg?react'");
                     assert.calledOnceWith(
@@ -215,7 +217,7 @@ describe("test-reader/mocha-reader", () => {
 
         describe("forbid suite hooks", () => {
             it('should throw in case of "before" hook', async () => {
-                Mocha.prototype.loadFilesAsync.callsFake(() => {
+                loadFilesStub.callsFake(() => {
                     MochaEventBus.create.lastCall.returnValue.emit(
                         MochaEventBus.events.EVENT_SUITE_ADD_HOOK_BEFORE_ALL,
                     );
@@ -227,7 +229,7 @@ describe("test-reader/mocha-reader", () => {
             });
 
             it('should throw in case of "after" hook', async () => {
-                Mocha.prototype.loadFilesAsync.callsFake(() => {
+                loadFilesStub.callsFake(() => {
                     MochaEventBus.create.lastCall.returnValue.emit(MochaEventBus.events.EVENT_SUITE_ADD_HOOK_AFTER_ALL);
                 });
 
@@ -246,7 +248,7 @@ describe("test-reader/mocha-reader", () => {
                     const onEvent = sinon.stub().named(`on${testplaneEvent}`);
                     const eventBus = new EventEmitter().on(RunnerEvents[testplaneEvent], onEvent);
 
-                    Mocha.prototype.loadFilesAsync.callsFake(() => {
+                    loadFilesStub.callsFake(() => {
                         MochaEventBus.create.lastCall.returnValue.emit(
                             MochaEventBus.events[mochaEvent],
                             {},
@@ -276,7 +278,7 @@ describe("test-reader/mocha-reader", () => {
                     describe: () => {},
                 };
 
-                Mocha.prototype.loadFilesAsync.callsFake(() => {
+                loadFilesStub.callsFake(() => {
                     MochaEventBus.create.lastCall.returnValue.emit(
                         MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
                         globalCtx,
@@ -292,11 +294,12 @@ describe("test-reader/mocha-reader", () => {
             it("should not throw if source-map-support is not installed", async () => {
                 readFiles = proxyquire("src/test-reader/mocha-reader", {
                     "@cspotcode/source-map-support": null,
+                    "./load-files": { loadFiles: loadFilesStub },
                 }).readFiles;
 
                 const globalCtx = { describe: _.noop };
 
-                Mocha.prototype.loadFilesAsync.callsFake(() => {
+                loadFilesStub.callsFake(() => {
                     MochaEventBus.create.lastCall.returnValue.emit(
                         MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
                         globalCtx,
@@ -327,7 +330,7 @@ describe("test-reader/mocha-reader", () => {
                     const suite = {};
                     const globalCtx = _.set({}, methodName, () => emitAddRunnable_(suite, "EVENT_SUITE_ADD_SUITE"));
 
-                    Mocha.prototype.loadFilesAsync.callsFake(() => {
+                    loadFilesStub.callsFake(() => {
                         MochaEventBus.create.lastCall.returnValue.emit(
                             MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
                             globalCtx,
@@ -352,7 +355,7 @@ describe("test-reader/mocha-reader", () => {
                     const test = {};
                     const globalCtx = _.set({}, methodName, () => emitAddRunnable_(test, "EVENT_SUITE_ADD_TEST"));
 
-                    Mocha.prototype.loadFilesAsync.callsFake(() => {
+                    loadFilesStub.callsFake(() => {
                         MochaEventBus.create.lastCall.returnValue.emit(
                             MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
                             globalCtx,
@@ -385,7 +388,7 @@ describe("test-reader/mocha-reader", () => {
                         [methodName]: () => emitAddRunnable_(hook, event),
                     };
 
-                    Mocha.prototype.loadFilesAsync.callsFake(() => {
+                    loadFilesStub.callsFake(() => {
                         MochaEventBus.create.lastCall.returnValue.emit(
                             MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
                             globalCtx,
@@ -412,7 +415,7 @@ describe("test-reader/mocha-reader", () => {
                     it: () => emitAddRunnable_(test, "EVENT_SUITE_ADD_TEST"),
                 };
 
-                Mocha.prototype.loadFilesAsync.callsFake(() => {
+                loadFilesStub.callsFake(() => {
                     MochaEventBus.create.lastCall.returnValue.emit(
                         MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
                         globalCtx,
@@ -451,7 +454,7 @@ describe("test-reader/mocha-reader", () => {
                     const onBuildInstruction = sinon.spy();
                     const eventBus = new EventEmitter().on(ReadEvents.NEW_BUILD_INSTRUCTION, onBuildInstruction);
 
-                    Mocha.prototype.loadFilesAsync.callsFake(() => {
+                    loadFilesStub.callsFake(() => {
                         MochaEventBus.create.lastCall.returnValue.emit(MochaEventBus.events[event], {});
                     });
 
@@ -467,7 +470,7 @@ describe("test-reader/mocha-reader", () => {
                         instruction({ treeBuilder }),
                     );
 
-                    Mocha.prototype.loadFilesAsync.callsFake(() => {
+                    loadFilesStub.callsFake(() => {
                         MochaEventBus.create.lastCall.returnValue.emit(MochaEventBus.events[event], testObject);
                     });
 
@@ -500,7 +503,7 @@ describe("test-reader/mocha-reader", () => {
 
                 Mocha.Suite.prototype.hasOnly.returns(false);
 
-                Mocha.prototype.loadFilesAsync.callsFake(() => {
+                loadFilesStub.callsFake(() => {
                     eventBus.on(ReadEvents.NEW_BUILD_INSTRUCTION, onBuildInstruction);
                 });
 

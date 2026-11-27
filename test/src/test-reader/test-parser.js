@@ -14,6 +14,7 @@ const { makeConfigStub } = require("../../utils");
 const proxyquire = require("proxyquire").noCallThru();
 const path = require("path");
 const { EventEmitter } = require("events");
+const { URL } = require("node:url");
 const _ = require("lodash");
 const fs = require("fs-extra");
 const { compileTagFilter } = require("src/utils/cli");
@@ -454,14 +455,18 @@ describe("test-reader/test-parser", () => {
                     assert.calledWithMatch(readFiles, sinon.match.any, { esmDecorator: sinon.match.func });
                 });
 
-                it("should decorate esm module name with some random", async () => {
+                it("should keep the module URL and append a nonempty cache key", async () => {
                     await loadFiles_();
 
                     const { esmDecorator } = readFiles.lastCall.args[1];
-                    assert.match(esmDecorator("/some/file.mjs"), /^\/some\/file\.mjs\?rand=0\.[0-9]+$/);
+                    const url = new URL(esmDecorator("file:///some/file.mjs"));
+                    assert.equal(url.pathname, "/some/file.mjs");
+                    assert.isOk(url.searchParams.get("rand"));
                 });
 
-                it("should decorate with different random between calls", async () => {
+                it("should use a fresh module URL for each read even with a seeded random", async () => {
+                    sandbox.stub(Math, "random").returns(0.5);
+
                     await loadFiles_();
                     await loadFiles_();
 
