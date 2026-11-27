@@ -10,9 +10,11 @@ const { makeConfigStub } = require("../../utils");
 
 describe("browser-pool", () => {
     const sandbox = sinon.createSandbox();
+    let basicPool;
 
     beforeEach(() => {
-        sandbox.stub(BasicPool, "create").returns(sinon.createStubInstance(BasicPool));
+        basicPool = sinon.createStubInstance(BasicPool);
+        sandbox.stub(BasicPool, "create").returns(basicPool);
     });
 
     afterEach(() => sandbox.restore());
@@ -71,13 +73,7 @@ describe("browser-pool", () => {
     });
 
     describe("with a finite parallelLimit", () => {
-        let basicPool;
-        let config;
-        let browserPool;
-
         beforeEach(() => {
-            basicPool = sinon.createStubInstance(BasicPool);
-            BasicPool.create.returns(basicPool);
             basicPool.getBrowser.callsFake(async (config, { version } = {}) => ({
                 id: config.id,
                 config,
@@ -85,16 +81,24 @@ describe("browser-pool", () => {
                 reset: sandbox.stub().resolves(),
             }));
             basicPool.freeBrowser.resolves();
-            config = makeConfigStub({
-                browsers: ["chrome", "firefox"],
-                system: { parallelLimit: 2 },
-                sessionsPerBrowser: 2,
-            });
-            browserPool = mkPool_({ config });
         });
 
-        it("should reuse a session for a request waiting in the global queue", async () => {
-            const chrome = config.forBrowser("chrome");
+        const setup = limit => {
+            const config = makeConfigStub({
+                browsers: ["chrome", "firefox"],
+                sessionsPerBrowser: limit,
+                system: { parallelLimit: limit },
+            });
+            return {
+                browserPool: mkPool_({ config }),
+                chrome: config.forBrowser("chrome"),
+                firefox: config.forBrowser("firefox"),
+            };
+        };
+
+        it("should reuse a session when the next request waits in the global queue", async () => {
+            const { browserPool, chrome } = setup(2);
+            chrome.testsPerSession = 2;
             const [first, second] = await Promise.all([browserPool.getBrowser(chrome), browserPool.getBrowser(chrome)]);
             const queued = browserPool.getBrowser(chrome);
 
@@ -103,97 +107,57 @@ describe("browser-pool", () => {
             assert.strictEqual(await queued, first);
             assert.callCount(basicPool.getBrowser, 2);
             assert.notCalled(basicPool.freeBrowser);
-            await Promise.all([browserPool.freeBrowser(first), browserPool.freeBrowser(second)]);
-        });
 
-        it("should wait for cached sessions to close before opening replacements for another profile", async () => {
-            const chrome = config.forBrowser("chrome");
-            const firefox = config.forBrowser("firefox");
-            const browsers = await Promise.all([browserPool.getBrowser(chrome), browserPool.getBrowser(chrome)]);
-            await Promise.all(browsers.map(browser => browserPool.freeBrowser(browser)));
-            assert.notCalled(basicPool.freeBrowser);
-
-            const closing = Promise.withResolvers();
-            basicPool.freeBrowser.returns(closing.promise);
-            const replacements = Promise.all([browserPool.getBrowser(firefox), browserPool.getBrowser(firefox)]);
-
-            await new Promise(resolve => setImmediate(resolve));
-
-            assert.callCount(basicPool.getBrowser, 2);
-            assert.callCount(basicPool.freeBrowser, 2);
-            closing.resolve();
-            await replacements;
-            assert.callCount(basicPool.getBrowser, 4);
-        });
-
-        it("should reuse an idle session and evict an incompatible version at the profile limit", async () => {
-            const chrome = config.forBrowser("chrome");
-            chrome.sessionsPerBrowser = 1;
-            browserPool = mkPool_({ config });
-            const first = await browserPool.getBrowser(chrome, { version: "1" });
+            const next = browserPool.getBrowser(chrome);
             await browserPool.freeBrowser(first);
 
-            assert.notCalled(basicPool.freeBrowser);
-            assert.strictEqual(await browserPool.getBrowser(chrome, { version: "1" }), first);
-            await browserPool.freeBrowser(first);
-            const replacement = await browserPool.getBrowser(chrome, { version: "2" });
-
+            const replacement = await next;
             assert.notStrictEqual(replacement, first);
             assert.calledOnceWithExactly(basicPool.freeBrowser, first);
-            assert.isTrue(basicPool.freeBrowser.firstCall.calledBefore(basicPool.getBrowser.secondCall));
+            await Promise.all([browserPool.freeBrowser(replacement), browserPool.freeBrowser(second)]);
         });
 
-        it("should keep the slot occupied if an idle session fails to close", async () => {
-            config.system.parallelLimit = 1;
-            browserPool = mkPool_({ config });
-            const chrome = config.forBrowser("chrome");
-            const firefox = config.forBrowser("firefox");
-            const first = await browserPool.getBrowser(chrome);
-            await browserPool.freeBrowser(first);
-            basicPool.freeBrowser.rejects(new Error("quit failed"));
-
-            await assert.isRejected(browserPool.getBrowser(firefox), "quit failed");
-            await assert.isRejected(browserPool.getBrowser(firefox), "quit failed");
-            assert.calledOnce(basicPool.getBrowser);
-        });
-
-        it("should wait for a closing session to free a slot in its profile", async () => {
-            const chrome = config.forBrowser("chrome");
-            chrome.sessionsPerBrowser = 1;
-            const firefox = config.forBrowser("firefox");
-            browserPool = mkPool_({ config });
-
-            const chromeSession = await browserPool.getBrowser(chrome);
-            await browserPool.freeBrowser(chromeSession);
-            const firefoxSession = await browserPool.getBrowser(firefox, { version: "1" });
-
+        it("should close the other session when simultaneous releases have only one matching request", async () => {
+            const { browserPool, chrome, firefox } = setup(2);
+            const [first, second] = await Promise.all([browserPool.getBrowser(chrome), browserPool.getBrowser(chrome)]);
+            const matching = browserPool.getBrowser(chrome);
+            const different = browserPool.getBrowser(firefox);
             const closing = Promise.withResolvers();
-            basicPool.freeBrowser.withArgs(chromeSession).returns(closing.promise);
-            const newFirefox = browserPool.getBrowser(firefox, { version: "2" });
-            const newChrome = browserPool.getBrowser(chrome);
-            await browserPool.freeBrowser(firefoxSession);
+            basicPool.freeBrowser.returns(closing.promise);
 
-            assert.calledOnceWithExactly(basicPool.freeBrowser, chromeSession);
+            const released = Promise.all([browserPool.freeBrowser(first), browserPool.freeBrowser(second)]);
+            await new Promise(resolve => setImmediate(resolve));
+
+            assert.calledOnce(basicPool.freeBrowser);
             assert.callCount(basicPool.getBrowser, 2);
-
             closing.resolve();
-            await Promise.all([newFirefox, newChrome]);
-            assert.callCount(basicPool.getBrowser, 4);
+
+            await released;
+            assert.include([first, second], await matching);
+            assert.strictEqual((await different).id, "firefox");
+            assert.callCount(basicPool.getBrowser, 3);
         });
 
-        it("should replace a session when it reaches testsPerSession", async () => {
-            config.system.parallelLimit = 1;
-            const chrome = config.forBrowser("chrome");
-            chrome.testsPerSession = 1;
-            browserPool = mkPool_({ config });
-            const first = await browserPool.getBrowser(chrome);
-            const queued = browserPool.getBrowser(chrome);
+        it("should give a high-priority request the slot even if it queues during a matching release", async () => {
+            const { browserPool, chrome } = setup(1);
+            const first = await browserPool.getBrowser(chrome, { version: "1" });
+            const matching = browserPool.getBrowser(chrome, { version: "1" });
+            const closing = Promise.withResolvers();
+            basicPool.freeBrowser.onFirstCall().returns(closing.promise);
 
-            await browserPool.freeBrowser(first);
+            const released = browserPool.freeBrowser(first);
+            const highPriority = browserPool.getBrowser(chrome, { version: "2", highPriority: true });
+            await new Promise(resolve => setImmediate(resolve));
 
-            assert.notStrictEqual(await queued, first);
             assert.calledOnceWithExactly(basicPool.freeBrowser, first);
-            assert.callCount(basicPool.getBrowser, 2);
+            assert.calledOnce(basicPool.getBrowser);
+            closing.resolve();
+
+            await released;
+            const second = await highPriority;
+            assert.strictEqual(second.version, "2");
+            await browserPool.freeBrowser(second);
+            assert.strictEqual((await matching).version, "1");
         });
     });
 });

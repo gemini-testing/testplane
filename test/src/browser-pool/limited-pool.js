@@ -200,34 +200,22 @@ describe("browser-pool/limited-pool", () => {
             return pool.freeBrowser(browser).then(() => assert.calledWith(underlyingPool.freeBrowser, browser));
         });
 
-        it("when a browser profile has an excess session", () => {
+        it("for release with force if there are no more requests in specific browser limiter", () => {
             pool = makePool_({ isSpecificBrowserLimiter: true });
 
             return pool
                 .getBrowser(configFor("first"))
                 .then(() => pool.freeBrowser(browser))
-                .then(() =>
-                    assert.calledWith(
-                        underlyingPool.freeBrowser,
-                        browser,
-                        sinon.match({ force: false, hasExcessSessions: true }),
-                    ),
-                );
+                .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: true })));
         });
 
-        it("when the global queue drains without a forced close", () => {
+        it("for release without force if there are no more requests in all browser limiter", () => {
             pool = makePool_({ isSpecificBrowserLimiter: false });
 
             return pool
                 .getBrowser(configFor("first"))
                 .then(() => pool.freeBrowser(browser))
-                .then(() =>
-                    assert.calledWith(
-                        underlyingPool.freeBrowser,
-                        browser,
-                        sinon.match({ force: false, hasExcessSessions: false }),
-                    ),
-                );
+                .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: false })));
         });
 
         it("for caching if there is at least one pending request", () => {
@@ -237,9 +225,7 @@ describe("browser-pool/limited-pool", () => {
                     pool.getBrowser(configFor("second"));
                     return pool.freeBrowser(browser);
                 })
-                .then(() =>
-                    assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ hasExcessSessions: false })),
-                );
+                .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: false })));
         });
 
         it("for release if there are pending requests but forced to free", () => {
@@ -260,9 +246,7 @@ describe("browser-pool/limited-pool", () => {
                     pool.getBrowser(configFor("third"));
                     return pool.freeBrowser(browser);
                 })
-                .then(() =>
-                    assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ hasExcessSessions: false })),
-                );
+                .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: false })));
         });
 
         it("taking into account number of failed browser requests", () => {
@@ -282,9 +266,7 @@ describe("browser-pool/limited-pool", () => {
 
             return Promise.all([pool.getBrowser(configFor("first")), reflect(pool.getBrowser(configFor("second")))])
                 .then(() => pool.freeBrowser(browser))
-                .then(() =>
-                    assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ hasExcessSessions: true })),
-                );
+                .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: true })));
         });
     });
 

@@ -18,8 +18,6 @@ export const create = function (
     profiler: ProfilerRuntimeLike = noopProfilerRuntime,
 ): BrowserPool {
     const observer: PoolObserver | undefined = profiler.isEnabled() ? new ProfilerPoolObserver(profiler) : undefined;
-    const { parallelLimit } = config.system;
-    const hasGlobalLimit = _.isFinite(parallelLimit);
     let pool: BasicPool | CachingPool | PerBrowserLimitedPool | LimitedPool = BasicPool.create(
         {
             browserDownloadMirrors: config.browserDownloadMirrors,
@@ -29,12 +27,12 @@ export const create = function (
         observer,
     );
 
-    pool = new CachingPool(pool, observer, hasGlobalLimit ? parallelLimit : undefined);
+    pool = new CachingPool(pool, observer);
     pool = new PerBrowserLimitedPool(pool, config, observer);
 
-    if (hasGlobalLimit) {
+    if (_.isFinite(config.system.parallelLimit)) {
         pool = new LimitedPool(pool, {
-            limit: parallelLimit,
+            limit: config.system.parallelLimit,
             isSpecificBrowserLimiter: false,
             ...(observer && { observer }),
         });

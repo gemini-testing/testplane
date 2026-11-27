@@ -36,7 +36,7 @@ export class LimitedUseSet<T extends object = object> {
 
         this.log(`push ${formatedItem}`);
 
-        if (this._isOverLimit(value)) {
+        if (this.isOverLimit(value)) {
             this.log(`over limit, finalizing ${formatedItem}`);
             return this._finalize(value);
         }
@@ -47,7 +47,7 @@ export class LimitedUseSet<T extends object = object> {
         return Promise.resolve();
     }
 
-    private _isOverLimit(value: T): boolean {
+    isOverLimit(value: T): boolean {
         if (this._useLimit === 0) {
             return true;
         }
@@ -56,11 +56,11 @@ export class LimitedUseSet<T extends object = object> {
     }
 
     pop(): T | null {
-        const result = this.take();
-        if (!result) {
+        if (this._objects.length === 0) {
             return null;
         }
 
+        const result = this._objects.pop()!;
         const useCount = this._useCounts.get(result) || 0;
         const formatedItem = this._formatItem(result);
 
@@ -70,9 +70,5 @@ export class LimitedUseSet<T extends object = object> {
         this._useCounts.set(result, useCount + 1);
 
         return result;
-    }
-
-    take(): T | undefined {
-        return this._objects.pop();
     }
 }

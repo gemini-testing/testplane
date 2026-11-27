@@ -15,6 +15,18 @@ export interface BrowserOpts {
     highPriority?: boolean;
 }
 
+export interface BrowserRelease {
+    canReuse(): boolean;
+    finish(reuse: boolean): Promise<void>;
+}
+
+export interface FreeBrowserOpts {
+    force?: boolean;
+    hasFreeSlots?: boolean;
+    compositeIdForNextRequest?: string;
+    deferRelease?: (release: BrowserRelease) => void;
+}
+
 export type PoolLimiterKind = "browser" | "global";
 
 export interface PoolObserverOperation {

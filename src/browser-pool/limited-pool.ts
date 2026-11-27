@@ -3,7 +3,7 @@ import _ from "lodash";
 import yallist from "yallist";
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { BrowserOpts, Pool, PoolObserver, PoolObserverOperation } from "./types";
+import { BrowserOpts, BrowserRelease, FreeBrowserOpts, Pool, PoolObserver, PoolObserverOperation } from "./types";
 import { CancelledError } from "./cancelled-error";
 import { buildCompositeBrowserId } from "./utils";
 import { Browser } from "../browser/browser";
@@ -75,7 +75,7 @@ export class LimitedPool implements Pool {
         }
     }
 
-    async freeBrowser(browser: Browser, opts: BrowserOpts = {}): Promise<void> {
+    async freeBrowser(browser: Browser, opts: FreeBrowserOpts = {}): Promise<void> {
         --this._requests;
         this._sampleState(browser.id);
 
@@ -83,14 +83,52 @@ export class LimitedPool implements Pool {
         const compositeIdForNextRequest =
             nextRequest && buildCompositeBrowserId(nextRequest.browserConfig.id, nextRequest.opts.version);
         const hasFreeSlots = this._launched < this._limit;
-        const hasExcessSessions = this._isSpecificBrowserLimiter && this._launched > this._requests;
-        const optsForFree = { force: opts.force ?? false, hasExcessSessions, compositeIdForNextRequest, hasFreeSlots };
+        const shouldFreeUnusedResource = this._isSpecificBrowserLimiter && this._launched > this._requests;
+        const force = opts.force || shouldFreeUnusedResource;
+        const optsForFree: FreeBrowserOpts = { force, compositeIdForNextRequest, hasFreeSlots };
+        const matches = (request?: QueueItem): boolean =>
+            request?.browserConfig.id === browser.id && request.opts.version === browser.version;
+        let deferred: BrowserRelease | undefined;
+        let handedOff = false;
+
+        const { deferRelease } = opts;
+        if (shouldFreeUnusedResource && !opts.force && deferRelease) {
+            optsForFree.deferRelease = (release): void => {
+                handedOff = true;
+                deferRelease({
+                    canReuse: () => !this._lookAtNextRequest() && release.canReuse(),
+                    finish: reuse => this._finishRelease(release, reuse, browser.config),
+                });
+            };
+        } else if (!this._isSpecificBrowserLimiter && !force && matches(nextRequest)) {
+            optsForFree.deferRelease = (release): void => {
+                deferred = release;
+            };
+        }
 
         this.log(`free browser ${browser.fullId} with opts:${JSON.stringify(optsForFree)}`);
 
-        return this.underlyingPool
-            .freeBrowser(browser, optsForFree)
-            .finally(() => this._launchNextBrowser(browser.config));
+        return this.underlyingPool.freeBrowser(browser, optsForFree).finally(() => {
+            if (handedOff) {
+                return;
+            }
+            if (deferred) {
+                const reuse = deferred.canReuse() && matches(this._lookAtNextRequest());
+                return this._finishRelease(deferred, reuse, browser.config);
+            }
+            return this._launchNextBrowser(browser.config);
+        });
+    }
+
+    private _finishRelease(release: BrowserRelease, reuse: boolean, browserConfig: BrowserConfig): Promise<void> {
+        const finished = release.finish(reuse);
+        if (!reuse) {
+            return finished.finally(() => this._launchNextBrowser(browserConfig));
+        }
+
+        // The cache accepts the session synchronously. Dispatch now so only this request can claim it.
+        this._launchNextBrowser(browserConfig);
+        return finished;
     }
 
     cancel(error: Error = new CancelledError()): void {
